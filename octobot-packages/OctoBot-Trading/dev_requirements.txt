@@ -1,0 +1,23 @@
+pytest>=7.1
+pytest-asyncio>=0.19
+pytest-pep8
+pytest-cov
+pytest-xdist
+pytest-randomly
+
+mock>=4.0.2
+
+coverage
+coveralls
+
+twine
+pip
+setuptools
+wheel
+
+pur
+
+aiohttp
+python-dotenv
+
+pylint<2.15.2   # bug with pylint 2.15.2

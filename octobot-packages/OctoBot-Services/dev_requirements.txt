@@ -1,0 +1,17 @@
+pytest>=5.4.0
+pytest-pep8
+pytest-cov
+pytest-asyncio
+pytest-xdist
+
+coverage
+coveralls
+
+twine
+pip
+setuptools
+wheel
+
+pur
+
+pylint

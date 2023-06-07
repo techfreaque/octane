@@ -1,0 +1,9 @@
+# TA-Lib # conda install -c conda-forge ta-lib
+pandas
+pandas_ta
+finta
+newtulipy
+statistics
+scikit-neuralnetwork
+tensorflow
+# requirements inside the octobot-packages folder need to be installed as well

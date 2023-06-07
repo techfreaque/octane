@@ -1,0 +1,18 @@
+{
+    "installation_context": {
+        "octobot_version": "unknown"
+    },
+    "registered_tentacles": {
+        "OctoBot-Default-Tentacles": "tests/static/tentacles.zip"
+    },
+    "tentacle_activation": {
+        "Backtesting": {},
+        "Evaluator": {},
+        "Meta": {},
+        "Services": {
+            "RedditService": true,
+            "RedditServiceFeed": true
+        },
+        "Trading": {}
+    }
+}

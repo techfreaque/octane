@@ -1,0 +1,12 @@
+# Setup requirements
+numpy==1.23.5
+
+# Commons requirements
+jsonschema==3.2.0
+cryptography
+sortedcontainers
+requests
+psutil==5.9.5
+
+# async sqlite connection
+aiosqlite>=0.16.0, <0.17

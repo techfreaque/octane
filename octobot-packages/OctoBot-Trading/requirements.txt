@@ -1,0 +1,19 @@
+numpy==1.23.5
+
+# Drakkar-Software requirements
+# OctoBot-Backtesting>=1.8, <1.9
+# Async-Channel>=2.1, <2.2
+# OctoBot-Commons>=1.8, <1.9
+# OctoBot-Tentacles-Manager>=2.8, <2.9
+# trading-backend>=1.0.19
+
+# Exchange connection requirements
+ccxt==3.0.74 # always ensure real exchanges tests (in tests_additional and authenticated exchange tests) are passing before changing the ccxt version
+
+cryptography # Never specify a version (managed by https://github.com/Drakkar-Software/OctoBot-PyPi-Linux-Deployer)
+
+# OrderBook requirement
+sortedcontainers==2.4.0
+
+# Scripting requirements
+tinydb==4.5.2

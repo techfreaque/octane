@@ -1,0 +1,40 @@
+{
+  "time_frame": [
+    "1h",
+    "4h",
+    "1d"
+  ],
+  "exchanges": {
+    "binanceus": {
+      "api-key": "",
+      "api-secret": "",
+      "web-socket": false
+    }
+  },
+  "services": {},
+  "notification": {
+    "global-info": true,
+    "notification-type": [],
+    "price-alerts": true,
+    "trades": true
+  },
+  "backtesting": {
+    "enabled": false,
+    "files": [
+      "tests/static/binance_BTC_USDT_20180428_121156.data",
+      "tests/static/binance_ETH_USDT_20180716_131148.data",
+      "tests/static/binance_ICX_BTC_20180716_131148.data",
+      "tests/static/binance_NEO_BTC_20180716_131148.data",
+      "tests/static/binance_VEN_BTC_20180716_131148.data",
+      "tests/static/binance_XRB_BTC_20180716_131148.data",
+      "tests/static/binance_ONT_BTC_20180722_230900.data",
+      "tests/static/binance_XLM_BTC_20180722_234305.data",
+      "tests/static/binance_POWR_BTC_20180722_234855.data",
+      "tests/static/binance_ADA_BTC_20180722_223335.data",
+      "tests/static/bittrex_ETC_BTC_20180726_210341.data",
+      "tests/static/bittrex_WAX_BTC_20180726_205032.data",
+      "tests/static/bittrex_XRP_BTC_20180726_210927.data",
+      "tests/static/bittrex_XVG_BTC_20180726_211225.data"
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "origin_package": "Matrix-Tentacles",
+  "tentacles": [
+    "pie_chart_portfolio_value"
+  ],
+  "tentacles-requirements": []
+}

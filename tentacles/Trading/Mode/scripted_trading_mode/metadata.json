@@ -1,0 +1,6 @@
+{
+  "version": "1.2.0",
+  "origin_package": "OctoBot-Private-Tentacles",
+  "tentacles": ["ScriptedTradingMode"],
+  "tentacles-requirements": ["blank_strategy"]
+}

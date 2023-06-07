@@ -1,0 +1,62 @@
+{% extends "layout.html" %}
+{% set active_page = "community" %}
+
+{% import "components/community/bot_selector.html" as bot_selector %}
+{% import "components/community/tentacles_packages.html" as tentacles_packages_display %}
+{% import "components/community/bots_stats.html" as bots_stats %}
+{% import 'macros/flash_messages.html' as m_flash_messages %}
+
+{% block body %}
+<br>
+
+{{ bots_stats.bots_stats_card(current_bots_stats) }}
+
+{{ m_flash_messages.flash_messages() }}
+
+{% if use_preview %}
+    {{ tentacles_packages_display.tentacles_packages("example@mail.com", role, is_donor, selected_user_bot, preview_tentacles_packages, "#",
+                                                     default_tentacles_package_image, True, False, can_logout) }}
+{% else %}
+    {{ tentacles_packages_display.tentacles_packages(current_logged_in_email, role, is_donor, selected_user_bot, preview_tentacles_packages, OCTOBOT_COMMUNITY_URL,
+                                                     default_tentacles_package_image, True, True, can_logout) }}
+{% endif %}
+
+{% if can_select_bot %}
+<a class="btn btn-outline-primary waves-effect float-right" href="#" id="display-bot-select-modal"
+   data-toggle="modal" data-target="#bot-select-modal">
+   Select bot
+</a>
+<div class="modal" id="bot-select-modal" tabindex="-1" role="dialog"
+     aria-labelledby="#display-bot-select-modal" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content modal-text bg-dark text-light">
+      <div class="modal-header primary-text">
+        <h2 class="modal-title">Bot selection</h2>
+            {% if can_logout and not selected_user_bot["id"]%}
+            <div class="text-right">
+                <a class="btn btn-sm btn-outline-info waves-effect"
+                   href="{{ url_for('community_logout')}}">
+                    logout
+                </a>
+            </div>
+            {% endif %}
+          {% if selected_user_bot["id"] %}
+            <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          {% endif %}
+      </div>
+      <div class="modal-body">
+        {{ bot_selector.bot_selector(all_user_bots, selected_user_bot) }}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<br>
+{% endblock %}
+
+{% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/components/community.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+{% endblock additional_scripts %}

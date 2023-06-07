@@ -1,0 +1,27 @@
+{
+    "installation_context": {
+        "octobot_version": "unknown"
+    },
+    "registered_tentacles": {
+        "OctoBot-Default-Tentacles": "tests/static/tentacles.zip"
+    },
+    "tentacle_activation": {
+        "Evaluator": {
+            "ADXMomentumEvaluator": false,
+            "BBMomentumEvaluator": false,
+            "DipAnalyserStrategyEvaluator": false,
+            "InstantFluctuationsEvaluator": false,
+            "InstantMAEvaluator": false,
+            "KlingerOscillatorMomentumEvaluator": false,
+            "KlingerOscillatorReversalConfirmationMomentumEvaluator": false,
+            "MACDMomentumEvaluator": false,
+            "MoveSignalsStrategyEvaluator": false,
+            "OverallStateAnalyser": true,
+            "RSIMomentumEvaluator": false,
+            "RSIWeightMomentumEvaluator": false,
+            "RedditForumEvaluator": false,
+            "SimpleStrategyEvaluator": false,
+            "StochasticRSIVolatilityEvaluator": false
+        }
+    }
+}

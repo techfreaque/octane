@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "origin_package": "Matrix-Strategy-Blocks",
+  "tentacles": [
+    "send_alert"
+  ],
+  "tentacles-requirements": ["block_factory"]
+}

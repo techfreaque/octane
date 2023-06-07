@@ -1,0 +1,10 @@
+{
+  "version": "0.9.21",
+  "origin_package": "Matrix-O-UI",
+  "tentacles": [
+    "OctoUi2Plugin"
+  ],
+  "tentacles-requirements": [
+    "RunAnalysis", "RunAnalysisModePlugin"
+  ]
+}

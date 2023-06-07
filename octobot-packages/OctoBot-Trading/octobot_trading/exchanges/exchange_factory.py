@@ -1,0 +1,194 @@
+#  Drakkar-Software OctoBot-Trading
+#  Copyright (c) Drakkar-Software, All rights reserved.
+#
+#  This library is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU Lesser General Public
+#  License as published by the Free Software Foundation; either
+#  version 3.0 of the License, or (at your option) any later version.
+#
+#  This library is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#  Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public
+#  License along with this library.
+import asyncio
+
+import trading_backend
+
+import octobot_commons.authentication as authentication
+import octobot_trading.errors as errors
+import octobot_trading.exchanges as exchanges
+
+
+async def create_exchanges(exchange_manager):
+    if exchange_manager.is_sandboxed and not exchange_manager.exchange_only:
+        exchange_manager.logger.info(f"Using sandbox exchange for {exchange_manager.exchange_name}")
+
+    if exchange_manager.is_backtesting:
+        # simulated : create exchange simulator instance
+        await create_simulated_exchange(exchange_manager)
+        exchange_manager.load_constants()
+    else:
+        # real : create a rest or websocket exchange instance
+        await create_real_exchange(exchange_manager)
+        exchange_manager.load_constants()
+        await initialize_real_exchange(exchange_manager)
+
+    if not exchange_manager.exchange_only:
+        # create exchange producers if necessary
+        await exchanges.create_exchange_producers(exchange_manager)
+
+    if exchange_manager.is_backtesting:
+        await init_simulated_exchange(exchange_manager)
+
+    exchange_manager.exchange_name = exchange_manager.exchange.name
+    exchange_manager.is_ready = True
+
+
+async def create_real_exchange(exchange_manager) -> None:
+    """
+    Create and initialize real REST exchange
+    :param exchange_manager: the related exchange manager
+    """
+    await _create_rest_exchange(exchange_manager)
+    try:
+        await exchange_manager.exchange.initialize()
+        if exchange_manager.exchange_only:
+            return
+        _create_exchange_backend(exchange_manager)
+        await _initialize_exchange_backend(exchange_manager)
+        _ensure_exchange_validity(exchange_manager)
+    except errors.AuthenticationError:
+        exchange_manager.logger.error("Authentication error, retrying without authentication...")
+        exchange_manager.without_auth = True
+        await create_real_exchange(exchange_manager)
+        return
+
+
+async def initialize_real_exchange(exchange_manager):
+    if not exchange_manager.exchange_only:
+        await exchanges.create_exchange_channels(exchange_manager)
+
+    # create Websocket exchange if possible
+    if not exchange_manager.rest_only:
+        # search for websocket
+        if exchanges.check_web_socket_config(exchange_manager.config, exchange_manager.exchange.name):
+            await exchanges.search_and_create_websocket(exchange_manager)
+
+
+def _ensure_exchange_validity(exchange_manager):
+    if exchange_manager.is_future and \
+            not exchange_manager.is_trader_simulated and \
+            not exchange_manager.is_valid_account:
+        error_message = f"Impossible to check exchange sponsoring due to" \
+                        f" {exchange_manager.init_error.__class__.__name__}." \
+            if isinstance(exchange_manager.init_error, trading_backend.TimeSyncError) \
+            else \
+            f"Impossible to start futures trading for {exchange_manager.exchange.name.capitalize()}: " \
+            f"incompatible account with no registered donation. Your OctoBot will work normally " \
+            f"for spot trading but will be *limited to backtesting for futures trading. " \
+            f"Please select spot trading on your exchange configuration."
+        raise errors.NotSupported(error_message)
+
+
+def _create_exchange_backend(exchange_manager):
+    try:
+        exchange_manager.exchange_backend = trading_backend.exchange_factory.create_exchange_backend(
+            exchange_manager.exchange
+        )
+    except Exception as e:
+        exchange_manager.logger.exception(e, True, f"Error when creating exchange backend: {e}")
+
+
+async def _initialize_exchange_backend(exchange_manager):
+    if exchange_manager.exchange_backend is not None and exchange_manager.exchange.authenticated() \
+            and not exchange_manager.is_trader_simulated:
+        exchange_manager.logger.debug(await exchange_manager.exchange_backend.initialize())
+        return
+        # disabled
+        try:    # pylint: disable=W0101
+            exchange_manager.is_valid_account = await _is_supporting_octobot()
+            if exchange_manager.is_valid_account:
+                return True
+            exchange_manager.is_valid_account, message = await exchange_manager.exchange_backend.is_valid_account()
+            if not exchange_manager.is_valid_account:
+                exchange_manager.logger.error(
+                    f"Incompatible {exchange_manager.exchange.name.capitalize()} account to use futures trading: "
+                    f"{message}. OctoBot relies on exchanges profits sharing to remain 100% free, please create a "
+                    f"new {exchange_manager.exchange.name.capitalize()} account or register a donation to support "
+                    f"the project. {exchanges.get_partners_explanation_message()}")
+        except trading_backend.TimeSyncError as err:
+            exchanges.log_time_sync_error(exchange_manager.logger, exchange_manager.exchange.name,
+                                          err, "exchange_backend.is_valid_account")
+            exchange_manager.is_valid_account = False
+            exchange_manager.init_error = err
+        except Exception as err:
+            exchange_manager.is_valid_account = False
+            exchange_manager.init_error = err
+            exchange_manager.logger.exception(err, True, f"Error when loading exchange account: {err}")
+        finally:
+            if exchange_manager.is_valid_account:
+                exchange_manager.logger.info("On behalf of the OctoBot team, thank you for "
+                                             "actively supporting the project !")
+
+
+async def _is_supporting_octobot() -> bool:
+    try:
+        authenticator = authentication.Authenticator.instance()
+        if not authenticator.is_initialized():
+            initialization_timeout = 5
+            await authenticator.await_initialization(initialization_timeout)
+        if authenticator.user_account.supports.is_supporting():
+            return True
+    except asyncio.TimeoutError:
+        pass
+    return False
+
+
+async def _create_rest_exchange(exchange_manager) -> None:
+    """
+    create REST based on ccxt exchange
+    :param exchange_manager: the related exchange manager
+    """
+    await _search_and_create_rest_exchange(exchange_manager)
+
+    if not exchange_manager.exchange:
+        raise Exception(f"Can't create an exchange instance that match the exchange configuration ({exchange_manager})")
+
+
+async def create_simulated_exchange(exchange_manager):
+    exchange_manager.exchange = exchanges.ExchangeSimulator(
+        exchange_manager.config, exchange_manager, exchange_manager.backtesting
+    )
+
+    await exchange_manager.exchange.initialize()
+    _initialize_simulator_time_frames(exchange_manager)
+    exchange_manager.exchange_config.set_config_time_frame()
+    exchange_manager.exchange_config.set_config_traded_pairs()
+    await exchanges.create_exchange_channels(exchange_manager)
+
+
+async def init_simulated_exchange(exchange_manager):
+    await exchange_manager.exchange.create_backtesting_exchange_producers()
+
+
+async def _search_and_create_rest_exchange(exchange_manager) -> None:
+    """
+    Create a rest exchange if a RestExchange matching class is found
+    :param exchange_manager: the related exchange manager
+    """
+    rest_exchange_class = exchanges.get_rest_exchange_class(exchange_manager.exchange_name,
+                                                            exchange_manager.tentacles_setup_config)
+    if rest_exchange_class:
+        exchange_manager.exchange = rest_exchange_class(config=exchange_manager.config,
+                                                        exchange_manager=exchange_manager)
+
+
+def _initialize_simulator_time_frames(exchange_manager):
+    """
+    Initialize simulator client time frames
+    :param exchange_manager: the related exchange manager
+    """
+    exchange_manager.client_time_frames = exchange_manager.exchange.get_available_time_frames()
