@@ -3,8 +3,6 @@ FROM python:3.11-slim-buster AS base
 VOLUME /octobot/backtesting
 VOLUME /octobot/logs
 VOLUME /octobot/tentacles
-VOLUME /octobot/reference_tentacles
-VOLUME /octobot/reference_profiles
 VOLUME /octobot/user
 
 # requires git to install requirements with git+https
