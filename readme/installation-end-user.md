@@ -15,7 +15,7 @@ Make sure you have git and docker installed on your linux machine
 ### Downloading the Package
 
 ```
-git clone https://github.com/techfreaque/OctoBot-2
+git clone https://github.com/techfreaque/octane
 ```
 
 ### Install/Start & Update the docker container
@@ -53,7 +53,7 @@ docker stop octobot
 Execute this command in a PowerShell window inside the folder you want your OctoBot instance to be.
 
 ```
-git clone https://github.com/techfreaque/OctoBot-2
+git clone https://github.com/techfreaque/octane
 ```
 
 #### Install / Update / Repair Package
