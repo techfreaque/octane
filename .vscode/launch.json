@@ -1,0 +1,282 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Start OctoBot",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "EXIT_BEFORE_TENTACLES_AUTO_REINSTALL": "True",
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel;${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager;${workspaceFolder}/octobot-packages/OctoBot-Commons;${workspaceFolder}/octobot-packages/OctoBot-Trading;${workspaceFolder}/octobot-packages/OctoBot-Backtesting;${workspaceFolder}/octobot-packages/OctoBot-evaluators;${workspaceFolder}/octobot-packages/OctoBot-Services;${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "program": "start.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [
+            ],
+            "justMyCode": false
+        },
+        {
+            "name": "Update octobot dev version (Windows only)",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "${workspaceFolder}/windows-update-DEVELOPER-installation.ps1",
+            "cwd": "${cwd}"
+        },
+        {
+            "name": "Update octobot ENDUSER version (Windows only)",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "${workspaceFolder}/windows-update-ENDUSER-installation.ps1",
+            "cwd": "${cwd}"
+        },
+        {
+            // run the following to be able to view profiler reports:
+            // pip install snakeviz
+            //
+            // snakeviz profiler/result.prof
+            "name": "Start OctoBot in profiler mode",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "EXIT_BEFORE_TENTACLES_AUTO_REINSTALL": "True",
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "module": "cProfile",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "-o", "${workspaceFolder}/profiler/result.prof", "start.py"
+            ],
+            "justMyCode": false
+        },
+        {
+            "name": "Create Tentacle Package ZIP",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "EXIT_BEFORE_TENTACLES_AUTO_REINSTALL": "True",
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "program": "start.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "tentacles",
+                "-p",
+                "tentacle_zips/any_platform.zip",
+                "-d",
+                "./tentacles"
+            ],
+            "justMyCode": false
+        },
+        {
+            "name": "Install Tentacle Package ZIP",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "EXIT_BEFORE_TENTACLES_AUTO_REINSTALL": "True",
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "program": "start.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "tentacles",
+                "--install",
+                "--all",
+                "--location",
+                "./output/tentacle_zips/any_platform.zip"
+            ],
+            "justMyCode": false
+        }, {
+            "name": "Start backtesting on binance_BTCUSDT_1m data file",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "EXIT_BEFORE_TENTACLES_AUTO_REINSTALL": "True",
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "program": "start.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--backtesting", "-nl", "-bf", "ExchangeBotSnapshotWithHistoryCollector_binance_BTCUSDT_1m.data"
+            ],
+            "justMyCode": false
+        },
+         {
+            "name": "Start backtesting with profiler on binance_BTCUSDT_1m data file",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "EXIT_BEFORE_TENTACLES_AUTO_REINSTALL": "True",
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "module": "cProfile",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "-o",
+                "${workspaceFolder}/profiler/result.prof",
+                "start.py",
+                "--backtesting",
+                "-nl",
+                "-bf",
+                "ExchangeBotSnapshotWithHistoryCollector_binance_BTCUSDT_1m.data"
+            ],
+            "justMyCode": false
+        },
+        {
+            "name": "View profiler results",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "${workspaceFolder}/profiler/start_view_profiler_result.ps1",
+            "cwd": "${workspaceFolder}"
+        }, 
+         {
+            "name": "Start Async-Channel tests",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/octobot-packages/Async-Channel",
+            "args": [
+                "-vv", "tests"
+            ],
+            "justMyCode": true
+        }, {
+            "name": "Start OctoBot-Commons tests",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/octobot-packages/OctoBot-Commons",
+            "args": [
+                "-vv", "tests"
+            ],
+            "justMyCode": true
+        }, {
+            "name": "Start OctoBot-Backtesting tests",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/octobot-packages/OctoBot-Backtesting",
+            "args": [
+                "-vv", "tests"
+            ],
+            "justMyCode": true
+        }, {
+            "name": "Start OctoBot-Trading/tests/exchanges/implementations/test_default_websocket_exchange tests",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/octobot-packages/OctoBot-Trading",
+            "args": [
+                "-vv", "tests/exchanges/implementations/test_default_websocket_exchange.py"
+            ],
+            "justMyCode": true
+        }, {
+            "name": "Start OctoBot-evaluators tests",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/octobot-packages/OctoBot-evaluators",
+            "args": [
+                "-vv", "tests"
+            ],
+            "justMyCode": true
+        }, {
+            "name": "Start OctoBot-Tentacles-Manager tests",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager",
+            "args": [
+                "-vv", "tests"
+            ],
+            "justMyCode": true
+        }, {
+            "name": "Start OctoBot-Services tests",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/octobot-packages/OctoBot-Services",
+            "args": [
+                "-vv", "tests"
+            ],
+            "justMyCode": true
+        }, {
+            "name": "Start OctoBot tests",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "-vv", "tests"
+            ],
+            "justMyCode": true
+        }, {
+            "name": "Start trading-backend tests",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/octobot-packages/trading-backend",
+            "args": [
+                "-vv", "tests"
+            ],
+            "justMyCode": true
+        }, {
+            "name": "Start OctoBot tentacles tests",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "module": "pytest",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "-vv", "tentacles"
+            ],
+            "justMyCode": true
+        }
+    ]
+}

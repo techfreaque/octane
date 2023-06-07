@@ -1,0 +1,6 @@
+bot1.my-domain.com {
+        handle {
+                reverse_proxy octobot: 5001
+        }
+
+}

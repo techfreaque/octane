@@ -1,0 +1,10 @@
+{
+  "version": "1.0.0",
+  "origin_package": "Matrix-Pro-Tentacles",
+  "tentacles": [
+    "RealTimeStrategyEvaluator"
+  ],
+  "tentacles-requirements": [
+    "TimeFrameStrategyEvaluator"
+  ]
+}

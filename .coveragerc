@@ -1,0 +1,13 @@
+[run]
+omit =
+    tests/*
+    backtesting/*
+    interfaces/*
+    services/*
+    tools/*
+    evaluator/Dispatchers/*
+    trading/exchanges/rest_exchanges/*
+    tentacles/*
+    setup.py
+    start.py
+        

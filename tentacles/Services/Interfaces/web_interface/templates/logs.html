@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+{% set active_page = "logs" %}
+{% import 'macros/tables.html' as m_tables %}
+{% import 'macros/flash_messages.html' as m_flash_messages %}
+
+{% macro extract_logs(logs_list) -%}
+    {% for log in logs_list %}
+        {{ m_tables.logs_tr(log) }}
+    {% endfor %}
+{%- endmacro %}
+
+{% block body %}
+<br>
+<div class="card">
+    <div class="card-header"><h2>Event logs</h2></div>
+    <div class="card-body">
+      {{ m_flash_messages.flash_messages() }}
+      <table id="logs_datatable" class="table table-striped table-responsive-sm">
+        <caption>Find the full current and previous OctoBot executions information in logs/OctoBot.log files.</caption>
+      <thead>
+        <tr>
+            <th scope="col">Time</th>
+            <th scope="col">Level</th>
+            <th scope="col">Source</th>
+            <th scope="col">Message</th>
+        </tr>
+      </thead>
+          <tbody>
+            {{ extract_logs(logs) }}
+          </tbody>
+      </table>
+    </div>
+</div>
+<div class="text-center mb-2">
+    <button id="export-logs"
+            data-url="{{url_for('export_logs')}}"
+            class="btn btn-outline-primary waves-effect export-logs-button"
+            data-toggle="tooltip" title="Export your logs into a zipped file to help fixing the issues you might have.">
+        <i class="fas fa-share-square"></i> <span class="d-none d-md-inline">Export event logs</span>
+    </button>
+</div>
+{% endblock %}
+
+{% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/components/logs.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+{% endblock additional_scripts %}

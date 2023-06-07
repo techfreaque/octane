@@ -1,0 +1,61 @@
+{
+  "buttons": {
+    "backToOctoBot": "Zurück zu OctoBot",
+    "restartBot": "Bot neu starten",
+    "softRefresh": "Sanfte Aktualisierung",
+    "stopBot": "Bot stoppen",
+    "updateBot": "Bot aktualisieren",
+    "logout": "Melden Sie sich vom Bot ab",
+    "closePairSelectorTooltip": "Klicken Sie hier, um die Exchange-Einstellungen zu schließen",
+    "colorModeSwitch": "Farbmodus"
+  },
+  "notFoundPage": {
+    "goHome": "zur Startseite",
+    "title": "Seite nicht gefunden"
+  },
+  "notificationCenter": {
+    "botErrorLog": "Bot-Fehlerprotokoll",
+    "botNotifications": "Bot-Benachrichtigungen"
+  },
+  "plotting": {
+    "switchtotheDisplaySettings": "Wechseln zu den Anzeigeeinstellungen",
+    "switchtotheTablesView": "Wechsle in die Tabellenansicht",
+    "switchtotheChartsView": "Wechsle in die Diagrammansicht",
+    "switchToThePieChartView": "Wechseln Sie zum Kreisdiagramm-Layout"
+  },
+  "profile": {
+    "profileInfoButtonToolTip": "Öffnen die Profileinstellungen",
+    "profileSettingsButtonToolTip": "Öffnen Sie die Exchange-Einstellungen für diese Strategie."
+  },
+  "pairExchangeSettings": {
+    "currentPairTooltip": "Währungen und Symbole auswählen und einrichten"
+  },
+  "title": {
+    "warning": "Warnung"
+  },
+  "description": {
+    "warning": "Sie sind dabei, alle ausgewählten Einstellungen zurückzusetzen. \nMöchtest du fortfahren?"
+  },
+  "Reset": {
+    "Selected": "Ausgewählte zurücksetzen"
+  },
+  "select": {
+    "all": "Wählen Sie Alle"
+  },
+  "pairSelector": {
+    "SaveAndRestart": "Speichern und neu starten"
+  },
+  "exchangeSelector": {
+    "exchangeAuthenticatedTooltip": "Ihre API-Schlüssel sind gültig.",
+    "exchangeNotAuthenticatedTooltip": "Ihre API-Schlüssel konnten nicht verifiziert werden. \nFür den echten Handel sind gültige API-Schlüssel erforderlich.",
+    "isTestedExchangeTooltip": "Diese Börse wird vollständig unterstützt und ist getestet.",
+    "isTestedExchangeSimulatedTooltip": "Diese Börse wurde nur im Simulationsmodus getestet.",
+    "isUntestedExchangeTooltip": "Diese Börse wurde noch nicht getestet und wird noch nicht offiziell unterstützt."
+  },
+  "progress": {
+    "backtestingProgressTooltip": "Backtest ist zu {{progressPercent}} % abgeschlossen"
+  },
+  "apps": {
+    "cantSelectStrategyModeTooltip": "Du kannst den Modus einer Nur-Lese-Strategie nicht ändern. \nKlone eine Strategie, um alle Einstellungen anzupassen."
+  }
+}

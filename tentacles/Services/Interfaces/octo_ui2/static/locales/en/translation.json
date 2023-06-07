@@ -1,0 +1,61 @@
+{
+  "buttons": {
+    "backToOctoBot": "Back to OctoBot",
+    "restartBot": "Restart Bot",
+    "softRefresh": "Soft Refresh",
+    "stopBot": "Stop Bot",
+    "updateBot": "Update Bot",
+    "logout": "Log out from Bot",
+    "closePairSelectorTooltip": "Click to close the exchange settings",
+    "colorModeSwitch": "Color Mode"
+  },
+  "notFoundPage": {
+    "goHome": "go home",
+    "title": "Page not found"
+  },
+  "notificationCenter": {
+    "botErrorLog": "Bot Error Log",
+    "botNotifications": "Bot Notifications"
+  },
+  "plotting": {
+    "switchtotheDisplaySettings": "Switch to the Display Settings",
+    "switchtotheTablesView": "Switch to the Tables View",
+    "switchtotheChartsView": "Switch to the Charts View",
+    "switchToThePieChartView": "Switch to the pie chart layout"
+  },
+  "profile": {
+    "profileInfoButtonToolTip": "Open the profile settings",
+    "profileSettingsButtonToolTip": "Open the exchange settings for this strategy."
+  },
+  "pairExchangeSettings": {
+    "currentPairTooltip": "Select and setup currencies and symbols"
+  },
+  "title": {
+    "warning": "Warning"
+  },
+  "description": {
+    "warning": "You are about to reset all selected settings. Do you want to continue?"
+  },
+  "Reset": {
+    "Selected": "Reset Selected"
+  },
+  "select": {
+    "all": "Select All"
+  },
+  "pairSelector": {
+    "SaveAndRestart": "Save And Restart"
+  },
+  "exchangeSelector": {
+    "exchangeAuthenticatedTooltip": "Your API keys are valid.",
+    "exchangeNotAuthenticatedTooltip": "Failed to verify your API keys. Valid API keys are required for real trading.",
+    "isTestedExchangeTooltip": "This exchange is fully supported and tested.",
+    "isTestedExchangeSimulatedTooltip": "This exchange is tested and supported in simulation mode only.",
+    "isUntestedExchangeTooltip": "This exchange has not been tested yet and is not officially supported."
+  },
+  "progress": {
+    "backtestingProgressTooltip": "Backtest is {{progressPercent}}% completed"
+  },
+  "apps": {
+    "cantSelectStrategyModeTooltip": "You cant change the mode on a read only strategy. Clone a strategy to customize all settings."
+  }
+}
