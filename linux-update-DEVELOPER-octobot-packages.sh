@@ -12,6 +12,8 @@ chmod u+x linux-docker_install_or_update.sh
 chmod u+x linux-start-octobot.sh
 chmod u+x linux-update-DEVELOPER-octobot-packages.sh
 chmod u+x linux-update-ENDUSER-octobot-packages.sh
+cp octobot/config/default_config.json user/config.json
+python -m venv .venv
 source .venv/bin/activate
 export PYTHONPATH=${PWD}/octobot-packages/Async-Channel:${PWD}/octobot-packages/OctoBot-Tentacles-Manager:${PWD}/octobot-packages/OctoBot-Commons:${PWD}/octobot-packages/OctoBot-Trading:${PWD}/octobot-packages/OctoBot-Backtesting:${PWD}/octobot-packages/OctoBot-evaluators:${PWD}/octobot-packages/OctoBot-Services:${PWD}/octobot-packages/trading-backend
 pip uninstall -y OctoBot-Backtesting OctoBot-Trading Async-Channel OctoBot-Evaluators OctoBot-Commons OctoBot-Tentacles-Manager OctoBot-Services
