@@ -535,19 +535,21 @@ class AbstractBlock:
             show_in_optimizer=False,
             parent_input_name=parent_input_name,
         )
-        plot_color = self.user_select_color(
-            default_color=default_plot_color,
-            title=plot_color_title,
-            parent_input_name=parent_input_name,
-        )
-        chart_location = None
-        if chart_location_title:
-            chart_location = self.user_select_chart_location(
-                default_chart_location=default_chart_location,
-                title=chart_location_title,
-                name=f"chart_{self.NAME}_{self.last_io_node_id}",
+        chart_location: str = None
+        plot_color: str = None
+        if plot_data:
+            plot_color = self.user_select_color(
+                default_color=default_plot_color,
+                title=plot_color_title,
                 parent_input_name=parent_input_name,
             )
+            if chart_location_title:
+                chart_location = self.user_select_chart_location(
+                    default_chart_location=default_chart_location,
+                    title=chart_location_title,
+                    name=f"chart_{self.NAME}_{self.last_io_node_id}",
+                    parent_input_name=parent_input_name,
+                )
         self.register_block_output_node(
             output_node_class=output_node_class,
             node_id=self.block_id,
