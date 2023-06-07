@@ -1,8 +1,0 @@
-{
-  "version": "1.0.0",
-  "origin_package": "Matrix-Strategy-Blocks",
-  "tentacles": [
-    "static_stop_loss_order"
-  ],
-  "tentacles-requirements": ["block_factory"]
-}
