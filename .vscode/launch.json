@@ -27,10 +27,10 @@
             "cwd": "${cwd}"
         },
         {
-            "name": "Update octobot ENDUSER version (Windows only)",
+            "name": "Update octobot Dev version (Windows only)",
             "type": "PowerShell",
             "request": "launch",
-            "script": "${workspaceFolder}/windows-update-ENDUSER-installation.ps1",
+            "script": "${workspaceFolder}/windows-install-repair-and-update-to-BETA-installation.ps1",
             "cwd": "${cwd}"
         },
         {
