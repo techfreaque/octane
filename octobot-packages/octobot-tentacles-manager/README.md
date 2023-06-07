@@ -1,2 +1,0 @@
-# OctoBot-Tentacles-Manager
-

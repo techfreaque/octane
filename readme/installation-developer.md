@@ -16,7 +16,7 @@
 ### download repo
 
 * Execute the following command in a power shell prompt inside the folder you want to have your OctoBot:\
-  `git clone https://github.com/techfreaque/OctoBot-2`
+  `git clone https://github.com/techfreaque/octane`
 
 ### create virtual environment
 
