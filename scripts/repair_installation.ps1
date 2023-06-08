@@ -17,10 +17,7 @@ Get-ChildItem *.c -Recurse | foreach { Remove-Item -Path $_.FullName }
 Get-ChildItem *.pyd -Recurse | foreach { Remove-Item -Path $_.FullName }
 
 cd ..
-cd octobot
-Get-ChildItem *.c -Recurse | foreach { Remove-Item -Path $_.FullName }
-Get-ChildItem *.pyd -Recurse | foreach { Remove-Item -Path $_.FullName }
-cd ..
+
 
 python -m venv .venv
 
