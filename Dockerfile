@@ -59,14 +59,14 @@ ARG TENTACLES_URL_TAG=""
 ENV TENTACLES_URL_TAG=$TENTACLES_URL_TAG
 ENV SHARE_YOUR_OCOBOT=
 
-WORKDIR /octobot-packages/octobot-packages/OctoBot/octobot
+WORKDIR /octobot
 # Import python dependencies
 
 # COPY --from=base /opt/venv /opt/venv
 # # Import built dependencies
 # COPY --from=base /opt/efs/build /opt/efs/build
 
-COPY /octobot-packages/octobot-packages/OctoBot/octobot/config /octobot/octobot/config
+# COPY /octobot-packages/octobot-packages/OctoBot/octobot/config /octobot/octobot/config
 COPY /octobot-packages/octobot-packages/OctoBot/docker-entrypoint.sh docker-entrypoint.sh
 
 RUN rm -rf /var/lib/apt/lists/* \
