@@ -30,6 +30,10 @@ try:
     import tentacles.StrategyBlocks.EvaluatorBlock.neural_net_classification.neural_nets.network_utils as block_network_utils
 except (ImportError, ModuleNotFoundError):
     block_network_utils = None
+try:
+    import tentacles.Services.Interfaces.octo_ui2.octo_ui2_plugin as octo_ui2_plugin
+except (ImportError, ModuleNotFoundError):
+    octo_ui2_plugin = None
 
 TIME_TO_START = 40
 
@@ -83,6 +87,7 @@ def register_bot_info_routes(plugin):
         real_time_strategies_active: bool = False
         any_exchange_is_futures: bool = False
         missing_tentacles = set()
+        ui_pro_installed: str = True if octo_ui2_plugin is not None else False
         profiles = {
             profile.profile_id: profile.as_dict()
             for profile in models.get_profiles(commons_enums.ProfileType.LIVE).values()
@@ -211,6 +216,7 @@ def register_bot_info_routes(plugin):
                         for s in symbols
                     ]
                 ),
+                "ui_pro_installed": ui_pro_installed,
                 "installed_blocks_info": installed_blocks_info,
                 "should_stop_training": should_stop_training,
                 "any_neural_net_active": any_neural_net_active,
