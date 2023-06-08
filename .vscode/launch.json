@@ -27,13 +27,6 @@
             "cwd": "${cwd}"
         },
         {
-            "name": "Update octobot Dev version (Windows only)",
-            "type": "PowerShell",
-            "request": "launch",
-            "script": "${workspaceFolder}/windows-install-repair-and-update-to-BETA-installation.ps1",
-            "cwd": "${cwd}"
-        },
-        {
             // run the following to be able to view profiler reports:
             // pip install snakeviz
             //

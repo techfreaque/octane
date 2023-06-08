@@ -37,3 +37,4 @@ build/
 Octane_install.zip
 /tentacles
 docker-compose.yml
+.gitpod.yml

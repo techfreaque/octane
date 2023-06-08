@@ -32,4 +32,7 @@ cd octobot-packages/OctoBot-evaluators
 pip install -e ./
 cd ..
 cd ..
+cd octobot-packages/OctoBot
 pip install -e ./
+cd ..
+cd ..

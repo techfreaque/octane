@@ -27,7 +27,7 @@ python -m venv .venv
 New-Item -Path "./" -Name "user" -ItemType "directory"  -ErrorAction SilentlyContinue
 
 
-$sourceFile = 'octobot/config/default_config.json'
+$sourceFile = 'octobot-packages/OctoBot/octobot/config/default_config.json'
 $destinationFile = 'user/config.json'
 if (-not (test-path $destinationFile))
 {

@@ -1,1 +1,0 @@
-SemiAutoTradingMode execute trades by clicking a button

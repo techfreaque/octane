@@ -7,7 +7,7 @@ VOLUME /octobot/user
 
 # requires git to install requirements with git+https
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential git gcc libffi-dev rsync libssl-dev libxml2-dev libxslt1-dev libxslt-dev libjpeg62-turbo-dev zlib1g-dev \
+    && apt-get install -y --no-install-recommends curl libxslt-dev libxcb-xinput0 libjpeg62-turbo-dev zlib1g-dev libblas-dev liblapack-dev libatlas-base-dev libopenjp2-7 libtiff-dev build-essential git gcc libffi-dev rsync libssl-dev libxml2-dev libxslt1-dev libxslt-dev libjpeg62-turbo-dev zlib1g-dev \
     && python -m venv /opt/venv
 
 # skip cryptography rust compilation (required for armv7 builds)
@@ -22,8 +22,8 @@ WORKDIR /octobot-packages
 RUN cp .env /octobot/.env
 
 RUN pip install -U setuptools wheel pip>=20.0.0
-RUN pip install --prefer-binary -r requirements.txt
-RUN pip install --prefer-binary -r strategy_maker_requirements.txt
+RUN pip install --prefer-binary -r /octobot-packages/Octoot/requirements.txt
+RUN pip install --prefer-binary -r /octobot-packages/Octoot/strategy_maker_requirements.txt
 RUN pip install --prefer-binary -r octobot-packages/Async-Channel/requirements.txt
 RUN pip install --prefer-binary -r octobot-packages/OctoBot-Backtesting/requirements.txt
 RUN pip install --prefer-binary -r octobot-packages/OctoBot-Commons/requirements.txt
@@ -50,7 +50,7 @@ RUN pip install ./
 WORKDIR /octobot-packages/octobot-packages/OctoBot-evaluators
 RUN pip install ./
 
-WORKDIR /octobot-packages
+WORKDIR /octobot-packages/octobot-packages/OctoBot
 RUN python setup.py install
 
 # FROM python:3.11-slim-buster
@@ -59,7 +59,7 @@ ARG TENTACLES_URL_TAG=""
 ENV TENTACLES_URL_TAG=$TENTACLES_URL_TAG
 ENV SHARE_YOUR_OCOBOT=
 
-WORKDIR /octobot
+WORKDIR /octobot-packages/octobot-packages/Octobot/octobot
 # Import python dependencies
 
 # COPY --from=base /opt/venv /opt/venv
@@ -67,14 +67,12 @@ WORKDIR /octobot
 # COPY --from=base /opt/efs/build /opt/efs/build
 
 COPY octobot/config /octobot/octobot/config
-COPY docker-entrypoint.sh docker-entrypoint.sh
+COPY /octobot-packages/octobot-packages/Octobot/docker-entrypoint.sh docker-entrypoint.sh
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl libxslt-dev libxcb-xinput0 libjpeg62-turbo-dev zlib1g-dev libblas-dev liblapack-dev libatlas-base-dev libopenjp2-7 libtiff-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && ln -s /opt/venv/bin/OctoBot OctoBot # Make sure we use the virtualenv
+RUN rm -rf /var/lib/apt/lists/* \
+    && ln -s /opt/venv/bin/Octane Octane # Make sure we use the virtualenv
 RUN chmod +x docker-entrypoint.sh
-RUN chmod +x OctoBot
+RUN chmod +x Octane
 
 EXPOSE 5001
 
