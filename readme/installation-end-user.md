@@ -24,7 +24,7 @@ git clone https://github.com/techfreaque/octane
 * execute the following commands in a shell, to install/update and start the docker container:
 
 ```
-cd OctoBot-2
+cd octane
 chmod u+x linux-docker_install_or_update.sh # only on the first run
 ./linux-docker_install_or_update.sh
 ```

@@ -40,7 +40,7 @@
 
 #### Start with VSCode
 
-* Or open the OctoBot-2 folder with VSCode and press F5 on your keyboard to start OctoBot
+* Or open the octane folder with VSCode and press F5 on your keyboard to start OctoBot
 
 ### Use the latest nightly version (optional)
 
