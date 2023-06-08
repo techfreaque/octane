@@ -20,10 +20,11 @@
             "justMyCode": false
         },
         {
-            "name": "Update octobot dev version (Windows only)",
+
+            "name": "Update octobot Dev version (Windows only)",
             "type": "PowerShell",
             "request": "launch",
-            "script": "${workspaceFolder}/windows-update-DEVELOPER-installation.ps1",
+            "script": "${workspaceFolder}/windows-install-repair-and-update-to-BETA-installation.ps1",
             "cwd": "${cwd}"
         },
         {
