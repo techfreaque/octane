@@ -14,6 +14,6 @@ pip install -r octobot-packages/OctoBot-Tentacles-Manager/dev_requirements.txt
 pip install -r octobot-packages/OctoBot-Trading/dev_requirements.txt
 pip install -r octobot-packages/trading-backend/dev_requirements.txt
 pip install -r octobot-packages/Async-Channel/dev_requirements.txt
-pip install -r dev_requirements.txt
+pip install -r octobot-packages/OctoBot/dev_requirements.txt
 
 scripts\build-and-install-octobot-tentacles.ps1

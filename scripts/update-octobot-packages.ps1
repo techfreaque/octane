@@ -1,9 +1,9 @@
 .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -U wheel
-pip install -r strategy_maker_requirements.txt
+pip install -r octobot-packages/OctoBot/strategy_maker_requirements.txt
 
-pip install -r requirements.txt
+pip install -r octobot-packages/OctoBot/requirements.txt
 pip install -r octobot-packages/Async-Channel/requirements.txt
 pip install -r octobot-packages/OctoBot-Backtesting/requirements.txt
 pip install -r octobot-packages/OctoBot-Commons/requirements.txt

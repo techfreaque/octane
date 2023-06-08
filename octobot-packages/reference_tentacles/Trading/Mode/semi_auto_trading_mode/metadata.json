@@ -1,6 +1,0 @@
-{
-  "version": "1.0.2",
-  "origin_package": "Semi-Auto-Trading-Mode",
-  "tentacles": ["SemiAutoTradingMode"],
-  "tentacles-requirements": ["TimeFrameStrategyEvaluator", "basic_tentacles", "pro_tentacles"]
-}
