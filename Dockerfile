@@ -66,7 +66,7 @@ WORKDIR /octobot-packages/octobot-packages/OctoBot/octobot
 # # Import built dependencies
 # COPY --from=base /opt/efs/build /opt/efs/build
 
-COPY octobot/config /octobot/octobot/config
+COPY /octobot-packages/octobot-packages/OctoBot/octobot/config /octobot/octobot/config
 COPY /octobot-packages/octobot-packages/OctoBot/docker-entrypoint.sh docker-entrypoint.sh
 
 RUN rm -rf /var/lib/apt/lists/* \
