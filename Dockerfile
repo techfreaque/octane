@@ -22,8 +22,8 @@ WORKDIR /octobot-packages
 RUN cp .env /octobot/.env
 
 RUN pip install -U setuptools wheel pip>=20.0.0
-RUN pip install --prefer-binary -r /octobot-packages/Octoot/requirements.txt
-RUN pip install --prefer-binary -r /octobot-packages/Octoot/strategy_maker_requirements.txt
+RUN pip install --prefer-binary -r octobot-packages/OctoBot/requirements.txt
+RUN pip install --prefer-binary -r octobot-packages/OctoBot/strategy_maker_requirements.txt
 RUN pip install --prefer-binary -r octobot-packages/Async-Channel/requirements.txt
 RUN pip install --prefer-binary -r octobot-packages/OctoBot-Backtesting/requirements.txt
 RUN pip install --prefer-binary -r octobot-packages/OctoBot-Commons/requirements.txt
