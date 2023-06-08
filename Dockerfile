@@ -17,40 +17,40 @@ ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
 # Make sure we use the virtualenv:
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY . /octobot-packages
+COPY . .
 WORKDIR /octobot-packages
-RUN cp .env /octobot/.env
+RUN cp /.env /octobot/.env
 
 RUN pip install -U setuptools wheel pip>=20.0.0
-RUN pip install --prefer-binary -r octobot-packages/OctoBot/requirements.txt
-RUN pip install --prefer-binary -r octobot-packages/OctoBot/strategy_maker_requirements.txt
-RUN pip install --prefer-binary -r octobot-packages/Async-Channel/requirements.txt
-RUN pip install --prefer-binary -r octobot-packages/OctoBot-Backtesting/requirements.txt
-RUN pip install --prefer-binary -r octobot-packages/OctoBot-Commons/requirements.txt
-RUN pip install --prefer-binary -r octobot-packages/OctoBot-evaluators/requirements.txt
-RUN pip install --prefer-binary -r octobot-packages/OctoBot-Services/requirements.txt
-RUN pip install --prefer-binary -r octobot-packages/OctoBot-Tentacles-Manager/requirements.txt
-RUN pip install --prefer-binary -r octobot-packages/OctoBot-Trading/requirements.txt
-RUN pip install --prefer-binary -r octobot-packages/trading-backend/requirements.txt
+RUN pip install --prefer-binary -r OctoBot/requirements.txt
+RUN pip install --prefer-binary -r OctoBot/strategy_maker_requirements.txt
+RUN pip install --prefer-binary -r Async-Channel/requirements.txt
+RUN pip install --prefer-binary -r OctoBot-Backtesting/requirements.txt
+RUN pip install --prefer-binary -r OctoBot-Commons/requirements.txt
+RUN pip install --prefer-binary -r OctoBot-evaluators/requirements.txt
+RUN pip install --prefer-binary -r OctoBot-Services/requirements.txt
+RUN pip install --prefer-binary -r OctoBot-Tentacles-Manager/requirements.txt
+RUN pip install --prefer-binary -r OctoBot-Trading/requirements.txt
+RUN pip install --prefer-binary -r trading-backend/requirements.txt
 
-WORKDIR /octobot-packages/octobot-packages/Async-Channel
+WORKDIR /octobot-packages/Async-Channel
 RUN pip install ./
-WORKDIR /octobot-packages/octobot-packages/trading-backend
+WORKDIR /octobot-packages/trading-backend
 RUN pip install ./
-WORKDIR /octobot-packages/octobot-packages/OctoBot-Commons
+WORKDIR /octobot-packages/OctoBot-Commons
 RUN pip install ./
-WORKDIR /octobot-packages/octobot-packages/OctoBot-Tentacles-Manager
+WORKDIR /octobot-packages/OctoBot-Tentacles-Manager
 RUN pip install ./
-WORKDIR /octobot-packages/octobot-packages/OctoBot-Backtesting
+WORKDIR /octobot-packages/OctoBot-Backtesting
 RUN pip install ./
-WORKDIR /octobot-packages/octobot-packages/OctoBot-Trading
+WORKDIR /octobot-packages/OctoBot-Trading
 RUN pip install ./
-WORKDIR /octobot-packages/octobot-packages/OctoBot-Services
+WORKDIR /octobot-packages/OctoBot-Services
 RUN pip install ./
-WORKDIR /octobot-packages/octobot-packages/OctoBot-evaluators
+WORKDIR /octobot-packages/OctoBot-evaluators
 RUN pip install ./
 
-WORKDIR /octobot-packages/octobot-packages/OctoBot
+WORKDIR /octobot-packages/OctoBot
 RUN python setup.py install
 
 # FROM python:3.11-slim-buster
@@ -66,8 +66,8 @@ WORKDIR /octobot
 # # Import built dependencies
 # COPY --from=base /opt/efs/build /opt/efs/build
 
-# COPY /octobot-packages/octobot-packages/OctoBot/octobot/config /octobot/octobot/config
-COPY /octobot-packages/octobot-packages/OctoBot/docker-entrypoint.sh docker-entrypoint.sh
+# COPY /octobot-packages/OctoBot/octobot/config /octobot/octobot/config
+COPY /octobot-packages/OctoBot/docker-entrypoint.sh docker-entrypoint.sh
 
 RUN rm -rf /var/lib/apt/lists/* \
     && ln -s /opt/venv/bin/Octane Octane # Make sure we use the virtualenv

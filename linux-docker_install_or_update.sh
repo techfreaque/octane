@@ -4,7 +4,7 @@ timedatectl set-ntp true
 
 git stash
 git pull
-chmod u+x linux-docker_install_or_update.sh
+chmod +x linux-docker_install_or_update.sh
 docker build --tag octobot .
 
 docker stop octobot1
