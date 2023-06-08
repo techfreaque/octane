@@ -3,6 +3,11 @@ git pull
 git checkout main
 git pull
 
+cp ./octobot-packages/OctoBot/octobot/config/default_config.json user/config.json
+
+python -m venv .venv
+source .venv/bin/activate
+
 chmod u+x scripts/update-octobot-packages.sh
 chmod u+x scripts/build-and-install-octobot-tentacles.sh
 chmod u+x scripts/cythonize-octobot-packages.sh
