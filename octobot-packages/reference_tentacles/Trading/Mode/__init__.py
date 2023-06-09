@@ -82,15 +82,6 @@ if check_tentacle_version('1.2.0', 'trading_view_signals_trading_mode', 'OctoBot
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.2.0', 'trading_view_signals_trading_pro_mode', 'OctoBot-Default-Tentacles'):
-    try:
-        from .trading_view_signals_trading_pro_mode import *
-    except Exception as e:
-        get_logger('TentacleLoader').error(f'Error when loading trading_view_signals_trading_pro_mode: '
-                                           f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
-                                           f'error persists, try reinstalling your tentacles via '
-                                           f'"python start.py tentacles --install --all".')
-
 if check_tentacle_version('0.7.1', 'arbitrage_pro_trading_mode', 'Matrix-Strategies'):
     try:
         from .arbitrage_pro_trading_mode import *

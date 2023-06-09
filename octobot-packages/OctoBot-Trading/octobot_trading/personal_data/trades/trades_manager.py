@@ -65,9 +65,9 @@ class TradesManager(util.Initializable):
             self.trades[trade.trade_id] = trade
             self._check_trades_size()
 
-    def has_closing_trade_with_order_id(self, order_id) -> bool:
-        for trade in self.trades.values():
-            if trade.origin_order_id == order_id and trade.is_closing_order:
+    def has_closing_trade_with_exchange_order_id(self, exchange_order_id) -> bool:
+        for trade in self.get_trades(exchange_order_id=exchange_order_id):
+            if trade.is_closing_order:
                 return True
         return False
 
@@ -86,7 +86,7 @@ class TradesManager(util.Initializable):
         return total_fees
 
     def get_completed_trades_pnl(self, trades=None) -> list:
-        trades = trades or self.trades.values()
+        trades = trades or self.get_trades()
         trades_by_order_id = {
             trade.origin_order_id: trade
             for trade in trades
@@ -110,6 +110,16 @@ class TradesManager(util.Initializable):
 
     def get_trade(self, trade_id):
         return self.trades[trade_id]
+
+    def get_trades(self, origin_order_id=None, exchange_order_id=None):
+        return [
+            trade
+            for trade in self.trades.values()
+            if (
+                (not origin_order_id or trade.origin_order_id == origin_order_id)
+                and (not exchange_order_id or trade.exchange_order_id == exchange_order_id)
+            )
+        ]
 
     # private
     def _check_trades_size(self):
