@@ -16,9 +16,9 @@
 import octobot_trading.personal_data as personal_data
 
 
-def create_trade(trader, trade_id, is_closing_order, origin_order_id):
+def create_trade(trader, exchange_order_id, is_closing_order, origin_order_id):
     trade = personal_data.Trade(trader)
-    trade.trade_id = trade_id
+    trade.exchange_order_id = exchange_order_id
     trade.is_closing_order = is_closing_order
     trade.origin_order_id = origin_order_id
     return trade

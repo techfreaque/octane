@@ -69,7 +69,7 @@ def register_tentacles_config_routes(plugin):
                     ]
             except IndexError:
                 basic_utils.get_octo_ui_2_logger().error(
-                    f"Failed to load config for {clean_tentacle_name}"
+                    f"{clean_tentacle_name} doesnt seem to have a config"
                 )
             except Exception as error:
                 basic_utils.get_octo_ui_2_logger().exception(

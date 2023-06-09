@@ -186,7 +186,6 @@ def _format_order(order, exchange_manager):
                 OrdersStorage.sanitize_for_storage(order.exchange_creation_params),
             enums.StoredOrdersAttr.TRADER_CREATION_KWARGS.value:
                 OrdersStorage.sanitize_for_storage(order.trader_creation_kwargs),
-            enums.StoredOrdersAttr.SHARED_SIGNAL_ORDER_ID.value: order.shared_signal_order_id,
             enums.StoredOrdersAttr.HAS_BEEN_BUNDLED.value: order.has_been_bundled,
             enums.StoredOrdersAttr.ENTRIES.value: order.associated_entry_ids,
             enums.StoredOrdersAttr.GROUP.value: _get_group_dict(order),
@@ -212,9 +211,7 @@ def _format_order_update(exchange_manager, order_dict, update_type, update_time)
     details = None
     try:
         details = _format_order(
-            exchange_manager.exchange_personal_data.orders_manager.get_order(
-                order_dict[enums.ExchangeConstantsOrderColumns.ID.value]
-            ),
+            exchange_manager.exchange_personal_data.orders_manager.get_order(order_id),
             exchange_manager
         )
     except KeyError:

@@ -1,8 +1,2 @@
-
-# Drakkar-Software requirements
-# Async-Channel>=2.1, <2.2
-# OctoBot-Commons>=1.8, <1.9
-# OctoBot-Tentacles-Manager>=2.8, <2.9
-
 # async http requests
 aiohttp>=3.8.1

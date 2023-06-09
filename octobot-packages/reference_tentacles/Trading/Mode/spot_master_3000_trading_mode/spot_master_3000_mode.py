@@ -1,3 +1,4 @@
+import typing
 import octobot_commons.logging as logging
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes.script_keywords.context_management as context_management
@@ -35,6 +36,11 @@ class SpotMaster3000Mode(abstract_mode_base.AbstractBaseMode):
 
 
 class SpotMaster3000ModeProducer(spot_master_3000_trading_mode.SpotMaster3000Making):
-    async def make_strategy(self, ctx: context_management.Context, action: str):
+    async def make_strategy(
+        self,
+        ctx: context_management.Context,
+        action: str,
+        action_data: typing.Optional[dict] = None,
+    ):
         self.action = action
         await self.execute_rebalancing_strategy(ctx)
