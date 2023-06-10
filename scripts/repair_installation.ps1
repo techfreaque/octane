@@ -31,8 +31,11 @@ if (-not (test-path $destinationFile))
   $opts = @{'path' = $sourceFile; 'destination' = $destinationFile; 'confirm' = $false}
   copy-item @opts
 }
-# else
-# {
-#    $opts = @{'path' = $sourceFile; 'destination' = $destinationFile; 'confirm' = $true}
-#    copy-item @opts
-# }
+
+$sourceFile = '.env-example-windows'
+$destinationFile = '.env'
+if (-not (test-path $destinationFile))
+{
+  $opts = @{'path' = $sourceFile; 'destination' = $destinationFile; 'confirm' = $false}
+  copy-item @opts
+}
