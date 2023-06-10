@@ -57,5 +57,8 @@
   },
   "apps": {
     "cantSelectStrategyModeTooltip": "No puede cambiar el modo en una estrategia de solo lectura. \nClona una estrategia para personalizar todos los ajustes."
+  },
+  "modal": {
+    "powerMenuTooltip": "Menú de energía"
   }
 }

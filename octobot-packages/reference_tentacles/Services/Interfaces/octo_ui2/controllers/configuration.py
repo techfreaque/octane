@@ -55,16 +55,14 @@ def register_bot_config_routes(plugin):
                     request_data = flask.request.get_json()
                     return util.get_rest_reply(
                         flask.jsonify(
-                            config.save_ui_config(
-                                request_data, octo_ui2_plugin.OctoUi2Plugin
-                            )
+                            config.save_ui_config(request_data, octo_ui2_plugin.O_UI)
                         )
                     )
                 except Exception as e:
                     basic_utils.get_octo_ui_2_logger().exception(e)
                     return util.get_rest_reply(str(e), 500)
             return util.get_rest_reply("You are not logged in", 500)
-        return config.get_ui_config(octo_ui2_plugin.OctoUi2Plugin)
+        return config.get_ui_config(octo_ui2_plugin.O_UI)
 
     route = "/bot-config"
     if cross_origin := import_cross_origin_if_enabled():

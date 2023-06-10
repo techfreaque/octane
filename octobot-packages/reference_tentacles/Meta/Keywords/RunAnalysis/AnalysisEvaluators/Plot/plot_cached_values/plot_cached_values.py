@@ -43,52 +43,89 @@ class PlotCachedValues(abstract_analysis_evaluator.AnalysisEvaluator):
         ):
             main_plotted_element = run_data.get_plotted_element("main-chart")
             sub_plotted_element = run_data.get_plotted_element("sub-chart")
-            cached_values_metadata = await run_data.get_cached_values(
-                run_data.ctx.symbol
-            )
-            for cached_value_metadata in cached_values_metadata:
-                if (
-                    cached_value_metadata.get(
-                        commons_enums.DBRows.TIME_FRAME.value, None
+            symbols_db = run_data.get_symbols_db(run_data.ctx.symbol)
+            symbols_tables = await symbols_db.tables()
+            for table_name in symbols_tables:
+                cached_values_metadata = await symbols_db.all(table_name)
+                if table_name == commons_enums.DBTables.CACHE_SOURCE.value:
+                    plot_value_from_cache_storage(
+                        run_data=run_data,
+                        cached_values_metadata=cached_values_metadata,
+                        main_plotted_element=main_plotted_element,
+                        sub_plotted_element=sub_plotted_element,
                     )
-                    == run_data.ctx.time_frame
-                ):
-                    try:
-                        chart = cached_value_metadata[
-                            commons_enums.DisplayedElementTypes.CHART.value
-                        ]
-                        plotted_element = None
-                        if chart == "main-chart":
+                elif table_name != commons_enums.DBTables.CANDLES_SOURCE.value:
+                    plotted_element = None
+                    if (
+                        cached_values_metadata is not None
+                        and len(cached_values_metadata)
+                        and (
+                            cached_values_metadata[0].get(
+                                commons_enums.DBRows.TIME_FRAME.value, None
+                            )
+                            == run_data.ctx.time_frame
+                        )
+                    ):
+                        if cached_values_metadata[0]["chart"] == "main-chart":
                             plotted_element = main_plotted_element
-                        elif chart == "sub-chart":
+                        elif cached_values_metadata[0]["chart"] == "sub-chart":
                             plotted_element = sub_plotted_element
                         else:
-                            continue
-                        x_shift = cached_value_metadata["x_shift"]
-                        values = sorted(
-                            await _get_cached_values_to_display(
-                                run_data.logger,
-                                cached_value_metadata,
-                                x_shift,
-                                run_data.start_time,
-                                run_data.end_time,
-                            ),
-                            key=lambda x: x[commons_enums.PlotAttributes.X.value],
+                            return
+                        plot_from_standard_data(
+                            data_set=cached_values_metadata,
+                            plotted_element=plotted_element,
+                            title=table_name,
                         )
-                        if values and len(values):
-                            values[0] = {**cached_value_metadata, **values[0]}
-                            plot_from_standard_data(
-                                data_set=values,
-                                plotted_element=plotted_element,
-                                title=cached_value_metadata["title"],
-                            )
-                    except Exception as error:
-                        run_data.logger.exception(
-                            error,
-                            True,
-                            "Failed to plot cached values for "
-                            f"{cached_value_metadata.get('title', '')}",
-                        )
+
+
+async def plot_value_from_cache_storage(
+    run_data: base_data_provider.RunAnalysisBaseDataGenerator,
+    cached_values_metadata,
+    main_plotted_element,
+    sub_plotted_element,
+):
+    for cached_value_metadata in cached_values_metadata:
+        if (
+            cached_value_metadata.get(commons_enums.DBRows.TIME_FRAME.value, None)
+            == run_data.ctx.time_frame
+        ):
+            try:
+                chart = cached_value_metadata[
+                    commons_enums.DisplayedElementTypes.CHART.value
+                ]
+                plotted_element = None
+                if chart == "main-chart":
+                    plotted_element = main_plotted_element
+                elif chart == "sub-chart":
+                    plotted_element = sub_plotted_element
+                else:
+                    continue
+                x_shift = cached_value_metadata["x_shift"]
+                values = sorted(
+                    await _get_cached_values_to_display(
+                        run_data.logger,
+                        cached_value_metadata,
+                        x_shift,
+                        run_data.start_time,
+                        run_data.end_time,
+                    ),
+                    key=lambda x: x[commons_enums.PlotAttributes.X.value],
+                )
+                if values and len(values):
+                    values[0] = {**cached_value_metadata, **values[0]}
+                    plot_from_standard_data(
+                        data_set=values,
+                        plotted_element=plotted_element,
+                        title=cached_value_metadata["title"],
+                    )
+            except Exception as error:
+                run_data.logger.exception(
+                    error,
+                    True,
+                    "Failed to plot cached values for "
+                    f"{cached_value_metadata.get('title', '')}",
+                )
 
 
 async def _get_cached_values_to_display(

@@ -1,8 +1,8 @@
 {
   "version": "0.9.22",
-  "origin_package": "Matrix-O-UI",
+  "origin_package": "Octane-Default-Tentacles",
   "tentacles": [
-    "OctoUi2Plugin"
+    "O_UI"
   ],
   "tentacles-requirements": [
     "RunAnalysis", "RunAnalysisModePlugin"

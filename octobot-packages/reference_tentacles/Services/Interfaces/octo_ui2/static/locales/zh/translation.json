@@ -57,5 +57,8 @@
   },
   "apps": {
     "cantSelectStrategyModeTooltip": "您不能更改只读策略的模式。\n克隆策略以自定义所有设置。"
+  },
+  "modal": {
+    "powerMenuTooltip": "电源菜单"
   }
 }
