@@ -5,7 +5,7 @@ timedatectl set-ntp true
 git stash
 git pull
 chmod +x linux-docker_install_or_update.sh
-cp .env-example-unix .env
+cp -n .env-example-unix .env
 docker build --tag octobot .
 
 docker stop octobot1

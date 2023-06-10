@@ -13,8 +13,8 @@ chmod u+x linux-start-octobot.sh
 chmod u+x linux-update-DEVELOPER-octobot-packages.sh
 chmod u+x linux-update-ENDUSER-octobot-packages.sh
 
-cp ./octobot-packages/OctoBot/octobot/config/default_config.json user/config.json
-cp .env-example-unix .env
+cp -n ./octobot-packages/OctoBot/octobot/config/default_config.json user/config.json
+cp -n .env-example-unix .env
 
 
 python -m venv .venv
