@@ -4,6 +4,7 @@ git checkout main
 git pull
 
 cp ./octobot-packages/OctoBot/octobot/config/default_config.json user/config.json
+cp .env-example-unix .env
 
 python -m venv .venv
 source .venv/bin/activate
