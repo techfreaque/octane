@@ -1,18 +1,11 @@
-import abc
 import os
-import shutil
-import aiohttp
 import flask
-import jsonschema
 
 import octobot_commons.authentication as authentication
 import octobot_commons.profiles as profiles
 import octobot_commons.constants as constants
-import octobot_commons.logging as bot_logging
-import octobot_commons.errors as errors
-from octobot_commons.profiles.profile import Profile
+
 import octobot_commons.profiles.profile_sharing as profile_sharing
-import octobot_services.constants as services_constants
 import octobot_services.interfaces.util as interfaces_util
 
 import tentacles.Services.Interfaces.web_interface.util as util
