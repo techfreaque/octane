@@ -120,12 +120,13 @@ def get_installed_tentacles_modules_dict() -> dict:
             app_dict["is_owner"] = not app_dict["updated_by_distro"]
             app_dict["categories"] = [category_title]
             tentacle_folder = app['tentacle_path'].split('/')[-1]
-            block_info = installed_blocks_info.get(tentacle_folder, {}).get(
-                package_id
-            )
-            if block_info:
-                app_dict["title"] = block_info["title"]
-                app_dict["description"] = block_info["description"]
+            if installed_blocks_info:
+                block_info = installed_blocks_info.get(tentacle_folder, {}).get(
+                    package_id
+                )
+                if block_info:
+                    app_dict["title"] = block_info["title"]
+                    app_dict["description"] = block_info["description"]
 
     if CATEGORY_TRADING_MODE not in all_apps:
         print(f"no trading mode found in installedTentaclesInfo ({tentacles_info})")
