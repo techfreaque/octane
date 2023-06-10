@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "origin_package": "Matrix-Tentacles",
+  "origin_package": "Octane-Default-Tentacles",
   "tentacles": [
     "historical_wins_and_losses"
   ],

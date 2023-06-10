@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "origin_package": "Matrix-Strategy-Blocks",
+  "origin_package": "Octane-Strategy-Blocks",
   "tentacles": [
     "indicator_keywords"
   ],

@@ -57,5 +57,8 @@
   },
   "apps": {
     "cantSelectStrategyModeTooltip": "Du kannst den Modus einer Nur-Lese-Strategie nicht ändern. \nKlone eine Strategie, um alle Einstellungen anzupassen."
+  },
+  "modal": {
+    "powerMenuTooltip": "Power-Menü"
   }
 }

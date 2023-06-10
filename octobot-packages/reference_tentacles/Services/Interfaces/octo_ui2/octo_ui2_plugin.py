@@ -27,7 +27,7 @@ from .controllers import (
 )
 
 
-class OctoUi2Plugin(plugins.AbstractWebInterfacePlugin):
+class O_UI(plugins.AbstractWebInterfacePlugin):
     NAME = "octo_ui2"
     PLUGIN_ROOT_FOLDER = os.path.dirname(os.path.abspath(__file__))
 
@@ -89,5 +89,5 @@ class OctoUi2Plugin(plugins.AbstractWebInterfacePlugin):
 
 
 optimization_campaign.register_optimization_campaign_name_proxy(
-    OctoUi2Plugin.optimization_campaign_name
+    O_UI.optimization_campaign_name
 )

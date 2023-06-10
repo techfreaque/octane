@@ -57,5 +57,8 @@
   },
   "apps": {
     "cantSelectStrategyModeTooltip": "You cant change the mode on a read only strategy. Clone a strategy to customize all settings."
+  },
+  "modal": {
+    "powerMenuTooltip": "Power Menu"
   }
 }
