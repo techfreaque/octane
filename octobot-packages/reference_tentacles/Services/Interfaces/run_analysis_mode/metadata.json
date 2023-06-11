@@ -1,5 +1,5 @@
 {
-  "version": "0.6.2",
+  "version": "0.9.23",
   "origin_package": "Octane-Default-Tentacles",
   "tentacles": [
     "RunAnalysisModePlugin"
