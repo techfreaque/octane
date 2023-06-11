@@ -48,7 +48,7 @@ class PlotCachedValues(abstract_analysis_evaluator.AnalysisEvaluator):
             for table_name in symbols_tables:
                 cached_values_metadata = await symbols_db.all(table_name)
                 if table_name == commons_enums.DBTables.CACHE_SOURCE.value:
-                    plot_value_from_cache_storage(
+                    await plot_value_from_cache_storage(
                         run_data=run_data,
                         cached_values_metadata=cached_values_metadata,
                         main_plotted_element=main_plotted_element,
