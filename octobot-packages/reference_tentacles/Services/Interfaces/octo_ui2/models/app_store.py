@@ -101,7 +101,9 @@ def get_installed_tentacles_modules_dict() -> dict:
             installed_blocks_info,
         ) = block_factory.BlockFactory.get_installed_blocks_by_type()
     for app_key, app in tentacles_info.items():
-        category_title = CATEGORY_KEY_TO_TITLE.get(app["tentacle_path"])
+        category_title = CATEGORY_KEY_TO_TITLE.get(
+            app["tentacle_path"].replace("\\", "/")
+        )
         if category_title:
             if category_title not in all_apps:
                 all_apps[category_title] = {}
@@ -119,7 +121,7 @@ def get_installed_tentacles_modules_dict() -> dict:
             )
             app_dict["is_owner"] = not app_dict["updated_by_distro"]
             app_dict["categories"] = [category_title]
-            tentacle_folder = app['tentacle_path'].split('/')[-1]
+            tentacle_folder = app["tentacle_path"].split("/")[-1]
             if installed_blocks_info:
                 block_info = installed_blocks_info.get(tentacle_folder, {}).get(
                     package_id
