@@ -60,6 +60,21 @@ CATEGORY_KEY_TO_TITLE = {
     # "tentacles/Backtesting/collectors/exchanges": CATEGORY_BACKTESTING_COLLECTORS,
 }
 
+DISTRO_UPDATED_PACKAGES = ("OctoBot-Default-Tentacles", "Octane-Default-Tentacles")
+DISTRO_UPDATED_APPS = (
+    "arbitrage_trading",
+    "copy_trading",
+    "daily_trading",
+    "dip_analyser",
+    "gpt_trading",
+    "grid_trading",
+    "default",
+    "signal_trading",
+    "simple_dca",
+    "tradingview_trading",
+    "staggered_orders_trading",
+)
+
 
 def get_installed_tentacles_modules_dict() -> dict:
     tentacles_info = {
@@ -82,7 +97,6 @@ def get_installed_tentacles_modules_dict() -> dict:
         }
         for _tentacle in loaders.get_tentacle_classes().values()
     }
-    distro_updated_packages = ["OctoBot-Default-Tentacles", "Octane-Default-Tentacles"]
     all_apps: dict = {}
     all_apps[CATEGORY_STRATEGY] = {}
     profiles = {
@@ -117,7 +131,8 @@ def get_installed_tentacles_modules_dict() -> dict:
             app_dict["is_shared"] = False
             app_dict["tentacle_name"] = app_key
             app_dict["updated_by_distro"] = (
-                app["origin_package"] in distro_updated_packages
+                app["origin_package"] in DISTRO_UPDATED_PACKAGES
+                or package_id in DISTRO_UPDATED_APPS
             )
             app_dict["is_owner"] = not app_dict["updated_by_distro"]
             app_dict["categories"] = [category_title]
@@ -165,6 +180,7 @@ def get_installed_tentacles_modules_dict() -> dict:
 
 
 def convert_profile_into_app(current_profile: dict, profile: dict, profile_id: str):
+    updated_by_distro: bool = profile_id in DISTRO_UPDATED_APPS
     return {
         "package_id": profile_id,
         "origin_package": profile_id,
@@ -173,13 +189,11 @@ def convert_profile_into_app(current_profile: dict, profile: dict, profile_id: s
         "description": profile["profile"]["description"],
         "requirements": profile["profile"].get("required_trading_tentacles", []),
         "categories": [CATEGORY_STRATEGY],
-        "avatar_url": profile["profile"]["avatar"]
-        # all_apps[profile_id]["config"] = profile["config"]
-        # all_apps[profile_id]["short_description"] =
-        ,
+        "avatar_url": profile["profile"]["avatar"],
+        "updated_by_distro": updated_by_distro,
         "is_from_store": False,
         "is_installed": True,
         "is_shared": False,
-        "is_owner": True
+        "is_owner": not updated_by_distro
         # all_apps[profile_id]["image_url"] =
     }
