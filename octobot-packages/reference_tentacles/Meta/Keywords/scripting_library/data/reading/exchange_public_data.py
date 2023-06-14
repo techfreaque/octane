@@ -242,9 +242,14 @@ async def _local_candles_manager(exchange_manager, symbol, time_frame, start_tim
 async def _get_candle_manager(context, symbol, time_frame, max_history):
     symbol = symbol or context.symbol
     time_frame = time_frame or context.time_frame
-    candle_manager = api.get_symbol_candles_manager(
+    candle_manager = None
+    try:
+        candle_manager = api.get_symbol_candles_manager(
         api.get_symbol_data(context.exchange_manager, symbol, allow_creation=False), time_frame
     )
+    except KeyError as error:
+        if not max_history or not context.exchange_manager.is_backtesting:
+            raise error
     if max_history and context.exchange_manager.is_backtesting:
         if isinstance(candle_manager, octobot_trading.exchange_data.PreloadedCandlesManager):
             return candle_manager
