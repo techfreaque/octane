@@ -10,6 +10,7 @@ import octobot_commons.enums as commons_enums
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_services.interfaces as interfaces
 import octobot_services.interfaces.util as interfaces_util
+from tentacles.Services.Interfaces.octo_ui2.models import neural_net_helper
 import tentacles.Services.Interfaces.web_interface as web_interface
 
 import tentacles.Services.Interfaces.octo_ui2.utils.basic_utils as basic_utils
@@ -20,16 +21,6 @@ from tentacles.Services.Interfaces.octo_ui2.models.octo_ui2 import (
     import_cross_origin_if_enabled,
 )
 
-try:
-    from tentacles.Meta.Keywords.pro_tentacles.evaluators.neural_net_classification.neural_nets import (
-        network_utils,
-    )
-except (ImportError, ModuleNotFoundError):
-    network_utils = None
-try:
-    import tentacles.StrategyBlocks.EvaluatorBlock.neural_net_classification.neural_nets.network_utils as block_network_utils
-except (ImportError, ModuleNotFoundError):
-    block_network_utils = None
 try:
     import tentacles.Services.Interfaces.octo_ui2_pro.octo_ui2_pro_plugin as octo_ui2_pro_plugin
 except (ImportError, ModuleNotFoundError):
@@ -70,7 +61,6 @@ def register_bot_info_routes(plugin):
         )
         is_starting = False
         try_counter += 1
-        config_candles_count = 0
         trading_mode = trading_mode_name = None
         exchange_name = None
         exchange_names = []
@@ -145,18 +135,8 @@ def register_bot_info_routes(plugin):
                     # enabled_time_frames = models.get_strategy_required_time_frames(
                     #     strategies[0]
                     # )
-                if network_utils:
-                    should_stop_training = network_utils.SHOULD_STOP_TRAINING
-                    any_neural_net_active = network_utils.ANY_NEURAL_NET_ACTIVE
-                if block_network_utils:
-                    should_stop_training = (
-                        should_stop_training or block_network_utils.SHOULD_STOP_TRAINING
-                    )
-                    any_neural_net_active = (
-                        any_neural_net_active
-                        or block_network_utils.ANY_NEURAL_NET_ACTIVE
-                    )
-
+                should_stop_training = neural_net_helper.SHOULD_STOP_TRAINING
+                any_neural_net_active = neural_net_helper.ANY_NEURAL_NET_ACTIVE
                 # enabled_time_frames = (
                 #     models.get_strategy_required_time_frames(activated_strategy)
                 #     if activated_strategy
