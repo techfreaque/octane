@@ -5,7 +5,7 @@ scripts\update-octobot-packages.ps1
 
 # install dev dependencies
 .venv\Scripts\Activate.ps1
-pip uninstall -y OctoBot-Backtesting OctoBot-Trading Async-Channel OctoBot-Evaluators OctoBot-Commons OctoBot-Tentacles-Manager OctoBot-Services
+pip uninstall -y octane  OctoBot OctoBot-Backtesting OctoBot-Trading Async-Channel OctoBot-Evaluators OctoBot-Commons OctoBot-Tentacles-Manager OctoBot-Services
 pip install -r octobot-packages/OctoBot-Backtesting/dev_requirements.txt
 pip install -r octobot-packages/OctoBot-Commons/dev_requirements.txt
 pip install -r octobot-packages/OctoBot-evaluators/dev_requirements.txt

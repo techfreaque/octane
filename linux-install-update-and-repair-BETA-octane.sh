@@ -20,7 +20,7 @@ cp -n .env-example-unix .env
 python -m venv .venv
 source .venv/bin/activate
 export PYTHONPATH=${PWD}/octobot-packages/Async-Channel:${PWD}/octobot-packages/OctoBot-Tentacles-Manager:${PWD}/octobot-packages/OctoBot-Commons:${PWD}/octobot-packages/OctoBot-Trading:${PWD}/octobot-packages/OctoBot-Backtesting:${PWD}/octobot-packages/OctoBot-evaluators:${PWD}/octobot-packages/OctoBot-Services:${PWD}/octobot-packages/trading-backend
-pip uninstall -y OctoBot-Backtesting OctoBot-Trading Async-Channel OctoBot-Evaluators OctoBot-Commons OctoBot-Tentacles-Manager OctoBot-Services
+pip uninstall -y octane OctoBot OctoBot-Backtesting OctoBot-Trading Async-Channel OctoBot-Evaluators OctoBot-Commons OctoBot-Tentacles-Manager OctoBot-Services
 # install dev dependencies
 pip install -r octobot-packages/OctoBot-Backtesting/dev_requirements.txt
 pip install -r octobot-packages/OctoBot-Commons/dev_requirements.txt
