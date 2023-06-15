@@ -1,5 +1,5 @@
 git pull
-docker build --tag octobot .
+docker build --tag octobot -f /scripts/Dockerfile .
 
 docker stop octobot1
 docker rm octobot1
