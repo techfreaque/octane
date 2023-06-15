@@ -7,7 +7,8 @@
     "updateBot": "更新机器人",
     "logout": "从机器人注销",
     "closePairSelectorTooltip": "点击关闭兑换设置",
-    "colorModeSwitch": "颜色模式"
+    "colorModeSwitch": "颜色模式",
+    "login": "登录机器人"
   },
   "notFoundPage": {
     "goHome": "回家",

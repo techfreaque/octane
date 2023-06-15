@@ -13,8 +13,8 @@ def dev_mode_is_on():
     return DEV_MODE_ENABLED
 
 
-def import_cross_origin_if_enabled():
-    if CORS_ENABLED:
+def import_cross_origin_if_enabled(get_anyway: bool = False):
+    if CORS_ENABLED or get_anyway:
         from flask_cors import cross_origin
 
         return cross_origin
@@ -24,11 +24,13 @@ def create_env_dependent_route(
     plugin, route: str, route_method, can_be_shared=False, **kwargs
 ):
     cross_origin = import_cross_origin_if_enabled()
+    __func_name__ = f"_{route_method.__name__}"
     if can_be_shared and SHARE_YOUR_OCOBOT:
+        _cross_origin = import_cross_origin_if_enabled(True)
 
         @plugin.route(route)
-        @cross_origin(origins="*")
-        def bot_info(**kwargs):
+        @_cross_origin(origins="*")
+        def __func_name__(**kwargs):
             return route_method(**kwargs)
 
     elif cross_origin:
@@ -36,12 +38,12 @@ def create_env_dependent_route(
         @plugin.route(route)
         @cross_origin(origins="*")
         @login.login_required_when_activated
-        def bot_info(**kwargs):
+        def __func_name__(**kwargs):
             return route_method(**kwargs)
 
     else:
 
         @plugin.route(route)
         @login.login_required_when_activated
-        def bot_info(**kwargs):
+        def __func_name__(**kwargs):
             return route_method(**kwargs)

@@ -34,9 +34,9 @@ def register_bot_info_routes(plugin):
 
     cross_origin = import_cross_origin_if_enabled()
     if SHARE_YOUR_OCOBOT:
-
+        _cross_origin = import_cross_origin_if_enabled(True)
         @plugin.blueprint.route(route)
-        @cross_origin(origins="*")
+        @_cross_origin(origins="*")
         def bot_info(exchange=None):
             return _bot_info(exchange)
 

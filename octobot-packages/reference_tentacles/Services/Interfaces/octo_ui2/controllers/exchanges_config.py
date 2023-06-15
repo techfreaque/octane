@@ -19,9 +19,10 @@ def register_exchanges_routes(plugin):
     route = "/exchanges-info"
     cross_origin = import_cross_origin_if_enabled()
     if SHARE_YOUR_OCOBOT:
+        _cross_origin = import_cross_origin_if_enabled(True)
 
         @plugin.blueprint.route(route)
-        @cross_origin(origins="*")
+        @_cross_origin(origins="*")
         def exchanges_info():
             return _exchanges_info()
 
@@ -96,9 +97,10 @@ def register_exchanges_routes(plugin):
     route = "/exchanges-list"
     cross_origin = import_cross_origin_if_enabled()
     if SHARE_YOUR_OCOBOT:
+        _cross_origin = import_cross_origin_if_enabled(True)
 
         @plugin.blueprint.route(route)
-        @cross_origin(origins="*")
+        @_cross_origin(origins="*")
         def exchanges_list():
             return _exchanges_list()
 
