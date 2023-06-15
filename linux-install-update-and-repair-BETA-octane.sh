@@ -14,7 +14,7 @@ chmod u+x linux-install-update-and-repair-BETA-octane.sh
 chmod u+x linux-install-update-and-repair-STABLE-octane.sh
 
 cp -n ./octobot-packages/OctoBot/octobot/config/default_config.json user/config.json
-cp -n .env-example-unix .env
+cp -n scripts/.env-example-unix .env
 
 
 python -m venv .venv

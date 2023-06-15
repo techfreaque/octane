@@ -32,7 +32,7 @@ if (-not (test-path $destinationFile))
   copy-item @opts
 }
 
-$sourceFile = '.env-example-windows'
+$sourceFile = 'scripts/.env-example-windows'
 $destinationFile = '.env'
 if (-not (test-path $destinationFile))
 {

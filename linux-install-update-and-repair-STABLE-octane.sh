@@ -6,7 +6,7 @@ git pull
 timedatectl set-ntp true
 
 cp -n ./octobot-packages/OctoBot/octobot/config/default_config.json user/config.json
-cp -n .env-example-unix .env
+cp -n scripts/.env-example-unix .env
 
 python -m venv .venv
 source .venv/bin/activate
