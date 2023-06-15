@@ -3,6 +3,8 @@ git pull
 git checkout main
 git pull
 
+timedatectl set-ntp true
+
 cp -n ./octobot-packages/OctoBot/octobot/config/default_config.json user/config.json
 cp -n .env-example-unix .env
 
