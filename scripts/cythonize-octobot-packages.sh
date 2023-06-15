@@ -1,4 +1,4 @@
-.venv\bin\activate
+source .venv/bin/activate
 
 cd octobot-packages/trading-backend
 pip install -e ./
