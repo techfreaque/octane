@@ -114,7 +114,7 @@ def register_exchanges_routes(plugin):
 
         @plugin.blueprint.route(route)
         @login.login_required_when_activated
-        def services_info():
+        def exchanges_list():
             return _exchanges_list()
 
     def _exchanges_list():
