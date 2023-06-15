@@ -7,7 +7,8 @@
     "updateBot": "Bot aktualisieren",
     "logout": "Melden Sie sich vom Bot ab",
     "closePairSelectorTooltip": "Klicken Sie hier, um die Exchange-Einstellungen zu schließen",
-    "colorModeSwitch": "Farbmodus"
+    "colorModeSwitch": "Farbmodus",
+    "login": "Einloggen"
   },
   "notFoundPage": {
     "goHome": "zur Startseite",

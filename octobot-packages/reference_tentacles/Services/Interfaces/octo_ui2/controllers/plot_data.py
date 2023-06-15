@@ -17,9 +17,10 @@ def register_plot_data_routes(plugin):
 
     cross_origin = import_cross_origin_if_enabled()
     if SHARE_YOUR_OCOBOT:
+        _cross_origin = import_cross_origin_if_enabled(True)
 
         @plugin.blueprint.route(route, methods=methods)
-        @cross_origin(origins="*")
+        @_cross_origin(origins="*")
         def run_plotted_data():
             return _run_plotted_data()
 

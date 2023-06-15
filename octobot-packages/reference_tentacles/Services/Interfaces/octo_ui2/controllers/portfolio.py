@@ -12,9 +12,10 @@ def register_portfolio_routes(plugin):
 
     cross_origin = import_cross_origin_if_enabled()
     if SHARE_YOUR_OCOBOT:
+        _cross_origin = import_cross_origin_if_enabled(True)
 
         @plugin.blueprint.route(route)
-        @cross_origin(origins="*")
+        @_cross_origin(origins="*")
         def _portfolio():
             return portfolio()
 

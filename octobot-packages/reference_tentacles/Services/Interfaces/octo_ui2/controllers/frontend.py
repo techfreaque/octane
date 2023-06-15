@@ -12,9 +12,10 @@ def register_frontend_route(plugin):
     route = "/<url_path>"
     cross_origin = import_cross_origin_if_enabled()
     if SHARE_YOUR_OCOBOT:
+        _cross_origin = import_cross_origin_if_enabled(True)
 
         @plugin.blueprint.route(route)
-        @cross_origin(origins="*")
+        @_cross_origin(origins="*")
         def any_page(url_path=None):
             return _home(url_path)
 
@@ -35,9 +36,10 @@ def register_frontend_route(plugin):
 
     route = "/home"
     if SHARE_YOUR_OCOBOT:
+        _cross_origin = import_cross_origin_if_enabled(True)
 
         @plugin.blueprint.route(route)
-        @cross_origin(origins="*")
+        @_cross_origin(origins="*")
         def home(url_path=None):
             return _home(url_path)
 

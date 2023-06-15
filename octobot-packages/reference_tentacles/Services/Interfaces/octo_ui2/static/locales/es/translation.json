@@ -7,7 +7,8 @@
     "updateBot": "Actualizar robot",
     "logout": "Cerrar sesión de Bot",
     "closePairSelectorTooltip": "Haga clic para cerrar la configuración de intercambio",
-    "colorModeSwitch": "Modo de color"
+    "colorModeSwitch": "Modo de color",
+    "login": "Inicie sesión en el bot"
   },
   "notFoundPage": {
     "goHome": "Vete a casa",

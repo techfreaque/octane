@@ -27,9 +27,10 @@ def register_tentacles_config_routes(plugin):
 
     cross_origin = import_cross_origin_if_enabled()
     if SHARE_YOUR_OCOBOT:
+        _cross_origin = import_cross_origin_if_enabled(True)
 
         @plugin.blueprint.route(route, methods=methods)
-        @cross_origin(origins="*")
+        @_cross_origin(origins="*")
         def tentacles_config():
             return _tentacles_config()
 
