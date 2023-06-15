@@ -6,7 +6,7 @@ git stash
 git pull
 chmod +x linux-docker_install_or_update.sh
 cp -n scripts/.env-example-unix .env
-docker build --tag octobot -f /scripts/Dockerfile .
+docker build --tag octobot -f scripts/Dockerfile .
 
 docker stop octobot1
 docker rm octobot1
