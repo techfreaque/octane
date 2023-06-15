@@ -1,13 +1,14 @@
 # Installation (End User)
 
 * [Docker Linux Installation](installation-end-user.md#docker-installation-on-linux)
+* [Linux Local Installation](installation-end-user.md#linux-local-installation)
 * [Windows Installation](installation-end-user.md#windows-installation)
 
 ## Docker on Linux Installation
 
 ### Download and Install Requirements
 
-Make sure you have git and docker installed on your linux machine
+Make sure you have git and docker installed on your linux machine, use your distros package manager if possible
 
 * [Git](https://git-scm.com/downloads)
 * [Docker](https://www.docker.com/products/docker-desktop/)
@@ -36,6 +37,33 @@ docker start octobot
 docker restart octobot
 docker stop octobot
 ```
+## Linux Local Installation
+
+### Download and Install Requirements
+* Make sure you have git installed on your linux machine, use your distros package manager if possible
+
+### Downloading the Package
+ * Open a terminal inside the folder you want your Octane to be installed
+    ```
+    git clone https://github.com/techfreaque/octane
+    ```
+
+### Install / Update / Repair Package
+
+once you have downloaded the repository through git, you can install it by executing:
+
+```
+cd octane
+chmod u+x linux-install-update-and-repair-STABLE-octane.sh
+./linux-install-update-and-repair-STABLE-octane.sh
+```
+
+## Start On Linux
+
+To start Octane on Linux, run:
+```
+./linux-start-octane.sh
+```
 
 ## Windows Installation
 
@@ -59,6 +87,8 @@ git clone https://github.com/techfreaque/octane
 #### Install / Update / Repair Package
 
 once you have downloaded the repository through git, you can install it by:
+1. To be able to run PowerShell scripts on your windows computer, you must run the following command in a power shell prompt and confirm the policy change:\
+```Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser```
 
 1. Right-click on the file windows-install-repair-and-update-to-STABLE-installation.ps1
 2. Click on run with PowerShell, once the installation is completed, your bot will start automatically.

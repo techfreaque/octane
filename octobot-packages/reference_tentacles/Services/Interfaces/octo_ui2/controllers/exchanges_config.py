@@ -4,20 +4,28 @@ import octobot_commons.constants as commons_constants
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_services.constants as services_constants
 import octobot_services.interfaces.util as interfaces_util
-import octobot_trading.api as trading_api
 
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.octo_ui2.utils.basic_utils as basic_utils
 import tentacles.Services.Interfaces.octo_ui2.models.exchanges_config as exchanges_config
 from tentacles.Services.Interfaces.octo_ui2.models.octo_ui2 import (
+    SHARE_YOUR_OCOBOT,
     import_cross_origin_if_enabled,
 )
 
 
 def register_exchanges_routes(plugin):
     route = "/exchanges-info"
-    if cross_origin := import_cross_origin_if_enabled():
+    cross_origin = import_cross_origin_if_enabled()
+    if SHARE_YOUR_OCOBOT:
+
+        @plugin.blueprint.route(route)
+        @cross_origin(origins="*")
+        def exchanges_info():
+            return _exchanges_info()
+
+    elif cross_origin:
 
         @plugin.blueprint.route(route)
         @cross_origin(origins="*")
@@ -85,8 +93,39 @@ def register_exchanges_routes(plugin):
             },
         )
 
+    route = "/exchanges-list"
+    cross_origin = import_cross_origin_if_enabled()
+    if SHARE_YOUR_OCOBOT:
+
+        @plugin.blueprint.route(route)
+        @cross_origin(origins="*")
+        def exchanges_list():
+            return _exchanges_list()
+
+    elif cross_origin:
+
+        @plugin.blueprint.route(route)
+        @cross_origin(origins="*")
+        @login.login_required_when_activated
+        def exchanges_list():
+            return _exchanges_list()
+
+    else:
+
+        @plugin.blueprint.route(route)
+        @login.login_required_when_activated
+        def services_info():
+            return _exchanges_list()
+
+    def _exchanges_list():
+        display_config = interfaces_util.get_edited_config()
+        data = {
+            "exchanges": exchanges_config.get_exchanges_config(display_config),
+        }
+        return basic_utils.get_response(data=data)
+
     route = "/services-info"
-    if cross_origin := import_cross_origin_if_enabled():
+    if import_cross_origin_if_enabled():
 
         @plugin.blueprint.route(route)
         @cross_origin(origins="*")
@@ -109,14 +148,13 @@ def register_exchanges_routes(plugin):
         notifiers_list = models.get_notifiers_list()
 
         data = {
-            "exchanges": exchanges_config.get_exchanges_config(display_config),
             "config_notifications": display_config[
                 services_constants.CONFIG_CATEGORY_NOTIFICATION
             ],
             "config_services": display_config[
                 services_constants.CONFIG_CATEGORY_SERVICES
             ],
-            # "services_list": service_list,
+            "services_list": service_list,
             "notifiers_list": notifiers_list,
         }
         return basic_utils.get_response(data=data)
