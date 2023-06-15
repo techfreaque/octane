@@ -19,4 +19,4 @@ chmod u+x linux-update-ENDUSER-octobot-packages.sh
 scripts/update-octobot-packages.sh
 scripts/cythonize-octobot-packages.sh
 scripts/build-and-install-octobot-tentacles.sh
-./linux-start-octobot.sh
+./linux-start-octane.sh

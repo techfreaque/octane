@@ -32,4 +32,4 @@ pip install -r octobot-packages/OctoBot/dev_requirements.txt
 ./scripts/update-octobot-packages.sh
 ./scripts/build-and-install-octobot-tentacles.sh
 
-./linux-start-octobot.sh
+./linux-start-octane.sh
