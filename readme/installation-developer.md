@@ -1,7 +1,7 @@
 # Installation (Developer)
 
 ## Install Octane
-* follow the NON-Docker [installation as a user guide](readme/installation-end-user.md)
+* follow the NON-Docker [installation as a user guide](installation-end-user.md)
 ## optional developer requirements
 
 * IDE: [Visual Studio Code](https://code.visualstudio.com/Download)
