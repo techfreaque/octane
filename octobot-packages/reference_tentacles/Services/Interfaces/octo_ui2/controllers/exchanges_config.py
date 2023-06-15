@@ -125,7 +125,7 @@ def register_exchanges_routes(plugin):
         return basic_utils.get_response(data=data)
 
     route = "/services-info"
-    if import_cross_origin_if_enabled():
+    if cross_origin := import_cross_origin_if_enabled():
 
         @plugin.blueprint.route(route)
         @cross_origin(origins="*")
