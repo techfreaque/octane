@@ -1,5 +1,6 @@
 import os
 import flask
+from numpy import cross
 
 import octobot_commons.authentication as authentication
 import octobot_commons.profiles as profiles
@@ -15,6 +16,7 @@ import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.octo_ui2.models.app_store as app_store_models
 import tentacles.Services.Interfaces.octo_ui2.utils.basic_utils as basic_utils
 from tentacles.Services.Interfaces.octo_ui2.models.octo_ui2 import (
+    SHARE_YOUR_OCOBOT,
     import_cross_origin_if_enabled,
     dev_mode_is_on,
 )
@@ -22,7 +24,16 @@ from tentacles.Services.Interfaces.octo_ui2.models.octo_ui2 import (
 
 def register_appstore_routes(plugin):
     route = "/tentacles-info"
-    if cross_origin := import_cross_origin_if_enabled():
+    cross_origin = import_cross_origin_if_enabled()
+    if SHARE_YOUR_OCOBOT:
+        _cross_origin = import_cross_origin_if_enabled(True)
+
+        @plugin.blueprint.route(route)
+        @_cross_origin(origins="*")
+        def app_store():
+            return _app_store()
+
+    elif cross_origin:
         if dev_mode_is_on:
 
             @plugin.blueprint.route(route)
