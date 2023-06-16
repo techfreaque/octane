@@ -30,13 +30,17 @@ chmod u+x linux-docker_install_or_update.sh # only on the first run
 ./linux-docker_install_or_update.sh
 ```
 
-### **Stop/Start/Restart OctoBot docker container**
+### Stop/Start/Restart OctoBot docker container
 
 ```
 docker start octobot
 docker restart octobot
 docker stop octobot
 ```
+
+### Access the Webinterface
+* go to myDomainOrIP.com:5001 
+
 ## Linux Local Installation
 
 ### Download and Install Requirements
@@ -64,7 +68,8 @@ To start Octane on Linux, run:
 ```
 ./linux-start-octane.sh
 ```
-
+### Access the Webinterface
+* go to myDomainOrIP.com:5001 
 ## Windows Installation
 
 ### Download and Install Requirements
@@ -76,15 +81,13 @@ To start Octane on Linux, run:
 
 ### Downloading the Package
 
-#### Download it through git
-
 Execute this command in a PowerShell window inside the folder you want your OctoBot instance to be.
 
 ```
 git clone https://github.com/techfreaque/octane
 ```
 
-#### Install / Update / Repair Package
+### Install / Update / Repair Package
 
 once you have downloaded the repository through git, you can install it by:
 1. To be able to run PowerShell scripts on your windows computer, you must run the following command in a power shell prompt and confirm the policy change:\
@@ -93,8 +96,9 @@ once you have downloaded the repository through git, you can install it by:
 1. Right-click on the file windows-install-repair-and-update-to-STABLE-installation.ps1
 2. Click on run with PowerShell, once the installation is completed, your bot will start automatically.
 
-**Start On Windows**
+### Start On Windows
 
 To start OctoBot on Windows, just double-click the Windows-Start-Octobot.exe file
 
-##
+### Access the Webinterface
+* go to myDomainOrIP.com:5001 
