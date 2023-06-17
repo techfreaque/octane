@@ -76,8 +76,8 @@ class SignalDirection:
     short: int = -1
     neutral: int = 0
     tuple_long: typing.Tuple[int, int, int] = (1, 0, 0)
-    tuple_short: typing.Tuple[int, int, int] = (0, 1, 0)
-    tuple_neutral: typing.Tuple[int, int, int] = (0, 0, 1)
+    tuple_short: typing.Tuple[int, int, int] = (0, 0, 1)
+    tuple_neutral: typing.Tuple[int, int, int] = (0, 1, 0)
 
 
 class FeatureArrays:
