@@ -8,6 +8,8 @@ timedatectl set-ntp true
 cp -n ./octobot-packages/OctoBot/octobot/config/default_config.json user/config.json
 cp -n scripts/.env-example-unix .env
 
+apt install -y python3.10-venv
+
 python -m venv .venv
 python3 -m venv .venv
 
