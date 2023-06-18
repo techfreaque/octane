@@ -477,6 +477,9 @@ class RestExchange(abstract_exchange.AbstractExchange):
                                 **kwargs: dict) -> typing.Optional[list]:
         return await self.connector.get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
 
+    async def is_market_open(self, symbol:str) -> bool:
+        return True
+
     async def get_kline_price(self, symbol: str, time_frame: commons_enums.TimeFrames,
                               **kwargs: dict) -> typing.Optional[list]:
         if self.DUMP_INCOMPLETE_LAST_CANDLE:
@@ -869,7 +872,14 @@ class RestExchange(abstract_exchange.AbstractExchange):
 
     def supports_trading_type(self, symbol, trading_type: enums.FutureContractType):
         return self.connector.supports_trading_type(symbol, trading_type)
-
+    
+    def symbol_exists(self, symbol):
+        if self.exchange_manager.client_symbols is None:
+            self.logger.error(f"Failed to load available symbols from REST exchange, impossible to check if "
+                              f"{symbol} exists on {self.exchange.name}")
+            return False
+        return symbol in self.exchange_manager.client_symbols
+    
     def is_linear_symbol(self, symbol):
         """
         :param symbol: the symbol

@@ -113,7 +113,7 @@ MERGED_CCXT_EXCHANGES = {
 REMOVED_CCXT_EXCHANGES = set(MERGED_CCXT_EXCHANGES.values())
 FULL_EXCHANGE_LIST = [
     exchange
-    for exchange in set(ccxt.async_support.exchanges)
+    for exchange in set(ccxt.async_support.exchanges + trading_constants.ADDITIONAL_EXCHANGES)
     if exchange not in REMOVED_CCXT_EXCHANGES
 ]
 

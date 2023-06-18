@@ -66,7 +66,9 @@ class ExchangeBotSnapshotWithHistoryCollector(collector.AbstractExchangeBotSnaps
 
     def get_permanent_file_identifier(self):
         # TODO remove tmp fix [:90] and [:60] which allows to download any amount of timeframes and pairs
+        self.symbols.sort(key=lambda symbol : symbol.symbol_str)
         symbols = "-".join(symbol_util.merge_symbol(symbol.symbol_str) for symbol in self.symbols)[:90]
+        self.time_frames.sort(key=lambda time_frame : time_frame.value)
         time_frames = "-".join(tf.value for tf in self.time_frames)[:60]
         return f"{self.exchange_name}{backtesting_constants.BACKTESTING_DATA_FILE_SEPARATOR}" \
                f"{symbols}{backtesting_constants.BACKTESTING_DATA_FILE_SEPARATOR}{time_frames}"

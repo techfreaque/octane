@@ -82,6 +82,7 @@ FULL_CANDLE_HISTORY_EXCHANGES = [
     "gateio",
     "hitbtc",
     "hollaex",
+    "yahoo_finance",
     "huobi",
     "huobipro",
     "kucoin",
@@ -90,6 +91,8 @@ FULL_CANDLE_HISTORY_EXCHANGES = [
     "okx",
     "binanceusdm",
 ]
+
+ADDITIONAL_EXCHANGES = ["yahoo_finance"]
 
 DEFAULT_FUTURE_EXCHANGES = ["binanceusdm", "bybit"]
 TESTED_EXCHANGES = [

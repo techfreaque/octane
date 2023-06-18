@@ -209,6 +209,7 @@ def get_y_train_series(
     lows: npt.NDArray[numpy.float64],
     highs: npt.NDArray[numpy.float64],
     training_data_settings: utils.YTrainSettings,
+    raise_missing_data: bool = False,
 ):
     if training_data_settings.training_data_type == utils.YTrainTypes.IS_WINNING_TRADE:
         y_train_series = []
@@ -265,7 +266,8 @@ def get_y_train_series(
                 utils.SignalDirection.neutral,
             ),
         )
-    verify_training_prediction_labels_completeness(y_train_series)
+    if raise_missing_data:
+        verify_training_prediction_labels_completeness(y_train_series)
     return y_train_series
 
 

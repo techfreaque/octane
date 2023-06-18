@@ -200,6 +200,7 @@ async def get_historical_ohlcv(
     request_retry_timeout is a timer in seconds to keep retrying to fetch failed candle requests before giving up
     """
     reached_max = False
+    last_start_time = None
     while start_time < end_time and not reached_max:
         candles = await local_exchange_manager.exchange.retry_till_success(
             request_retry_timeout,
@@ -213,8 +214,12 @@ async def get_historical_ohlcv(
             if candles:
                 yield candles
                 start_time = candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value] * 1000
-                # avoid fetching the last element twice
-                start_time += 1
+                if last_start_time == start_time:
+                    reached_max = True
+                else:
+                    # avoid fetching the last element twice
+                    last_start_time = start_time
+                    start_time += 1
             else:
                 reached_max = True
         else:
