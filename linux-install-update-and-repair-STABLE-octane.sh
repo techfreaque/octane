@@ -9,6 +9,8 @@ cp -n ./octobot-packages/OctoBot/octobot/config/default_config.json user/config.
 cp -n scripts/.env-example-unix .env
 
 python -m venv .venv
+python3 -m venv .venv
+
 source .venv/bin/activate
 
 chmod u+x scripts/update-octobot-packages.sh

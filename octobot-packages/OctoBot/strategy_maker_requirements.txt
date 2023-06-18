@@ -6,4 +6,5 @@ newtulipy
 statistics
 scikit-neuralnetwork
 tensorflow
+yfinance
 # requirements inside the octobot-packages folder need to be installed as well
