@@ -36,7 +36,48 @@ SECONDS_PER_DAY = 60 * 60 * 24
 
 class YFinanceClient:
     name: str = "yahoo_finance"
-    symbols: set = {"TSLA/USD"}
+    symbols: set = {
+        "TSLA/USDT",
+        "INTC/USDT",
+        "AAPL/USDT",
+        "AMZN/USDT",
+        "AMD/USDT",
+        "QQQ/USDT",
+        "DISH/USDT",
+        "F/USDT",
+        "NVDA/USDT",
+        "T/USDT",
+        "PFE/USDT",
+        "SIRI/USDT",
+        "GOOG/USDT",
+        "PANW/USDT",
+        "GPK/USDT",
+        "BAC/USDT",
+        "CCL/USDT",
+        "MSFT/USDT",
+        "WBD/USDT",
+        "GOOGL/USDT",
+        "MAC/USDT",
+        "OVV/USDT",
+        "XOM/USDT",
+        "META/USDT",
+        "GFI/USDT",
+        "CSCO/USDT",
+        "LUMN/USDT",
+        "DEI/USDT",
+        "WFC/USDT",
+        "BTG/USDT",
+        "VZ/USDT",
+        "CMCSA/USDT",
+        "FULT/USDT",
+        "MU/USDT",
+        "IMGN/USDT",
+        "KGC/USDT",
+        "SWN/USDT",
+        "PLUG/USDT",
+        "USB/USDT",
+        "CSX/USDT",
+    }
     _TIMEFRAME_MAP = {
         commons_enums.TimeFrames.ONE_MINUTE.value: YFinanceTimeFrames.ONE_MINUTE.value,
         # commons_enums.TimeFrames.THREE_MINUTES.value: YFinanceTimeFrames.THREE_MINUTES.value,
@@ -109,7 +150,7 @@ class YFinanceClient:
 
     async def load_markets(self, config_symbols: typing.List[str]):
         logging.getLogger("yfinance").setLevel(logging.CRITICAL)
-        self.symbols = set(config_symbols)
+        self.symbols.add(tuple(config_symbols))
 
     @staticmethod
     def milliseconds():
@@ -137,7 +178,10 @@ class YFinanceClient:
             since_seconds
             if since_seconds
             else c_time
-            - ((self.max_history_per_call_by_timeframe[time_frame] -2 )* SECONDS_PER_DAY)
+            - (
+                (self.max_history_per_call_by_timeframe[time_frame] - 2)
+                * SECONDS_PER_DAY
+            )
         ) - datetime.timedelta(days=1)
         start = start_datetime.strftime("%Y-%m-%d")
         end_datetime = start_datetime + datetime.timedelta(days=history_length)
