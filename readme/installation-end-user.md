@@ -46,12 +46,13 @@ docker stop octobot
 ### Download and Install Requirements
 * git
 * python3-venv
+* gcc
 
 * Use your distros package manager if possible
 
 * On a Debian/Ubuntu based distribution you can install the packages with this command:
     ```
-    sudo apt install -y python3-venv git
+    sudo apt install -y python3-venv git gcc
     ```
 
 ### Downloading the Package
