@@ -43,6 +43,8 @@ docker stop octobot
 
 ## Linux Local Installation
 
+[Watch the video installation guide for Ubuntu 22.04](https://youtu.be/XI9L85kkFCA)
+
 ### Download and Install Requirements
 * git, python3-venv, build-essential, python3-dev
 
