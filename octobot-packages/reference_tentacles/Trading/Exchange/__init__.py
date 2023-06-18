@@ -56,15 +56,6 @@ if check_tentacle_version("1.2.0", "binanceusdm", "OctoBot-Default-Tentacles"):
             f'"python start.py tentacles --install --all".'
         )
 
-# if check_tentacle_version('0.0.1', 'ibkr', 'Matrix-Tentacles'):
-#     try:
-#         from .ibkr import *
-#     except Exception as e:
-#         get_logger('TentacleLoader').error(f'Error when loading ibkr: '
-#                                            f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
-#                                            f'error persists, try reinstalling your tentacles via '
-#                                            f'"python start.py tentacles --install --all".')
-
 if check_tentacle_version("1.2.0", "binanceus", "OctoBot-Default-Tentacles"):
     try:
         from .binanceus import *
@@ -1463,6 +1454,15 @@ if check_tentacle_version('1.2.0', 'coinbase', 'OctoBot-Default-Tentacles'):
         from .coinbase import *
     except Exception as e:
         get_logger('TentacleLoader').error(f'Error when loading coinbase: '
+                                           f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
+                                           f'error persists, try reinstalling your tentacles via '
+                                           f'"python start.py tentacles --install --all".')
+
+if check_tentacle_version('1.0.0', 'yahoo_finance', 'Octane-Default-Tentacles'):
+    try:
+        from .yahoo_finance import *
+    except Exception as e:
+        get_logger('TentacleLoader').error(f'Error when loading yahoo_finance: '
                                            f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')

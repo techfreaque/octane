@@ -208,7 +208,8 @@ class OHLCVUpdater(ohlcv_channel.OHLCVProducer):
                         last_candle: list = candles[-1]
                     else:
                         last_candle: list = []
-
+                        if not await self.channel.exchange_manager.exchange.is_market_open(pair):
+                            missing_data_sleep_time = time_frame_sleep if time_frame_sleep > 900 else 900
                     if last_candle and len(candles) > 1:
                         last_candle_timestamp, sleep_time = await self._refresh_current_candle(
                             time_frame, pair, candles, last_candle, last_candle_timestamp, time_frame_sleep
@@ -242,11 +243,14 @@ class OHLCVUpdater(ohlcv_channel.OHLCVProducer):
         # if we're trying to refresh the current candle => useless
         if last_candle_timestamp == current_candle_timestamp:
             if should_sleep_time < 0:
-                # up to date candle is not yet available on exchange: retry in a few seconds
-                should_sleep_time = self._ensure_correct_sleep_time(
-                    self.OHLCV_REFRESH_TIME_THRESHOLD,
-                    time_frame_sleep
-                )
+                if not await self.channel.exchange_manager.exchange.is_market_open(pair):
+                    should_sleep_time = time_frame_sleep
+                else:
+                    # up to date candle is not yet available on exchange: retry in a few seconds
+                    should_sleep_time = self._ensure_correct_sleep_time(
+                        self.OHLCV_REFRESH_TIME_THRESHOLD,
+                        time_frame_sleep
+                    )
             else:
                 should_sleep_time = self._ensure_correct_sleep_time(
                     should_sleep_time + time_frame_sleep + self.OHLCV_REFRESH_TIME_THRESHOLD,

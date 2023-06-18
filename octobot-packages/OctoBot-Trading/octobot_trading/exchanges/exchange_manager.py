@@ -225,11 +225,7 @@ class ExchangeManager(util.Initializable):
             self._raise_exchange_load_error(err_message)
 
     def symbol_exists(self, symbol):
-        if self.client_symbols is None:
-            self.logger.error(f"Failed to load available symbols from REST exchange, impossible to check if "
-                              f"{symbol} exists on {self.exchange.name}")
-            return False
-        return symbol in self.client_symbols
+        return self.exchange.symbol_exists(symbol)
 
     def time_frame_exists(self, time_frame):
         if not self.client_time_frames:

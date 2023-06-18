@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "origin_package": "Octane-Default-Tentacles",
+  "tentacles": [
+    "yahoo_finance"
+  ],
+  "tentacles-requirements": []
+}

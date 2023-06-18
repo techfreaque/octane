@@ -1,0 +1,1 @@
+Yahoo finance exchange adapter for simulation only

@@ -252,16 +252,16 @@ class AbstractBaseModeProducer(
 
     async def start(self):
         await super().start()
-        try:
-            import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_storage.storage as ping_pong_storage_management
-        except (ImportError, ModuleNotFoundError):
-            ping_pong_storage_management = None
-        if ping_pong_storage_management:
-            try:
-                await ping_pong_storage_management.init_ping_pong_storage(
-                    self.exchange_manager
-                )
-            except Exception as error:
-                logging.get_logger(self.trading_mode.get_name()).exception(
-                    error, True, f"Failed to restore ping pong storage - error: {error}"
-                )
+        # try:
+        #     import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_storage.storage as ping_pong_storage_management
+        # except (ImportError, ModuleNotFoundError):
+        #     ping_pong_storage_management = None
+        # if ping_pong_storage_management:
+        #     try:
+        #         await ping_pong_storage_management.init_ping_pong_storage(
+        #             self.exchange_manager
+        #         )
+        #     except Exception as error:
+        #         logging.get_logger(self.trading_mode.get_name()).exception(
+        #             error, True, f"Failed to restore ping pong storage - error: {error}"
+        #         )
