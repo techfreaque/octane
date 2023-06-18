@@ -51,7 +51,7 @@ docker stop octobot
 
 * On a Debian/Ubuntu based distribution you can install the packages with this command:
     ```
-    sudo apt install -y python3.10-venv git
+    sudo apt install -y python3-venv git
     ```
 
 ### Downloading the Package
