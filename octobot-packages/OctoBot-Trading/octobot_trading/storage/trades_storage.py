@@ -115,7 +115,7 @@ def _format_trade(trade_dict, exchange_manager, chart, x_multiplier, kind, mode)
                     shape = "arrow-bar-left"
                 else:
                     # short tp
-                    color = "blue"
+                    color = "cyan"
                     shape = "arrow-bar-left"
             else:
                 if trade_side == enums.TradeOrderSide.BUY.value:
@@ -129,7 +129,7 @@ def _format_trade(trade_dict, exchange_manager, chart, x_multiplier, kind, mode)
 
     if not is_using_positions:
         if trade_side == enums.TradeOrderSide.BUY.value:
-            color = "blue"
+            color = "cyan"
             shape = "arrow-bar-right"
         elif "stop_loss" in trade_dict[enums.ExchangeConstantsOrderColumns.TYPE.value]:
             color = "orange"
@@ -163,7 +163,7 @@ def _format_trade(trade_dict, exchange_manager, chart, x_multiplier, kind, mode)
         commons_enums.PlotAttributes.MODE.value: mode,
         commons_enums.PlotAttributes.SHAPE.value: shape,
         commons_enums.PlotAttributes.COLOR.value: color,
-        commons_enums.PlotAttributes.SIZE.value: "10",
+        commons_enums.PlotAttributes.SIZE.value: "15",
         "cost": float(trade_dict[enums.ExchangeConstantsOrderColumns.COST.value]),
         "state": trade_dict[enums.ExchangeConstantsOrderColumns.STATUS.value],
     }
