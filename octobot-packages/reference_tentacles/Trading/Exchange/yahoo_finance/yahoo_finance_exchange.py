@@ -5,12 +5,12 @@ from tentacles.Trading.Exchange.yahoo_finance.connector.yfinance_connector impor
 )
 
 
-class yahoo_finance(exchanges.RestExchange):
+class YahooFinance(exchanges.RestExchange):
     DEFAULT_CONNECTOR_CLASS = YahooFinanceConnector
 
     @classmethod
     def get_name(cls) -> str:
-        return "yahoo_finance"
+        return "yahoofinance"
 
     @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:

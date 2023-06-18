@@ -35,7 +35,7 @@ SECONDS_PER_DAY = 60 * 60 * 24
 
 
 class YFinanceClient:
-    name: str = "yahoo_finance"
+    name: str = "yahoofinance"
     symbols: set = {
         "TSLA/USDT",
         "INTC/USDT",

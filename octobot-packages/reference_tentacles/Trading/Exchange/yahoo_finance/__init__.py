@@ -1,1 +1,1 @@
-from .yahoo_finance_exchange import yahoo_finance
+from .yahoo_finance_exchange import YahooFinance
