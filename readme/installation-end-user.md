@@ -44,9 +44,7 @@ docker stop octobot
 ## Linux Local Installation
 
 ### Download and Install Requirements
-* git
-* python3-venv
-* gcc
+* git, python3-venv, build-essential, python3-dev
 
 * Use your distros package manager if possible
 
