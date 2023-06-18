@@ -155,7 +155,7 @@ def _start_backtesting(files, source, reset_tentacle_config=False, run_on_common
                        exchange_ids=[None], enable_logs=False, auto_stop=False,
                        collector_start_callback=None, start_callback=None, name=None):
     tools = web_interface_root.WebInterface.tools
-    if exchange_ids != [None]:
+    if exchange_ids != [None] or use_current_bot_data:
         for exchange_id in exchange_ids:
             trading_model.ensure_valid_exchange_id(exchange_id)
     try:
