@@ -59,6 +59,7 @@ class UnrealizedPortfolioValue(abstract_analysis_evaluator.AnalysisEvaluator):
                 x_type="date",
                 y_type="log",
                 line_shape="hv",
+                own_xaxis=True,
             )
 
 
