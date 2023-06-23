@@ -1,3 +1,5 @@
+from octobot_commons.constants import CONFIG_EXCHANGE_FUTURE
+from octobot_commons.symbols.symbol_util import merge_currencies, merge_symbol
 import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.common_user_inputs as common_user_inputs
 import tentacles.Meta.Keywords.RunAnalysis.BaseDataProvider.default_base_data_provider.base_data_provider as base_data_provider
 import tentacles.Meta.Keywords.RunAnalysis.RunAnalysisFactory.abstract_analysis_evaluator as abstract_analysis_evaluator
@@ -34,9 +36,9 @@ class PieChartPortfolio(abstract_analysis_evaluator.AnalysisEvaluator):
             default_chart_location="pie-chart",
         )
         if plotted_element is not None:
-            for portfolio_name in (
-                "starting_portfolio",
-                "ending_portfolio",
+            for portfolio_name, time_key in (
+                ("starting_portfolio", "starting_time"),
+                ("ending_portfolio", "last_update_time"),
             ):
                 start_end_portfolio_values = (
                     await run_data.get_start_end_portfolio_values()
@@ -46,20 +48,47 @@ class PieChartPortfolio(abstract_analysis_evaluator.AnalysisEvaluator):
                 if len(start_end_portfolio_values) and start_end_portfolio_values[
                     0
                 ].get(portfolio_name):
-                    for curency, balance in start_end_portfolio_values[0][
+                    for currency, balance in start_end_portfolio_values[0][
                         portfolio_name
                     ].items():
-                        values.append(balance["total"])
-                        labels.append(curency)
+                        if currency != run_data.ref_market:
+                            merged_symbol = merge_currencies(
+                                currency,
+                                market=run_data.ref_market,
+                                settlement_asset=run_data.ref_market
+                                if run_data.trading_type == CONFIG_EXCHANGE_FUTURE
+                                else None,
+                            )
+                            conversion_candles = await run_data.get_candles(
+                                symbol=merged_symbol, time_frame=run_data.ctx.time_frame
+                            )
+                            portfolio_time = (
+                                start_end_portfolio_values[0][time_key] * 1000
+                            )
+                            closest_close_price = None
+                            for candle_index, candle_time in enumerate(
+                                conversion_candles[0]
+                            ):
+                                if portfolio_time > candle_time:
+                                    closest_close_price = conversion_candles[4][
+                                        candle_index
+                                    ]
+                            total_balance_in_ref = (
+                                balance["total"] * closest_close_price
+                            )
+                        else:
+                            total_balance_in_ref = balance["total"]
+                        values.append(total_balance_in_ref)
+                        labels.append(currency)
 
                     plotted_element.pie_chart(
                         values,
                         labels,
-                        title="Current Portfolio"
+                        title="Starting Portfolio"
                         if portfolio_name == "starting_portfolio"
-                        else "Starting Portfolio",
-                        text="Current"
+                        else "Current Portfolio",
+                        text="Starting"
                         if portfolio_name == "starting_portfolio"
-                        else "Starting",
+                        else "Current",
                         hole_size=0.4,
                     )

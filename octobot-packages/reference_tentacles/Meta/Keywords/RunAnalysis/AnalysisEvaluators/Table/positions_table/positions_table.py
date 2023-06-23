@@ -1,5 +1,4 @@
 import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.common_user_inputs as common_user_inputs
-import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.analysis_enums as analysis_enums
 import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.table_keywords as table_keywords
 import tentacles.Meta.Keywords.RunAnalysis.BaseDataProvider.default_base_data_provider.base_data_provider as base_data_provider
 import tentacles.Meta.Keywords.RunAnalysis.RunAnalysisFactory.abstract_analysis_evaluator as abstract_analysis_evaluator
@@ -91,7 +90,7 @@ class PositionsTable(abstract_analysis_evaluator.AnalysisEvaluator):
 
                 table_keywords.plot_table_data(
                     data=transactions,
-                    data_name=f"Trades for {run_data.exchange_name}",
+                    data_name=f"Position History for {run_data.exchange_name}",
                     run_data=run_data,
                     additional_key_to_label=key_to_label,
                     additional_columns=additional_columns,
