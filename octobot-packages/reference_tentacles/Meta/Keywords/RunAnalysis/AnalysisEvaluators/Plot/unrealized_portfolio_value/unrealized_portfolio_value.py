@@ -1,4 +1,5 @@
 import typing
+import octobot_commons.enums as commons_enums
 import tentacles.Meta.Keywords.RunAnalysis.BaseDataProvider.default_base_data_provider.base_data_provider as base_data_provider
 import tentacles.Meta.Keywords.RunAnalysis.RunAnalysisFactory.abstract_analysis_evaluator as abstract_analysis_evaluator
 import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.common_user_inputs as common_user_inputs
@@ -14,6 +15,7 @@ class UnrealizedPortfolioValue(abstract_analysis_evaluator.AnalysisEvaluator):
 
     PLOT_UNREALIZED_PORTFOLIO_VALUE_NAME: str = "plot_unrealized_portfolio_value"
     PLOT_UNREALIZED_PORTFOLIO_VALUE_TITLE: str = "Plot unrealized portfolio value"
+    USE_OWN_Y_AXIS_NAME: str = "use_own_y_axis"
 
     @classmethod
     def init_user_inputs(
@@ -27,6 +29,15 @@ class UnrealizedPortfolioValue(abstract_analysis_evaluator.AnalysisEvaluator):
             parent_input_name=parent_input_name,
             default_chart_location="sub-chart",
             default_data_source_enabled=True,
+        )
+        analysis_mode_plugin.CLASS_UI.user_input(
+            parent_input_name + cls.USE_OWN_Y_AXIS_NAME,
+            commons_enums.UserInputTypes.BOOLEAN,
+            False,
+            inputs,
+            title="Use own y axis",
+            parent_input_name=parent_input_name
+            + cls.PLOT_UNREALIZED_PORTFOLIO_VALUE_NAME,
         )
 
     async def evaluate(
@@ -59,7 +70,13 @@ class UnrealizedPortfolioValue(abstract_analysis_evaluator.AnalysisEvaluator):
                 x_type="date",
                 y_type="log",
                 line_shape="hv",
-                own_xaxis=True,
+                own_yaxis=common_user_inputs.get_evaluator_settings(
+                    run_data, self.PLOT_UNREALIZED_PORTFOLIO_VALUE_NAME, analysis_type
+                ).get(
+                    analysis_type
+                    + self.USE_OWN_Y_AXIS_NAME,
+                    False,
+                ),
             )
 
 

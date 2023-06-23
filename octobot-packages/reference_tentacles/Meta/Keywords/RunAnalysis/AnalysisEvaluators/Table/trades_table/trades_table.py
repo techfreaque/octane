@@ -60,13 +60,14 @@ class TradesTable(abstract_analysis_evaluator.AnalysisEvaluator):
                     "Time": "datetime",
                     "Entry time": "datetime",
                     "Exit time": "datetime",
+                    "ID": "text",
                     "Symbol": "text",
                     "Type": "text",
                     "Side": "text",
                     "Price": "float",
-                    "Fees": "float",
-                    "Total": "float",
-                    "Volume": "float",
+                    "Fees": "text",
+                    "Total": "text",
+                    "Volume": "text",
                 }
                 additional_columns = [
                     {
