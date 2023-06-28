@@ -1,0 +1,124 @@
+{% extends 'clean-layout.html' %}
+
+{% import 'components/config/service_card.html' as m_config_service_card %}
+{% import 'components/config/notification_config.html' as m_config_notification %}
+
+{% set config_default_value = 'Bitcoin' %}
+{% set added_class = 'new_element' %}
+
+{% block additional_style %}
+  <link rel="stylesheet" href="{{ url_for('static', filename = 'css/components/configuration.css', u = LAST_UPDATED_STATIC_FILES) }}" />
+  <style>
+    .card,
+    .card-body,
+    .card-text,
+    .select2 li span,
+    .card-text,
+    .font-color {
+      background-color: var(--background) !important;
+      color: var(--font) !important;
+    }
+    .card,
+    .card-body {
+      border: 1px solid var(--border);
+    }
+    a.editable.editable-click {
+      color: var(--fontActive);
+    }
+    .special-button {
+      border-radius: 8px;
+      color: var(--font) !important;
+      text-transform: none;
+    }
+    .sidebar .nav .nav-link {
+      background-color: unset !important;
+      color: var(--font);
+    }
+    .sidebar .nav .nav-link:hover {
+      background-color: var(--backgroundActive) !important;
+      color: var(--font);
+    }
+    .sidebar .nav .nav-link.active {
+      color: var(--fontActive) !important;
+    }
+  </style>
+{% endblock %}
+
+{% block body %}
+  <div class="row">
+    <nav class="mt-0 pt-0 mb-0 pb-0 px-1 col-md-3 col-lg-2 col-1 d-block sidebar shadow" style="border-right: solid 1px var(--border)">
+      <div class="sidebar-sticky mt-0 pt-0 mb-0 pb-0 h-100">
+        <div class="nav flex-column bordered pt-0 mt-0 mt-md-4" id="v-tab" role="tablist" aria-orientation="vertical">
+          <a class="special-button nav-link pl-2 pl-sm-3 waves-effect d-flex" data-tab="default" id="panelServices-tab" data-toggle="pill" href="#panelServices" role="tab" aria-controls="panelServices" aria-selected="false"><i class="fas fa-share-alt"></i><span class="d-none d-md-block pl-3">Interfaces</span></a>
+          <a class="special-button mt-1 nav-link pl-2 pl-sm-3 waves-effect d-flex" id="panelNotifications-tab" data-toggle="pill" href="#panelNotifications" role="tab" aria-controls="panelNotifications" aria-selected="false"><i class="fas fa-bell"></i><span class="d-none d-md-block pl-3">Notifications</span></a>
+        </div>
+        <a class="special-button nav-link pl-2 pl-sm-3 btn green waves-effect d-flex mx-0 mx-md-auto" id="save-config" href="#" role="tab" aria-selected="false" update-url="{{ url_for('config') }}"><i class="fas fa-save"></i><span class="d-none d-md-block pl-2">Save</span></a>
+        <a class="special-button nav-link pl-2 pl-sm-3 btn orange waves-effect d-flex mx-0 mx-md-auto" id="reset-config" href="#" role="tab" aria-selected="false"><i class="fas fa-redo-alt"></i><span class="d-none d-md-block pl-2">Reset unsaved</span></a>
+        <button class="special-button nav-link pl-2 pl-sm-3 btn red waves-effect d-flex mx-0 mx-md-auto mt-1" id="save-config-and-restart" href="#" role="tab" type="button" aria-selected="false" update-url="{{ url_for('config') }}"><i class="fas fa-power-off"></i><span class="d-none d-md-block pl-2">Save & restart</span></button>
+      </div>
+    </nav>
+    <main role="main" class="col-md-9 col-lg-10 col-11 ml-auto px-4">
+      <div class="tab-content" id="super-container">
+        <div class="tab-pane fade config-root" id="panelServices" role="tabpanel" aria-labelledby="panelServices-tab">
+          <div>
+            <div class="card-header">
+              <h2>Interfaces</h2>
+            </div>
+            <div>
+              <div class="card">
+                <div class="card-body">
+                  Add a new interface :<select id="AddServiceSelect" class="selectpicker" data-live-search="true">
+                    {% for service in services_list|sort %}
+                      <option data-tokens="{{ service }}">{{ service }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="button" id="AddService" class="btn btn-primary add-btn px-3 waves-effect"><i class="fa fa-plus pr-2" aria-hidden="true"></i> Add</button>
+                </div>
+              </div>
+              <br />
+              <!-- Card deck -->
+              <div class="card-deck config-container" update-url="{{ url_for('config') }}">
+                {% for service in services_list %}
+                  {% if service in config_services %}
+                    {{ m_config_service_card.config_service_card(config_services, service, services_list[service]) }}
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-pane fade config-root" id="panelNotifications" role="tabpanel" aria-labelledby="panelNotifications-tab">
+          <div>
+            <div class="card-header">
+              <h2>
+                Notifications
+                <a class="float-right blue-text" target="_blank" rel="noopener" href="{{ OCTOBOT_DOCS_URL }}/configuration/accounts#notifications"><i class="fa-solid fa-question"></i></a>
+              </h2>
+            </div>
+            <div>
+              <!-- Card deck -->
+              <div class="card-deck config-container">{{ m_config_notification.config_notification(config_notifications, 'notification', notifiers_list) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Default cards -->
+  <div class="d-none">
+    <!-- Services -->
+    <div id="AddService-template-default">
+      {% for service in services_list %}
+        <div id="AddService-template-default-{{ service }}">{{ m_config_service_card.config_service_card(config_services, service, services_list[service], add_class = added_class, no_select = True, default_values = True) }}</div>
+      {% endfor %}
+    </div>
+  </div>
+  <br />
+{% endblock %}
+
+{% block additional_scripts %}
+  <script src="{{ url_for('static', filename = 'js/common/resources_rendering.js', u = LAST_UPDATED_STATIC_FILES) }}"></script>
+  <script src="{{ url_for('static', filename = 'js/common/exchange_accounts.js', u = LAST_UPDATED_STATIC_FILES) }}"></script>
+  <script src="{{ url_for('static', filename = 'js/components/configuration.js', u = LAST_UPDATED_STATIC_FILES) }}"></script>
+{% endblock %}

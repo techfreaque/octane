@@ -207,6 +207,45 @@ def accounts():
         notifiers_list=notifiers_list,
     )
 
+route = "/account-settings"
+if cross_origin := import_cross_origin_if_enabled():
+
+    @web_interface.server_instance.route(route)
+    @cross_origin(origins="*")
+    @login.login_required_when_activated
+    def account_settings():
+        return _account_settings()
+
+else:
+
+    @web_interface.server_instance.route(route)
+    @login.login_required_when_activated
+    def account_settings():
+        return _account_settings()
+
+
+def _account_settings():
+    display_config = interfaces_util.get_edited_config()
+
+    # service lists
+    service_list = models.get_services_list()
+    notifiers_list = models.get_notifiers_list()
+
+    config_exchanges = display_config[commons_constants.CONFIG_EXCHANGES]
+    return flask.render_template(
+        "account-settings.html",
+        ccxt_tested_exchanges=models.get_tested_exchange_list(),
+        ccxt_simulated_tested_exchanges=models.get_simulated_exchange_list(),
+        ccxt_other_exchanges=sorted(models.get_other_exchange_list()),
+        exchanges_details=models.get_exchanges_details(config_exchanges),
+        config_exchanges=config_exchanges,
+        config_notifications=display_config[
+            services_constants.CONFIG_CATEGORY_NOTIFICATION
+        ],
+        config_services=display_config[services_constants.CONFIG_CATEGORY_SERVICES],
+        services_list=service_list,
+        notifiers_list=notifiers_list,
+    )
 
 route = "/config"
 methods = ["POST"]

@@ -126,37 +126,38 @@ def register_exchanges_routes(plugin):
         }
         return basic_utils.get_response(data=data)
 
-    route = "/services-info"
-    if cross_origin := import_cross_origin_if_enabled():
+    # route = "/services-info"
+    # if cross_origin := import_cross_origin_if_enabled():
 
-        @plugin.blueprint.route(route)
-        @cross_origin(origins="*")
-        @login.login_required_when_activated
-        def services_info():
-            return _services_info()
+    #     @plugin.blueprint.route(route)
+    #     @cross_origin(origins="*")
+    #     @login.login_required_when_activated
+    #     def services_info():
+    #         return _services_info()
 
-    else:
+    # else:
 
-        @plugin.blueprint.route(route)
-        @login.login_required_when_activated
-        def services_info():
-            return _services_info()
+    #     @plugin.blueprint.route(route)
+    #     @login.login_required_when_activated
+    #     def services_info():
+    #         return _services_info()
 
-    def _services_info():
-        display_config = interfaces_util.get_edited_config()
+    # def _services_info():
+    #     display_config = interfaces_util.get_edited_config()
 
-        # service lists
-        service_list = models.get_services_list()
-        notifiers_list = models.get_notifiers_list()
+    #     # service lists
+    #     service_list = models.get_services_list()
+    #     notifiers_list = models.get_notifiers_list()
 
-        data = {
-            "config_notifications": display_config[
-                services_constants.CONFIG_CATEGORY_NOTIFICATION
-            ],
-            "config_services": display_config[
-                services_constants.CONFIG_CATEGORY_SERVICES
-            ],
-            "services_list": service_list,
-            "notifiers_list": notifiers_list,
-        }
-        return basic_utils.get_response(data=data)
+    #     data = {
+    #         "config_notifications": display_config[
+    #             services_constants.CONFIG_CATEGORY_NOTIFICATION
+    #         ],
+    #         "config_services": display_config[
+    #             services_constants.CONFIG_CATEGORY_SERVICES
+    #         ],
+    #         "services_list": service_list,
+    #         "notifiers_list": notifiers_list,
+    #     }
+    #     return basic_utils.get_response(data=data)
+
