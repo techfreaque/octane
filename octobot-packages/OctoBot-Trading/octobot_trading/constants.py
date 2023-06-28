@@ -90,6 +90,7 @@ FULL_CANDLE_HISTORY_EXCHANGES = [
     "okcoin",
     "okx",
     "binanceusdm",
+    "mexc",
 ]
 
 ADDITIONAL_EXCHANGES = ["yahoofinance"]

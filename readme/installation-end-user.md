@@ -3,7 +3,7 @@
 * [Linux Docker Installation](installation-end-user.md#docker-on-linux-installation) (recommended)
 * [Linux Local Installation](installation-end-user.md#linux-local-installation)
 * [Windows Docker Installation](installation-end-user.md#docker-on-windows-installation) (recommended)
-* [Windows Installation](installation-end-user.md#windows-installation)
+* [Windows Local Installation](installation-end-user.md#windows-installation)
 
 ## Docker on Linux Installation
 
@@ -116,7 +116,7 @@ Make sure you have git and docker installed on your windows machine
 ### Access the Webinterface
 *  go to myDomainOrIP.com:5001 or localhost:5001
 
-## Windows Installation
+## Windows Local Installation
 
 ### Download and Install Requirements
 
