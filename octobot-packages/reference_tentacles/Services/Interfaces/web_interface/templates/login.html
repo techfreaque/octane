@@ -1,18 +1,15 @@
-{% extends "layout.html" %}
+{% extends "clean-layout.html" %}
 {% set active_page = "home" %}
 
 {% from "macros/forms.html" import render_field %}
 
 {% block body %}
 <br>
-<div class="login_box mx-auto mt-1 mt-xl-5">
+<div class="login_box mx-auto mt-4">
     <div class="card text-center">
         <div class="card-header">
             <h2>
                 Welcome back
-                <a class="float-right blue-text" target="_blank" rel="noopener" href="{{OCTOBOT_DOCS_URL}}/interfaces/web-interface#protect-your-web-interface">
-                    <i class="fa-solid fa-question"></i>
-                </a>
             </h2>
         </div>
         <div class="card-body">
@@ -27,9 +24,9 @@
             {% endwith %}
             <h5>
                 {% if is_remote_login %}
-                Please enter your OctoBot account password to access your OctoBot
+                Please enter your Octane account password to access your Octane
                 {% else %}
-                Please enter your password to access your OctoBot
+                Please enter your password to access your Octane
                 {% endif %}
             </h5>
             <form method=post>

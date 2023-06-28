@@ -85,7 +85,7 @@ class WebService(services.AbstractService):
         return services_constants.CONFIG_WEB
 
     def get_website_url(self):
-        return "/home"
+        return "/"
 
     def get_logo(self):
         return "static/img/svg/octobot.svg"
