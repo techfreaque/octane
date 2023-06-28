@@ -1,4 +1,13 @@
 git pull
+
+$sourceFile = 'scripts/.env-example-unix'
+$destinationFile = '.env'
+if (-not (test-path $destinationFile))
+{
+  $opts = @{'path' = $sourceFile; 'destination' = $destinationFile; 'confirm' = $false}
+  copy-item @opts
+}
+
 docker build --tag octane -f scripts/Dockerfile-win .
 
 docker stop octane1
