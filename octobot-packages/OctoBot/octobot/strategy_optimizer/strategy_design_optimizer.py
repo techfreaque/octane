@@ -147,7 +147,11 @@ class StrategyDesignOptimizer:
         lock = multiprocessing.RLock()
         shared_keep_running = multiprocessing.Value(ctypes.c_bool, True)
         shared_run_time = multiprocessing.Array(ctypes.c_float, [0.0 for _ in range(self.active_processes_count)])
+        previous_log_level = commons_logging.get_global_logger_level()
+        previous_log_level_per_handler = commons_logging.get_logger_level_per_handler()
         try:
+            self.logger.info("Setting logging level to logging.ERROR to limit messages.")
+            commons_logging.set_global_logger_level(logging.ERROR)
             async for selected_optimizer_ids in self._all_optimizer_ids(optimizer_ids,
                                                                         optimizer_settings.empty_the_queue):
                 run_queues_by_optimizer_id = {
@@ -156,6 +160,8 @@ class StrategyDesignOptimizer:
                     for optimizer_id in selected_optimizer_ids
                 }
                 try:
+
+
                     await self._run_multi_processed_optimizer(
                         optimizer_settings, lock,
                         shared_keep_running, shared_run_time,
@@ -178,6 +184,10 @@ class StrategyDesignOptimizer:
             self.logger.exception(e, True, f"Error when running optimizer processes: {e}")
             success = False
         finally:
+            commons_logging.set_global_logger_level(
+                previous_log_level,
+                handler_levels=previous_log_level_per_handler,
+            )
             if optimizer_settings.notify_when_complete:
                 await self._send_optimizer_finished_notification()
             self.process_pool_handle = None

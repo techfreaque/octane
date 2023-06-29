@@ -64,6 +64,8 @@ class O_UI(plugins.AbstractWebInterfacePlugin):
         config = tentacles_manager_api.get_tentacle_config(
             interfaces_util.get_edited_tentacles_config(), cls
         )
+        if not config:
+            config = DEFAULT_CONFIG
         config[octobot_constants.OPTIMIZATION_CAMPAIGN_KEY] = campaign_config
         config[
             commons_constants.CONFIG_CURRENT_LIVE_ID
@@ -91,3 +93,44 @@ class O_UI(plugins.AbstractWebInterfacePlugin):
 optimization_campaign.register_optimization_campaign_name_proxy(
     O_UI.optimization_campaign_name
 )
+
+DEFAULT_CONFIG = {
+    "backtesting_run_settings": {
+        "data_sources": [
+            "current_bot_data"
+        ],
+        "end_timestamp": None,
+        "exchange_names": [
+        ],
+        "exchange_type": "use_current_profile",
+        "start_timestamp": None
+    },
+    "display_settings": {
+        "graphs": {
+            "display_unified_tooltip": True,
+            "display_use_log_scale": False,
+            "max_candles_before_line_display": 10000,
+            "max_candles_line_sources": [
+                "high",
+                "low"
+            ]
+        }
+    },
+    "optimizer_campaigns_to_load": {
+        "default_campaign": True
+    },
+    "optimizer_run_settings": {
+        "data_files": [
+            "current_bot_data"
+        ],
+        "end_timestamp": None,
+        "exchange_names": [
+        ],
+        "exchange_type": "use_current_profile",
+        "idle_cores": 1,
+        "notify_when_complete": True,
+        "optimizer_id": 1,
+        "queue_size": 1000,
+        "start_timestamp": None
+    }
+}

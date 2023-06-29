@@ -16,5 +16,5 @@
 
 PROJECT_NAME = "Octane"
 AUTHOR = "a42.ch"
-VERSION = "0.9.27"  # major.minor.revision
+VERSION = "0.9.28"  # major.minor.revision
 LONG_VERSION = f"{VERSION}"
