@@ -34,13 +34,13 @@ if cross_origin := import_cross_origin_if_enabled():
             return _tentacles()
     else:
         @advanced_controllers.advanced.route(tentacles_route)
-        @login.active_login_required
+        @login.login_required_when_activated
         @cross_origin(origins="*")
         def tentacles():
             return _tentacles()
 else:
     @advanced_controllers.advanced.route(tentacles_route)
-    @login.active_login_required
+    @login.login_required_when_activated
     def tentacles():
         return _tentacles()
 
@@ -142,13 +142,13 @@ if cross_origin := import_cross_origin_if_enabled():
             return _tentacle_packages()
     else:
         @advanced_controllers.advanced.route(tentacles_package_route, methods=methods)
-        @login.active_login_required
+        @login.login_required_when_activated
         @cross_origin(origins="*")
         def tentacle_packages():
             return _tentacle_packages()
 else:
     @advanced_controllers.advanced.route(tentacles_package_route, methods=methods)
-    @login.active_login_required
+    @login.login_required_when_activated
     def tentacle_packages():
         return _tentacle_packages()
 
