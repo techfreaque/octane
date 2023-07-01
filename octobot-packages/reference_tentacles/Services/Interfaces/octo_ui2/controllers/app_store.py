@@ -76,7 +76,7 @@ def register_appstore_routes(plugin):
         else:
 
             @plugin.blueprint.route(tentacles_package_route, methods=methods)
-            @login.active_login_required
+            @login.login_required_when_activated
             @cross_origin(origins="*")
             def tentacle_packages():
                 return _tentacle_packages()
@@ -84,7 +84,7 @@ def register_appstore_routes(plugin):
     else:
 
         @plugin.blueprint.route(tentacles_package_route, methods=methods)
-        @login.active_login_required
+        @login.login_required_when_activated
         def tentacle_packages():
             return _tentacle_packages()
 
