@@ -132,5 +132,5 @@ linux-update-ENDUSER-octobot-packages.sh
 windows-docker_install_or_update---untested.ps1
 windows-install-repair-and-update-to-BETA-installation.ps1
 windows-install-repair-and-update-to-STABLE-installation.ps1
-windows-start-octobot.ps1
+windows-start-octane.ps1
 Windows-Start-Octobot.exe
