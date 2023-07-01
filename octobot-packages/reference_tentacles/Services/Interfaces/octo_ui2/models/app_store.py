@@ -73,6 +73,8 @@ DISTRO_UPDATED_APPS = (
     "simple_dca",
     "tradingview_trading",
     "staggered_orders_trading",
+    "basic_tentacles",
+    "LorentzianClassificationMode"
 )
 
 
