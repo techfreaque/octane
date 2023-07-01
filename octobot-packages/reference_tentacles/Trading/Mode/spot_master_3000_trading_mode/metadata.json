@@ -1,5 +1,5 @@
 {
-  "version": "0.8.6",
+  "version": "0.9.0",
   "origin_package": "Octane-Default-Tentacles",
   "tentacles": ["SpotMaster3000Mode"],
   "tentacles-requirements": ["TimeFrameStrategyEvaluator", "basic_tentacles"]
