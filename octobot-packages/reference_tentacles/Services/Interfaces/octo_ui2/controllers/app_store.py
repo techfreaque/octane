@@ -1,6 +1,5 @@
 import os
 import flask
-from numpy import cross
 
 import octobot_commons.authentication as authentication
 import octobot_commons.profiles as profiles
