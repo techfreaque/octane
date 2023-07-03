@@ -1,6 +1,6 @@
 {
   "version": "1.1.0",
-  "origin_package": "Octane-Pro-Tentacles",
+  "origin_package": "Octane-Pro-Tentacles-Keywords",
   "tentacles": ["pro_tentacles"],
   "tentacles-requirements": ["basic_tentacles"]
 }
