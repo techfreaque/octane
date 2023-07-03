@@ -19,7 +19,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 COPY . .
 WORKDIR /octobot-packages
-RUN mkdir /octobot
+RUN mkdir -p /octobot
 RUN cp /.env /octobot/.env
 
 RUN pip install -U setuptools wheel pip>=20.0.0
