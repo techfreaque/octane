@@ -35,6 +35,7 @@ def register_bot_info_routes(plugin):
     cross_origin = import_cross_origin_if_enabled()
     if SHARE_YOUR_OCOBOT:
         _cross_origin = import_cross_origin_if_enabled(True)
+
         @plugin.blueprint.route(route)
         @_cross_origin(origins="*")
         def bot_info(exchange=None):
@@ -247,7 +248,16 @@ def register_bot_info_routes(plugin):
         )
 
     route = "/profile_media/<path:path>"
-    if cross_origin := import_cross_origin_if_enabled():
+    cross_origin = import_cross_origin_if_enabled()
+    if SHARE_YOUR_OCOBOT:
+        _cross_origin = import_cross_origin_if_enabled(True)
+
+        @plugin.blueprint.route(route)
+        @_cross_origin(origins="*")
+        def profile_media(path):
+            return _profile_media(path)
+
+    elif cross_origin:
 
         @plugin.blueprint.route(route)
         @cross_origin(origins="*")
@@ -268,12 +278,11 @@ def register_bot_info_routes(plugin):
             # reference point is the web interface directory:
             #   use OctoBot root folder as a reference
             return _send_file("../../../..", path)
-        else:
-            # use default profile image
-            basic_utils.get_octo_ui_2_logger().error(
-                f"Failed to get profile image, path {path} not found"
-            )
-            return _send_file("../../../..", "daily_trading")
+        # use default profile image
+        basic_utils.get_octo_ui_2_logger().error(
+            f"Failed to get profile image, path {path} not found"
+        )
+        return _send_file("../../../..", "daily_trading")
 
     def _send_file(base_dir, file_path):
         base_path, file_name = os.path.split(file_path)
