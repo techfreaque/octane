@@ -94,7 +94,7 @@ def _check_tentacles_install_exit():
     if constants.EXIT_BEFORE_TENTACLES_AUTO_REINSTALL:
         logging.get_logger(COMMANDS_LOGGER_NAME).info(
             "Exiting OctoBot before re-installing tentacles as EXIT_BEFORE_TENTACLES_AUTO_REINSTALL is True")
-        sys.exit(0)
+        # sys.exit(0)
 
 
 def _get_first_non_imported_profile_tentacles_setup_config(config):
@@ -136,7 +136,7 @@ async def update_or_repair_tentacles_if_necessary(selected_profile_tentacles_set
 
 
 async def install_or_update_tentacles(config):
-    await install_all_tentacles()
+    # await install_all_tentacles()
     # reload profiles
     config.load_profiles()
     # reload tentacles
