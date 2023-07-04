@@ -82,7 +82,7 @@ docker stop octane1
 
 
 ## Docker on Windows Installation
-
+[Watch the video installation guide for Docker on Windows](https://youtu.be/P4bEarM7GRE)
 ### Download and Install Requirements
 
 Make sure you have git and docker installed on your windows machine
