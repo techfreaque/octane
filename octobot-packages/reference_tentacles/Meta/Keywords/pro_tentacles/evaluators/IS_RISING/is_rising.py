@@ -25,7 +25,7 @@ from tentacles.Meta.Keywords.pro_tentacles.pro_keywords.indicator_keywords.plott
     store_evaluator_data,
     allow_enable_plot,
 )
-from tentacles.Meta.Keywords.pro_tentacles.pro_keywords.indicator_keywords.moving.moving import (
+from tentacles.Meta.Keywords.indicator_keywords.moving.moving_up_down import (
     moving_up_,
 )
 from tentacles.Meta.Keywords.pro_tentacles.indicators.indicator_handling import (
