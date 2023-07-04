@@ -22,7 +22,7 @@ import numpy
 from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.user_inputs2 import (
     user_input2,
 )
-from tentacles.Meta.Keywords.pro_tentacles.pro_keywords.indicator_keywords.crossing import (
+from tentacles.Meta.Keywords.indicator_keywords.crossing import (
     crossing_up_,
     crossing_down_,
     crossing_,
