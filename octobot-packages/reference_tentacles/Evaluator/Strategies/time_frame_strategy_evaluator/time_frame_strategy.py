@@ -40,7 +40,7 @@ class TimeFrameStrategyEvaluator(evaluators.StrategyEvaluator):
         self.UI.user_input(
             common_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT,
             common_enums.UserInputTypes.INT,
-            2000,
+            3000,
             inputs,
             min_val=200,
             title="Amount of historical live candles (requires a restart of Octobot)",

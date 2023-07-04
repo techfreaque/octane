@@ -92,7 +92,15 @@ def local_cache_client(evaluator, symbol, time_frame, exchange_name=None):
 
 
 def get_required_candles_count(trading_mode_class, tentacles_setup_config):
-    return tentacles_manager_api.get_tentacle_config(tentacles_setup_config, trading_mode_class).get(
+    evaluators_candle_count = tentacles_manager_api.get_tentacle_config(tentacles_setup_config, trading_mode_class).get(
         constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT,
-        constants.DEFAULT_IGNORED_VALUE
+    )
+    return evaluators_candle_count or (
+        tentacles_manager_api.get_tentacle_config(
+            tentacles_setup_config, trading_mode_class
+        )
+        .get("nodes", {})
+        .get("mode_node", {})
+        .get("config_mode_node", {})
+        .get("available_candles", constants.DEFAULT_IGNORED_VALUE)
     )

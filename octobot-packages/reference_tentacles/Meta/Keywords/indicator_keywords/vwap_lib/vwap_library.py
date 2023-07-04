@@ -19,6 +19,8 @@
 # please contact me at max@a42.ch
 
 import typing
+
+import numpy
 import octobot_commons.enums as common_enums
 from datetime import datetime
 
@@ -87,6 +89,7 @@ def calculate_historical_VWAP(
     custom_window_in_minutes: typing.Optional[int] = None,
 ):
     vwap_data = []
+    standard_diviations = []
     if window == "24h" or custom_window_in_minutes:
         length = calculate_VWAP_length(
             time_frame=time_frame,
@@ -110,6 +113,7 @@ def calculate_historical_VWAP(
                 volume_sum = sum(volumes)
 
                 vwap_data.append(volume_x_candle_sum / volume_sum)
+                standard_diviations.append(numpy.std(vwap_data[-length:]))
 
     else:
         volume_x_candle_data = []
@@ -128,6 +132,8 @@ def calculate_historical_VWAP(
             if relative_candle_id >= length:
                 if length == 0:
                     vwap_data.append(current_volume_x_candle / volume[candle_id])
+                    standard_diviations.append(0)
+
                 else:
                     volume_x_candle_data = volume_x_candle_data[-length:]
                     volume_x_candle_sum = sum(volume_x_candle_data)
@@ -136,6 +142,7 @@ def calculate_historical_VWAP(
                     volume_sum = sum(volumes)
 
                     vwap_data.append(volume_x_candle_sum / volume_sum)
+                    standard_diviations.append(numpy.std(vwap_data[-length:]))
 
             # volume_x_candle_data = []
             # volume_x_candle_sum = 0.0
@@ -156,4 +163,4 @@ def calculate_historical_VWAP(
             # except ZeroDivisionError:
             #     vwap_data.append(0)
             # candle_id += length
-    return vwap_data
+    return vwap_data, numpy.array(standard_diviations)

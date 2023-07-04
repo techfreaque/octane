@@ -25,6 +25,7 @@ import octobot_evaluators.evaluators.channel as evaluator_channels
 import octobot_evaluators.constants as constants
 import octobot_evaluators.evaluators as evaluator
 import octobot_evaluators.util as util
+from octobot_trading import modes
 
 
 def init_time_frames_from_strategies(config, tentacles_setup_config) -> None:
@@ -56,7 +57,8 @@ def get_activated_evaluators(tentacles_setup_config):
         get_activated_scripted_evaluators_classes(tentacles_setup_config) + \
         get_activated_real_time_evaluators_classes(tentacles_setup_config) + \
         get_activated_social_evaluators_classes(tentacles_setup_config) + \
-        get_activated_strategies_classes(tentacles_setup_config)
+        get_activated_strategies_classes(tentacles_setup_config) + \
+        get_activated_trading_mode_classes(tentacles_setup_config)
 
 
 def get_activated_strategies_classes(tentacles_setup_config):
@@ -77,6 +79,10 @@ def get_activated_real_time_evaluators_classes(tentacles_setup_config):
 
 def get_activated_social_evaluators_classes(tentacles_setup_config):
     return _get_activated_classes(tentacles_setup_config, evaluator.SocialEvaluator)
+
+
+def get_activated_trading_mode_classes(tentacles_setup_config):
+    return _get_activated_classes(tentacles_setup_config, modes.AbstractTradingMode)
 
 
 def _get_activated_classes(tentacles_setup_config, parent_class):
