@@ -3,7 +3,7 @@
 * [Linux Docker Installation](installation-end-user.md#docker-on-linux-installation) (recommended)
 * [Linux Local Installation](installation-end-user.md#linux-local-installation)
 * [Windows Docker Installation](installation-end-user.md#docker-on-windows-installation) (recommended)
-* [Windows Local Installation](installation-end-user.md#windows-installation)
+* [Windows Local Installation](installation-end-user.md#windows-local-installation)
 
 ## Docker on Linux Installation
 
