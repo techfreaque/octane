@@ -117,6 +117,7 @@ Make sure you have git and docker installed on your windows machine
 *  go to myDomainOrIP.com:5001 or localhost:5001
 
 ## Windows Local Installation
+[Watch the video installation guide for installing locally on Windows](https://youtu.be/SjYHsxf7Xu0)
 
 ### Download and Install Requirements
 
