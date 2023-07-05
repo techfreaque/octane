@@ -778,6 +778,18 @@ class RestExchange(abstract_exchange.AbstractExchange):
         """
         return await self.connector.get_funding_rate_history(symbol=symbol, limit=limit, **kwargs)
 
+    async def get_open_interest_history(
+        self, symbol: str, time_frame: str, limit: int = 500, **kwargs: dict
+        ) -> list:
+        """
+        :param symbol: the symbol
+        :param limit: the history limit size
+        :return: the open interest history
+        """
+        return await self.connector.get_open_interest_history(
+            symbol=symbol, time_frame=time_frame, limit=limit, **kwargs
+        )
+
     """
     Margin and leverage
     """

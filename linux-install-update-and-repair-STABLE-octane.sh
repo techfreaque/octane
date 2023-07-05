@@ -5,6 +5,7 @@ git pull
 
 timedatectl set-ntp true
 
+mkdir -p user
 cp -n ./octobot-packages/OctoBot/octobot/config/default_config.json user/config.json
 cp -n scripts/.env-example-unix .env
 

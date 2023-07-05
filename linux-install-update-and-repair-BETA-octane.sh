@@ -13,6 +13,7 @@ chmod u+x linux-start-octane.sh
 chmod u+x linux-install-update-and-repair-BETA-octane.sh
 chmod u+x linux-install-update-and-repair-STABLE-octane.sh
 
+mkdir -p user
 cp -n ./octobot-packages/OctoBot/octobot/config/default_config.json user/config.json
 cp -n scripts/.env-example-unix .env
 
