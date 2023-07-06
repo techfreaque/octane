@@ -33,6 +33,11 @@ from trading_backend.exchanges.bybit import (
     Bybit
 )
 
+from trading_backend.exchanges import cryptocom
+from trading_backend.exchanges.cryptocom import (
+    CryptoCom
+)
+
 from trading_backend.exchanges import ascendex
 from trading_backend.exchanges.ascendex import (
     Ascendex
@@ -63,10 +68,26 @@ from trading_backend.exchanges.phemex import (
     Phemex
 )
 
+from trading_backend.exchanges import kucoin
+from trading_backend.exchanges.kucoin import (
+    Kucoin
+)
+
+from trading_backend.exchanges import kucoinfutures
+from trading_backend.exchanges.kucoinfutures import (
+    KucoinFutures
+)
+
+from trading_backend.exchanges import mexc
+from trading_backend.exchanges.mexc import (
+    MEXC
+)
+
 __all__ = [
     "Exchange",
     "Binance",
     "Bybit",
+    "CryptoCom",
     "OKX",
     "Ascendex",
     "GateIO",
@@ -74,4 +95,7 @@ __all__ = [
     "HuobiPro",
     "Bitget",
     "Phemex",
+    "Kucoin",
+    "KucoinFutures",
+    "MEXC",
 ]

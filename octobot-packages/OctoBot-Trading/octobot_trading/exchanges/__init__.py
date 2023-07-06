@@ -40,12 +40,6 @@ from octobot_trading.exchanges.abstract_websocket_exchange import (
     AbstractWebsocketExchange,
 )
 
-from octobot_trading.exchanges import basic_exchange_wrapper
-from octobot_trading.exchanges.basic_exchange_wrapper import (
-    BasicExchangeWrapper,
-    temporary_exchange_wrapper,
-)
-
 from octobot_trading.exchanges import exchange_manager
 from octobot_trading.exchanges.exchange_manager import (
     ExchangeManager,
@@ -76,6 +70,9 @@ from octobot_trading.exchanges.util import (
     is_missing_trading_fees,
     apply_trades_fees,
     get_exchange_class_from_name,
+    get_local_exchange_manager,
+    get_auto_filled_exchange_names,
+    get_exchange_details,
     force_disable_web_socket,
     check_web_socket_config,
     search_websocket_class,
@@ -122,6 +119,10 @@ from octobot_trading.exchanges.connectors import (
     ExchangeSimulatorConnector,
     ExchangeSimulatorAdapter,
 )
+from octobot_trading.exchanges import exchange_details
+from octobot_trading.exchanges.exchange_details import (
+    ExchangeDetails,
+)
 
 __all__ = [
     "AbstractAdapter",
@@ -151,6 +152,9 @@ __all__ = [
     "is_missing_trading_fees",
     "apply_trades_fees",
     "get_exchange_class_from_name",
+    "get_local_exchange_manager",
+    "get_auto_filled_exchange_names",
+    "get_exchange_details",
     "AbstractExchange",
     "is_channel_managed_by_websocket",
     "is_channel_fully_managed_by_websocket",
@@ -171,8 +175,6 @@ __all__ = [
     "ExchangeMarketStatusFixer",
     "is_ms_valid",
     "AbstractWebsocketExchange",
-    "BasicExchangeWrapper",
-    "temporary_exchange_wrapper",
     "force_disable_web_socket",
     "check_web_socket_config",
     "search_websocket_class",
@@ -181,4 +183,5 @@ __all__ = [
     "CCXTAdapter",
     "ExchangeSimulatorConnector",
     "ExchangeSimulatorAdapter",
+    "ExchangeDetails",
 ]

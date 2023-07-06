@@ -40,10 +40,19 @@ class Binance(exchanges.Exchange):
         cls.SPOT_ID = cls.LEGACY_SPOT_ID
         cls.FUTURE_ID = cls.LEGACY_FUTURE_ID
 
+    def _get_broker_dict(self, current_broker_params):
+        current_broker_params.update({
+            'spot': f"x-{self.__class__.SPOT_ID}",
+            'swap': f"x-{self.__class__.FUTURE_ID}",  # used in stop orders
+            'future': f"x-{self.__class__.FUTURE_ID}",
+        })
+        return current_broker_params
+
     def get_orders_parameters(self, params=None) -> dict:
-        params = super().get_orders_parameters(params)
-        params.update({'newClientOrderId': self._get_order_custom_id()})
-        return params
+        current_broker_params = self._exchange.connector.client.options.get("broker", {})
+        if current_broker_params != self._get_broker_dict(current_broker_params):
+            self._exchange.connector.client.options["broker"] = self._get_broker_dict(current_broker_params)
+        return super().get_orders_parameters(params)
 
     async def _ensure_broker_status(self):
         try:

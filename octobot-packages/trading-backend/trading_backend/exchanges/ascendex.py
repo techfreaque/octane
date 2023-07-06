@@ -31,6 +31,7 @@ class Ascendex(exchanges.Exchange):
         return f"{self._get_id()}{new_id[len(self._get_id()):]}"
 
     def get_orders_parameters(self, params=None) -> dict:
+        # no ccxt broker id automation
         params = super().get_orders_parameters(params)
         params.update({'id': self._generate_order_id()})
         return params

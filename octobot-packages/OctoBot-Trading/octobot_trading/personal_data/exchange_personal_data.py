@@ -82,12 +82,17 @@ class ExchangePersonalData(util.Initializable):
             self.logger.exception(e, True, f"Failed to update balance : {e}")
             return False
 
-    async def handle_portfolio_update_from_order(self, order,
-                                                 require_exchange_update: bool = True,
-                                                 should_notify: bool = True) -> bool:
+    async def handle_portfolio_and_position_update_from_order(
+        self, order, require_exchange_update: bool = True, should_notify: bool = True
+    ) -> bool:
         try:
-            changed: bool = await self.portfolio_manager.handle_balance_update_from_order(order,
-                                                                                          require_exchange_update)
+            changed: bool = await self.portfolio_manager.handle_balance_update_from_order(
+                order, require_exchange_update
+            )
+            if self.exchange_manager.is_future:
+                changed = await self.positions_manager.handle_position_update_from_order(
+                    order, require_exchange_update
+                ) and changed
             if should_notify:
                 await self.handle_portfolio_update_notification(self.portfolio_manager.portfolio.portfolio)
 
@@ -203,7 +208,11 @@ class ExchangePersonalData(util.Initializable):
 
     async def update_order_from_stored_data(self, exchange_order_id, pending_groups):
         order = self.orders_manager.get_order(None, exchange_order_id=exchange_order_id)
+        previous_order_id = order.order_id
         await orders_storage_operations.apply_order_storage_details_if_any(order, self.exchange_manager, pending_groups)
+        if previous_order_id != order.order_id:
+            # order_id got restored to its original value
+            self.orders_manager.replace_order(previous_order_id, order)
 
     async def on_order_refresh_success(self, order, should_notify, is_new_order):
         if order.state is not None:

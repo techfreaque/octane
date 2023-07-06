@@ -17,10 +17,12 @@ import mock
 
 import trading_backend.exchange_factory
 import trading_backend.exchanges
-from tests import binance_exchange, bybit_exchange, default_exchange
+from tests import binance_exchange, bybit_exchange, default_exchange, kucoin_exchange, kucoinfutures_exchange
 
 
-def test_create_exchange_backend(binance_exchange, bybit_exchange, default_exchange):
+def test_create_exchange_backend(
+    binance_exchange, bybit_exchange, kucoin_exchange, kucoinfutures_exchange, default_exchange
+):
     class ExchangeMock:
         def __init__(self, *args):
             pass
@@ -31,12 +33,20 @@ def test_create_exchange_backend(binance_exchange, bybit_exchange, default_excha
     class BybitMock(ExchangeMock):
         pass
 
+    class KucoinMock(ExchangeMock):
+        pass
+
+    class KucoinFuturesMock(ExchangeMock):
+        pass
+
     class OtherMock(ExchangeMock):
         pass
 
     exchanges_dict = {
-        "binance": BinanceMock,
+        "binanceus": BinanceMock,
         "bybit": BybitMock,
+        "kucoin": KucoinMock,
+        "kucoinfutures": KucoinFuturesMock,
         "other": OtherMock,
     }
     with mock.patch.object(trading_backend.exchange_factory, "_get_exchanges",
@@ -45,6 +55,12 @@ def test_create_exchange_backend(binance_exchange, bybit_exchange, default_excha
         _get_exchanges_mock.assert_called_once()
         _get_exchanges_mock.reset_mock()
         assert isinstance(trading_backend.create_exchange_backend(bybit_exchange), BybitMock)
+        _get_exchanges_mock.assert_called_once()
+        _get_exchanges_mock.reset_mock()
+        assert isinstance(trading_backend.create_exchange_backend(kucoin_exchange), KucoinMock)
+        _get_exchanges_mock.assert_called_once()
+        _get_exchanges_mock.reset_mock()
+        assert isinstance(trading_backend.create_exchange_backend(kucoinfutures_exchange), KucoinFuturesMock)
         _get_exchanges_mock.assert_called_once()
         _get_exchanges_mock.reset_mock()
         assert isinstance(trading_backend.create_exchange_backend(default_exchange), trading_backend.exchanges.Exchange)
@@ -65,5 +81,5 @@ def test_get_exchanges():
         for exchange_class in exchanges_by_name.values()
         for exchange in exchange_class.__subclasses__()
     })
-    assert len(exchanges_by_name) == 10
+    assert len(exchanges_by_name) == 14
     assert trading_backend.exchange_factory._get_exchanges() == exchanges_by_name

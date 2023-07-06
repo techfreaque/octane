@@ -62,6 +62,7 @@ THROTTLED_WS_UPDATES = float(os.getenv("THROTTLED_WS_UPDATES", "0.1"))  # avoid 
 ENABLE_LIVE_CANDLES_STORAGE = os_util.parse_boolean_environment_var("ENABLE_LIVE_CANDLES_STORAGE", "False")
 ENABLE_HISTORICAL_ORDERS_UPDATES_STORAGE = os_util.parse_boolean_environment_var("ENABLE_HISTORICAL_ORDERS_UPDATES_STORAGE", "False")
 ENABLE_SIMULATED_CURRENT_ORDERS_STORAGE = os_util.parse_boolean_environment_var("ENABLE_SIMULATED_CURRENT_ORDERS_STORAGE", "False")
+ENABLE_BACKTESTING_CURRENT_ORDERS_STORAGE = os_util.parse_boolean_environment_var("ENABLE_BACKTESTING_CURRENT_ORDERS_STORAGE", "False")
 DISPLAY_TIME_FRAME = commons_enums.TimeFrames.ONE_HOUR
 
 # Decimal default values (decimals are immutable, can be stored as constant)
@@ -110,6 +111,7 @@ TESTED_EXCHANGES = [
     "phemex",
     "hollaex",
     "binanceusdm"
+    "mexc",
 ]
 DEFAULT_FUTURE_EXCHANGES = ["binanceusdm", "bybit"]
 SIMULATOR_TESTED_EXCHANGES = ["bitfinex2", "bithumb", "bitstamp", "bittrex", "coinex",

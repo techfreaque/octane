@@ -22,7 +22,6 @@ from octobot_trading.enums import TradeOrderSide
 import octobot_trading.modes.script_keywords.basic_keywords.account_balance as account_balance
 import octobot_trading.modes.script_keywords.basic_keywords.user_inputs as user_inputs
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.data.exchange_private_data as exchange_private_data
-import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_public_data as exchange_public_data
 import tentacles.Meta.Keywords.scripting_library.data.writing.plotting as plotting
 
 
@@ -86,144 +85,145 @@ async def plot_orders(ctx):
         #     else:
         #         short_entry_list.append(float(order.origin_price))
 
-    if ctx.exchange_manager.is_backtesting:
-        if long_tp_list:
-            await ctx.set_cached_value(value=long_tp_list, value_key="ltp")
-        if long_sl_list:
-            await ctx.set_cached_value(value=long_sl_list, value_key="lsl")
-        if long_limit_list:
-            await ctx.set_cached_value(value=long_limit_list, value_key="llmt")
-        if short_tp_list:
-            await ctx.set_cached_value(value=short_tp_list, value_key="stp")
-        if short_sl_list:
-            await ctx.set_cached_value(value=short_sl_list, value_key="ssl")
-        if short_limit_list:
-            await ctx.set_cached_value(value=short_limit_list, value_key="slmt")
-        try:
-            await plotting.plot(
-                ctx,
-                "Short stop losses",
-                cache_value="ssl",
-                mode="markers",
-                chart="main-chart",
-                color="yellow",
-                shift_to_open_candle_time=False,
-            )
-            await plotting.plot(
-                ctx,
-                "Long stop losses",
-                cache_value="lsl",
-                mode="markers",
-                chart="main-chart",
-                color="yellow",
-                shift_to_open_candle_time=False,
-            )
-            await plotting.plot(
-                ctx,
-                "Short take profits",
-                cache_value="stp",
-                mode="markers",
-                chart="main-chart",
-                color="green",
-                shift_to_open_candle_time=False,
-            )
-            await plotting.plot(
-                ctx,
-                "Long take profits",
-                cache_value="ltp",
-                mode="markers",
-                chart="main-chart",
-                color="magenta",
-                shift_to_open_candle_time=False,
-            )
-            await plotting.plot(
-                ctx,
-                "Short entry limit orders",
-                cache_value="slmt",
-                mode="markers",
-                chart="main-chart",
-                color="red",
-                shift_to_open_candle_time=False,
-            )
-            await plotting.plot(
-                ctx,
-                "Long entry limit orders",
-                cache_value="llmt",
-                mode="markers",
-                chart="main-chart",
-                color="blue",
-                shift_to_open_candle_time=False,
-            )
-        except RuntimeError:
-            pass  # no cache
-    else:
-        candle_time = await exchange_public_data.current_candle_time(ctx)
-        if long_tp_list:
-            await plotting.plot(
-                ctx,
-                "Long take profits",
-                y=[long_tp_list],
-                x=[candle_time],
-                mode="markers",
-                chart="main-chart",
-                color="magenta",
-                shift_to_open_candle_time=False,
-            )
-        if short_tp_list:
-            await plotting.plot(
-                ctx,
-                "Short take profits",
-                y=[short_tp_list],
-                x=[candle_time],
-                mode="markers",
-                chart="main-chart",
-                color="green",
-                shift_to_open_candle_time=False,
-            )
-        if long_sl_list:
-            await plotting.plot(
-                ctx,
-                "Long stop losses",
-                y=[long_sl_list],
-                x=[candle_time],
-                mode="markers",
-                chart="main-chart",
-                color="yellow",
-                shift_to_open_candle_time=False,
-            )
-        if short_sl_list:
-            await plotting.plot(
-                ctx,
-                "Short stop losses",
-                y=[short_sl_list],
-                x=[candle_time],
-                mode="markers",
-                chart="main-chart",
-                color="yellow",
-                shift_to_open_candle_time=False,
-            )
-        if long_limit_list:
-            await plotting.plot(
-                ctx,
-                "Long entry limit orders",
-                y=[long_limit_list],
-                x=[candle_time],
-                mode="markers",
-                chart="main-chart",
-                color="blue",
-                shift_to_open_candle_time=False,
-            )
-        if short_limit_list:
-            await plotting.plot(
-                ctx,
-                "Short entry limit orders",
-                y=[short_limit_list],
-                x=[candle_time],
-                mode="markers",
-                chart="main-chart",
-                color="red",
-                shift_to_open_candle_time=False,
-            )
+    # if ctx.exchange_manager.is_backtesting:
+    value_key_prefix = "b" if ctx.exchange_manager.is_backtesting else "l"
+    if long_tp_list:
+        await ctx.set_cached_value(value=long_tp_list, value_key=f"{value_key_prefix}ltp")
+    if long_sl_list:
+        await ctx.set_cached_value(value=long_sl_list, value_key=f"{value_key_prefix}lsl")
+    if long_limit_list:
+        await ctx.set_cached_value(value=long_limit_list, value_key=f"{value_key_prefix}llmt")
+    if short_tp_list:
+        await ctx.set_cached_value(value=short_tp_list, value_key=f"{value_key_prefix}stp")
+    if short_sl_list:
+        await ctx.set_cached_value(value=short_sl_list, value_key=f"{value_key_prefix}ssl")
+    if short_limit_list:
+        await ctx.set_cached_value(value=short_limit_list, value_key=f"{value_key_prefix}slmt")
+    try:
+        await plotting.plot(
+            ctx,
+            "Short stop losses",
+            cache_value=f"{value_key_prefix}ssl",
+            mode="markers",
+            chart="main-chart",
+            color="yellow",
+            shift_to_open_candle_time=False,
+        )
+        await plotting.plot(
+            ctx,
+            "Long stop losses",
+            cache_value=f"{value_key_prefix}lsl",
+            mode="markers",
+            chart="main-chart",
+            color="yellow",
+            shift_to_open_candle_time=False,
+        )
+        await plotting.plot(
+            ctx,
+            "Short take profits",
+            cache_value=f"{value_key_prefix}stp",
+            mode="markers",
+            chart="main-chart",
+            color="green",
+            shift_to_open_candle_time=False,
+        )
+        await plotting.plot(
+            ctx,
+            "Long take profits",
+            cache_value=f"{value_key_prefix}ltp",
+            mode="markers",
+            chart="main-chart",
+            color="magenta",
+            shift_to_open_candle_time=False,
+        )
+        await plotting.plot(
+            ctx,
+            "Short entry limit orders",
+            cache_value=f"{value_key_prefix}slmt",
+            mode="markers",
+            chart="main-chart",
+            color="red",
+            shift_to_open_candle_time=False,
+        )
+        await plotting.plot(
+            ctx,
+            "Long entry limit orders",
+            cache_value=f"{value_key_prefix}llmt",
+            mode="markers",
+            chart="main-chart",
+            color="blue",
+            shift_to_open_candle_time=False,
+        )
+    except RuntimeError:
+        pass  # no cache
+    # else:
+    #     candle_time = await exchange_public_data.current_candle_time(ctx)
+    #     if long_tp_list:
+    #         await plotting.plot(
+    #             ctx,
+    #             "Long take profits",
+    #             y=[long_tp_list],
+    #             x=[candle_time],
+    #             mode="markers",
+    #             chart="main-chart",
+    #             color="magenta",
+    #             shift_to_open_candle_time=False,
+    #         )
+    #     if short_tp_list:
+    #         await plotting.plot(
+    #             ctx,
+    #             "Short take profits",
+    #             y=[short_tp_list],
+    #             x=[candle_time],
+    #             mode="markers",
+    #             chart="main-chart",
+    #             color="green",
+    #             shift_to_open_candle_time=False,
+    #         )
+    #     if long_sl_list:
+    #         await plotting.plot(
+    #             ctx,
+    #             "Long stop losses",
+    #             y=[long_sl_list],
+    #             x=[candle_time],
+    #             mode="markers",
+    #             chart="main-chart",
+    #             color="yellow",
+    #             shift_to_open_candle_time=False,
+    #         )
+    #     if short_sl_list:
+    #         await plotting.plot(
+    #             ctx,
+    #             "Short stop losses",
+    #             y=[short_sl_list],
+    #             x=[candle_time],
+    #             mode="markers",
+    #             chart="main-chart",
+    #             color="yellow",
+    #             shift_to_open_candle_time=False,
+    #         )
+    #     if long_limit_list:
+    #         await plotting.plot(
+    #             ctx,
+    #             "Long entry limit orders",
+    #             y=[long_limit_list],
+    #             x=[candle_time],
+    #             mode="markers",
+    #             chart="main-chart",
+    #             color="blue",
+    #             shift_to_open_candle_time=False,
+    #         )
+    #     if short_limit_list:
+    #         await plotting.plot(
+    #             ctx,
+    #             "Short entry limit orders",
+    #             y=[short_limit_list],
+    #             x=[candle_time],
+    #             mode="markers",
+    #             chart="main-chart",
+    #             color="red",
+    #             shift_to_open_candle_time=False,
+    #         )
 
 
 async def plot_current_position(ctx, parent_input):

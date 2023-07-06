@@ -77,7 +77,7 @@ class PortfolioManager(util.Initializable):
 
     async def handle_balance_update_from_order(self, order, require_exchange_update: bool) -> bool:
         """
-        Handle a balance update from an order request
+        Handle a balance update from an order update
         :param order: the order
         :param require_exchange_update: when True, will sync with exchange portfolio, otherwise will predict the
         portfolio changes using order data (as in trading simulator)
@@ -87,7 +87,8 @@ class PortfolioManager(util.Initializable):
             async with self.portfolio_history_update():
                 if self.trader.simulate or not require_exchange_update:
                     return self._refresh_simulated_trader_portfolio_from_order(order)
-                # on real trading: reload portfolio to ensure portfolio sync
+                # on real trading only:
+                # reload portfolio to ensure portfolio sync
                 return await self._refresh_real_trader_portfolio()
         return False
 
@@ -205,9 +206,9 @@ class PortfolioManager(util.Initializable):
         Call BALANCE_CHANNEL producer to refresh real trader portfolio
         :return: True if the portfolio was updated
         """
-        return await exchange_channel.get_chan(constants.BALANCE_CHANNEL,
-                                               self.exchange_manager.id).get_internal_producer().\
-            refresh_real_trader_portfolio()
+        return await exchange_channel.get_chan(
+            constants.BALANCE_CHANNEL, self.exchange_manager.id
+        ).get_internal_producer().refresh_real_trader_portfolio()
 
     async def reset_history(self):
         if self.trader.simulate:

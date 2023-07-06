@@ -21,7 +21,7 @@ from tests import phemex_exchange
 
 
 def test_get_name(phemex_exchange):
-    assert exchanges.Phemex(phemex_exchange).get_name() == ccxt.async_support.phemex().name.lower()
+    assert exchanges.Phemex(phemex_exchange).get_name() == ccxt.async_support.phemex().id.lower()
 
 
 @pytest.mark.asyncio

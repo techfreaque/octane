@@ -18,15 +18,17 @@ import mock
 import trading_backend.exchanges as exchanges
 
 
-async def create_order_mocked_test_args(exchange: exchanges.Exchange,
-                                        exchange_private_post_order_method_name: str,
-                                        exchange_request_referral_key: str,
-                                        should_contains: bool = True,
-                                        result_is_list: bool = False,
-                                        symbol: str = "BTC/USDT",
-                                        amount: int = 1,
-                                        price: int = 1,
-                                        post_order_mock_return_value: dict = None):
+async def create_order_mocked_test_args(
+    exchange: exchanges.Exchange,
+    exchange_private_post_order_method_name: str,
+    exchange_request_referral_key: str,
+    should_contains: bool = True,
+    result_is_list: bool = False,
+    symbol: str = "BTC/USDT",
+    amount: int = 1,
+    price: int = 1,
+    post_order_mock_return_value: dict = None
+):
     with mock.patch.object(exchange._exchange.connector.client,
                            "check_required_credentials",
                            mock.Mock(return_value=False)), \
@@ -51,6 +53,47 @@ async def create_order_mocked_test_args(exchange: exchanges.Exchange,
             assert exchange._get_id() in result
         else:
             assert exchange._get_id() == result
+
+
+async def sign_test(
+    exchange: exchanges.Exchange,
+    api,
+    broker_id_header_key: str,
+    broker_sign_header_key: str = None,
+):
+    url_path = "url/path"
+    method = "POST"
+    params = {}
+    headers = None
+    body = None
+    api_key = "123"
+    api_secret = "456"
+    password = "789"
+    ccxt_client = exchange._exchange.connector.client
+    ccxt_client.apiKey = api_key
+    ccxt_client.secret = api_secret
+    ccxt_client.password = password
+
+    # without referral patch
+    signed_result = ccxt_client.sign(
+        url_path, api=api, method=method, params=params, headers=headers, body=body
+    )
+    assert signed_result
+    headers = signed_result["headers"]
+    assert headers[broker_id_header_key] != exchange._get_id()
+    if broker_sign_header_key:
+        assert headers[broker_sign_header_key]
+
+    # with referral patch
+    exchange.get_orders_parameters()
+    signed_result = ccxt_client.sign(
+        url_path, api=api, method=method, params=params, headers=headers, body=body
+    )
+    assert signed_result
+    headers = signed_result["headers"]
+    assert headers[broker_id_header_key] == exchange._get_id()
+    if broker_sign_header_key:
+        assert headers[broker_sign_header_key]
 
 
 async def exchange_requests_contains_headers_test(exchange: exchanges.Exchange,

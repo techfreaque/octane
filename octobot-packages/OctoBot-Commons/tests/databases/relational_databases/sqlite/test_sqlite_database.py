@@ -92,9 +92,8 @@ async def test_select():
         assert changed_order_ohlcv[0] != ohlcv[0]
         try:
             ohlcv = await database.select(OHLCV, xyz="xyz")
-        except Exception as e:
+        except TypeError:
             assert True
-        # assert len(ohlcv) == 0
 
 
 async def test_select_max():

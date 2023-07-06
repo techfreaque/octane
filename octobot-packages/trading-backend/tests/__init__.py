@@ -19,7 +19,7 @@ import ccxt.async_support
 
 @pytest.fixture
 def binance_exchange():
-    return ExchangeWrapper(ccxt.async_support.binance())
+    return ExchangeWrapper(ccxt.async_support.binanceus())  # binanceus not to fail on CI
 
 
 @pytest.fixture
@@ -53,6 +53,11 @@ def bybit_exchange():
 
 
 @pytest.fixture
+def cryptocom_exchange():
+    return ExchangeWrapper(ccxt.async_support.cryptocom())
+
+
+@pytest.fixture
 def gateio_exchange():
     return ExchangeWrapper(ccxt.async_support.gateio())
 
@@ -70,6 +75,21 @@ def bitget_exchange():
 @pytest.fixture
 def phemex_exchange():
     return ExchangeWrapper(ccxt.async_support.phemex())
+
+
+@pytest.fixture
+def kucoin_exchange():
+    return ExchangeWrapper(ccxt.async_support.kucoin())
+
+
+@pytest.fixture
+def kucoinfutures_exchange():
+    return ExchangeWrapper(ccxt.async_support.kucoinfutures())
+
+
+@pytest.fixture
+def mexc_exchange():
+    return ExchangeWrapper(ccxt.async_support.mexc())
 
 
 @pytest.fixture

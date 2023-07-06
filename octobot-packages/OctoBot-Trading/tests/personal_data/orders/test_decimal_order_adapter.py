@@ -340,9 +340,9 @@ async def test_decimal_check_and_adapt_order_details_if_necessary_without_price_
     quantity = decimal.Decimal(str(3))
     price = decimal.Decimal(str(0.01))
     try:
-        assert personal_data.decimal_check_and_adapt_order_details_if_necessary(quantity, price, symbol_market) == []
+        personal_data.decimal_check_and_adapt_order_details_if_necessary(quantity, price, symbol_market)
         assert False
-    except Exception:
+    except errors.MissingMinimalExchangeTradeVolume:
         assert True
 
     # cost too high

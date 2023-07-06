@@ -215,7 +215,7 @@ class BotLogger:
                     str(exception) if str(exception) else exception.__class__.__name__
                 )
             elif include_exception_name:
-                message = f"{message} ({exception.__class__.__name__})"
+                message = f"{message} (error: {exception.__class__.__name__})"
             self.error(message, skip_post_callback=True)
         self._post_callback_if_necessary(exception, error_message, skip_post_callback)
 
