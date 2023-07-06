@@ -29,6 +29,7 @@ build/
 *.pyd
 /octobot-packages/trading-backend/.gitignore
 /octobot-packages/trading-backend/.github/workflows/main.yml
+/octobot-packages/OctoBot/user
 /.eggs/
 /my_docker_update.sh
 /users/

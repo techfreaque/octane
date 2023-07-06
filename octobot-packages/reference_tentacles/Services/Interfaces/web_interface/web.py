@@ -218,7 +218,11 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
             self.websocket_instance = self._prepare_websocket()
 
             if self.should_open_web_interface:
-                self._open_web_interface_on_browser()
+                # use a thread to prevent blocking on text based browsers
+                browser_open_thread = threading.Thread(
+                    target=self._open_web_interface_on_browser
+                )
+                browser_open_thread.start()
 
             self.started = True
             self.websocket_instance.run(server_instance,

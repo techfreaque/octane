@@ -34,7 +34,7 @@ async def test_fetch_and_extract_tentacles_using_download():
     assert not path.isdir(temp_dir)
     async with aiohttp.ClientSession() as session:
         await tentacles_manager_util.fetch_and_extract_tentacles(temp_dir, constants.DEFAULT_TENTACLES_URL, session)
-    _test_temp_tentacles([constants.TENTACLES_META_PATH])
+    _test_temp_tentacles([constants.TENTACLES_META_PATH, constants.TENTACLES_STRATEGY_BLOCKS_PATH])
     _cleanup()
 
 
@@ -58,7 +58,7 @@ async def test_fetch_and_extract_tentacles_using_download_without_session():
 async def test_fetch_and_extract_tentacles_using_local_file():
     _cleanup()
     await tentacles_manager_util.fetch_and_extract_tentacles(temp_dir, path.join("tests", "static", "tentacles.zip"), None)
-    _test_temp_tentacles()
+    _test_temp_tentacles([constants.TENTACLES_META_PATH, constants.TENTACLES_STRATEGY_BLOCKS_PATH])
     _cleanup()
 
 
