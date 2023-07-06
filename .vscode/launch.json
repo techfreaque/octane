@@ -15,17 +15,8 @@
             "program": "octobot-packages/OctoBot/start.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
-            "args": [
-            ],
+            "args": [],
             "justMyCode": false
-        },
-        {
-
-            "name": "Update octobot Dev version (Windows only)",
-            "type": "PowerShell",
-            "request": "launch",
-            "script": "${workspaceFolder}/windows-install-repair-and-update-to-BETA-installation.ps1",
-            "cwd": "${cwd}"
         },
         {
             // run the following to be able to view profiler reports:
@@ -101,8 +92,7 @@
                 "--backtesting", "-nl", "-bf", "ExchangeBotSnapshotWithHistoryCollector_binance_BTCUSDT_1m.data"
             ],
             "justMyCode": false
-        },
-         {
+        }, {
             "name": "Start backtesting with profiler on binance_BTCUSDT_1m data file",
             "type": "python",
             "request": "launch",
@@ -123,15 +113,13 @@
                 "ExchangeBotSnapshotWithHistoryCollector_binance_BTCUSDT_1m.data"
             ],
             "justMyCode": false
-        },
-        {
+        }, {
             "name": "View profiler results",
             "type": "PowerShell",
             "request": "launch",
             "script": "${workspaceFolder}/profiler/start_view_profiler_result.ps1",
             "cwd": "${workspaceFolder}"
-        }, 
-         {
+        }, {
             "name": "Start Async-Channel tests",
             "type": "python",
             "request": "launch",
@@ -174,7 +162,7 @@
             ],
             "justMyCode": true
         }, {
-            "name": "Start OctoBot-Trading/tests/exchanges/implementations/test_default_websocket_exchange tests",
+            "name": "Start OctoBot-Trading tests",
             "type": "python",
             "request": "launch",
             "env": {
@@ -184,7 +172,7 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/octobot-packages/OctoBot-Trading",
             "args": [
-                "-vv", "tests/exchanges/implementations/test_default_websocket_exchange.py"
+                "-vv", "tests"
             ],
             "justMyCode": true
         }, {
@@ -234,11 +222,11 @@
             "type": "python",
             "request": "launch",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+                "PYTHONPATH": "${workspaceFolder}${pathSeparator}${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
             },
             "module": "pytest",
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/octobot-packages/OctoBot",
             "args": [
                 "-vv", "tests"
             ],

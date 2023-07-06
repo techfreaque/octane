@@ -7,4 +7,5 @@ statistics
 scikit-neuralnetwork
 tensorflow
 yfinance
+py_expression_eval
 # requirements inside the octobot-packages folder need to be installed as well

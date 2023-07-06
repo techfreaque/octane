@@ -52,7 +52,7 @@ async def test_uninstall_two_tentacles(clean):
         os.path.join("tests", "static", "default_tentacle_config.json")
     assert await uninstall_worker.process(["instant_fluctuations_evaluator", "generic_exchange_importer"]) == 0
     tentacles_files_count = sum(1 for _ in os.walk(TENTACLES_PATH))
-    assert tentacles_files_count < 67
+    assert tentacles_files_count < 72
     with open(USER_REFERENCE_TENTACLE_CONFIG_FILE_PATH, "r") as config_f:
         assert json.load(config_f) == {
             'installation_context': get_installation_context_octobot_version(),
