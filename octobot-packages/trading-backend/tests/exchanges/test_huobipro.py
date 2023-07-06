@@ -23,8 +23,7 @@ from tests import huobipro_exchange
 
 def test_get_name(huobipro_exchange):
     # huobi on ccxt
-    assert exchanges.HuobiPro(huobipro_exchange).get_name() != ccxt.async_support.huobipro().name.lower()
-    assert exchanges.HuobiPro(huobipro_exchange).get_name() == "huobipro"
+    assert exchanges.HuobiPro(huobipro_exchange).get_name() == ccxt.async_support.huobipro().id.lower()
 
 
 @pytest.mark.asyncio

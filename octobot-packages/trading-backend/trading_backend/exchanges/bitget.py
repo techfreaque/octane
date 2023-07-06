@@ -29,7 +29,8 @@ class Bitget(exchanges.Exchange):
         return f"{self._get_id()}#{self._exchange.connector.client.uuid22()}"
 
     def get_orders_parameters(self, params=None) -> dict:
-        self._exchange.connector.client.options["broker"] = self._get_id()
+        if self._exchange.connector.client.options.get("broker", None) != self._get_id():
+            self._exchange.connector.client.options["broker"] = self._get_id()
         params = super().get_orders_parameters(params)
         params["clientOrderId"] = self._generate_order_id()
         return super().get_orders_parameters(params)

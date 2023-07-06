@@ -22,7 +22,7 @@ from tests import okx_exchange
 
 
 def test_get_name(okx_exchange):
-    assert exchanges.OKX(okx_exchange).get_name() == ccxt.async_support.okx().name.lower()
+    assert exchanges.OKX(okx_exchange).get_name() == ccxt.async_support.okx().id.lower()
 
 
 @pytest.mark.asyncio

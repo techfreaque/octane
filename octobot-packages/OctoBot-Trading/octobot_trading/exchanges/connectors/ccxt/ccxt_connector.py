@@ -48,7 +48,7 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
     """
 
     def __init__(
-            self, config, exchange_manager, adapter_class=None, additional_config=None, rest_name=None, force_auth=False
+        self, config, exchange_manager, adapter_class=None, additional_config=None, rest_name=None, force_auth=False
     ):
         super().__init__(config, exchange_manager)
         self.client = None
@@ -82,7 +82,8 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
         try:
             if self.exchange_manager.exchange.is_supporting_sandbox():
                 ccxt_client_util.set_sandbox_mode(
-                    self, self.exchange_manager.is_sandboxed)
+                    self, self.exchange_manager.is_sandboxed
+                )
                 
             if self.force_authentication or (
                 self._should_authenticate() and not self.exchange_manager.exchange_only
@@ -159,7 +160,7 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
 
     def _create_client(self):
         self.client, self.is_authenticated = ccxt_client_util.create_client(
-            self.exchange_type, self.name, self.exchange_manager, self.logger,
+            self.exchange_type, self.exchange_manager, self.logger,
             self.options, self.headers, self.additional_config,
             self._should_authenticate(), self.unauthenticated_exchange_fallback
         )
@@ -404,7 +405,8 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
                         amount=quantity,
                         stopPrice=price,
                         params=params,
-                    )
+                    ),
+                    symbol=symbol, quantity=quantity
                 )
             except ccxt.OrderImmediatelyFillable:
                 # make sure stop always stops
@@ -437,7 +439,8 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
                     price=price,
                     stopPrice=stop_price,
                     params=params,
-                )
+                ),
+                symbol=symbol, quantity=quantity
             )
         raise NotImplementedError("create_limit_stop_loss_order is not implemented")
 
@@ -466,7 +469,7 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
             await self.client.edit_order(
                 exchange_order_id, symbol, ccxt_order_type, side, quantity, price_to_use, params
             ),
-            symbol=symbol
+            symbol=symbol, quantity=quantity
         )
 
     async def cancel_order(

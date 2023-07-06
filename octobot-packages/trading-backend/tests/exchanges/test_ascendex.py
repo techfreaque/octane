@@ -22,7 +22,7 @@ from tests import ascendex_exchange
 
 
 def test_get_name(ascendex_exchange):
-    assert exchanges.Ascendex(ascendex_exchange).get_name() == ccxt.async_support.ascendex().name.lower()
+    assert exchanges.Ascendex(ascendex_exchange).get_name() == ccxt.async_support.ascendex().id.lower()
 
 
 @pytest.mark.asyncio

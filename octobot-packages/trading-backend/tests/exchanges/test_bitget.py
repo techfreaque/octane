@@ -13,7 +13,6 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import mock
 import pytest
 import ccxt.async_support
 import trading_backend.exchanges as exchanges
@@ -22,7 +21,7 @@ from tests import bitget_exchange
 
 
 def test_get_name(bitget_exchange):
-    assert exchanges.Bitget(bitget_exchange).get_name() == ccxt.async_support.bitget().name.lower()
+    assert exchanges.Bitget(bitget_exchange).get_name() == ccxt.async_support.bitget().id.lower()
 
 
 @pytest.mark.asyncio

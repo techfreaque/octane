@@ -34,6 +34,7 @@ class OrdersStorage(abstract_storage.AbstractStorage):
     HISTORICAL_OPEN_ORDERS_TABLE = commons_enums.DBTables.HISTORICAL_ORDERS_UPDATES.value
     ENABLE_HISTORICAL_ORDER_UPDATES_STORAGE = constants.ENABLE_HISTORICAL_ORDERS_UPDATES_STORAGE
     ENABLE_SIMULATED_CURRENT_ORDERS_STORAGE = constants.ENABLE_SIMULATED_CURRENT_ORDERS_STORAGE
+    ENABLE_BACKTESTING_CURRENT_ORDERS_STORAGE = constants.ENABLE_BACKTESTING_CURRENT_ORDERS_STORAGE
 
     def __init__(self, exchange_manager, use_live_consumer_in_backtesting=None, is_historical=None):
         super().__init__(exchange_manager, plot_settings=None,
@@ -45,9 +46,17 @@ class OrdersStorage(abstract_storage.AbstractStorage):
         return self.should_store_date()
 
     def should_store_date(self):
-        return self.ENABLE_SIMULATED_CURRENT_ORDERS_STORAGE \
-            or (not self.exchange_manager.is_backtesting
-                and not self.exchange_manager.is_trader_simulated)
+        return (
+            (
+                self.ENABLE_SIMULATED_CURRENT_ORDERS_STORAGE
+                and not self.exchange_manager.is_backtesting
+            )
+            or (not self.exchange_manager.is_trader_simulated)
+            or (
+                self.ENABLE_BACKTESTING_CURRENT_ORDERS_STORAGE
+                and self.exchange_manager.is_backtesting
+            )
+        )
 
     async def on_start(self):
         await self._load_startup_orders()
@@ -100,14 +109,13 @@ class OrdersStorage(abstract_storage.AbstractStorage):
     async def get_historical_orders_updates(self):
         return copy.deepcopy(await self._get_db().all(self.HISTORICAL_OPEN_ORDERS_TABLE))
 
-    async def get_startup_order_details(self, order_id):
-        return self.startup_orders.get(order_id, None)
+    async def get_startup_order_details(self, order_exchange__id):
+        return self.startup_orders.get(order_exchange__id, None)
 
     async def _load_startup_orders(self):
         if self.should_store_date():
             self.startup_orders = {
-                order[OrdersStorage.ORIGIN_VALUE_KEY][enums.ExchangeConstantsOrderColumns.ID.value]:
-                    self._from_order_document(order)
+                _get_startup_order_key(order): self._from_order_document(order)
                 for order in copy.deepcopy(await self._get_db().all(self.HISTORY_TABLE))
                 if order    # skip empty order details (error when serializing)
             }
@@ -223,3 +231,8 @@ def _format_order_update(exchange_manager, order_dict, update_type, update_time)
     order_update[enums.StoredOrdersAttr.ORDER_DETAILS.value] = details
     return order_update
 
+
+def _get_startup_order_key(order_dict):
+    # use exchange id if available, fallback to order_id (for self managed orders)
+    return order_dict[OrdersStorage.ORIGIN_VALUE_KEY][enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value] or \
+        order_dict[OrdersStorage.ORIGIN_VALUE_KEY][enums.ExchangeConstantsOrderColumns.ID.value]

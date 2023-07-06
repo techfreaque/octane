@@ -17,7 +17,8 @@ import trading_backend.exchanges as exchanges
 
 
 def create_exchange_backend(exchange) -> exchanges.Exchange:
-    return _get_exchanges().get(exchange.connector.client.name.lower(), exchanges.Exchange)(exchange)
+    # use ccxt exchange id to find exchanges (ex kucoinfutures: id: kucoinfutures, name: "Kucoin Futures")
+    return _get_exchanges().get(exchange.connector.client.id.lower(), exchanges.Exchange)(exchange)
 
 
 def is_sponsoring(exchange_name) -> bool:
