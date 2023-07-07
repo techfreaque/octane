@@ -36,6 +36,7 @@ async def activate_managed_orders(
 
 async def managed_order(
     maker,
+    order_block,
     trading_side: str,
     orders_settings: all_settings.ManagedOrdersSettings,
     forced_amount: decimal.Decimal = None,
@@ -53,6 +54,7 @@ async def managed_order(
     _managed_order = managed_orders.ManagedOrder()
     return await _managed_order.initialize_and_trade(
         maker=maker,
+        order_block=order_block,
         trading_side=trading_side,
         orders_settings=orders_settings,
         forced_amount=forced_amount,
@@ -62,12 +64,14 @@ async def managed_order(
 
 async def managed_order_preview(
     maker,
+    order_block,
     trading_side: str,
     orders_settings: all_settings.ManagedOrdersSettings,
 ) -> managed_orders.ManagedOrder or None:
     if not maker.exchange_manager.is_backtesting:
         return await managed_order(
             maker,
+            order_block=order_block,
             trading_side=trading_side,
             orders_settings=orders_settings,
             order_preview_mode=True,

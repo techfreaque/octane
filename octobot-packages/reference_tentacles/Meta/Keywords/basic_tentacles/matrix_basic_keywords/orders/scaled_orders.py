@@ -48,6 +48,7 @@ class ScaledOrderPriceDistributionTypes:
 
 async def scaled_order(
     maker,
+    order_block,
     current_price,
     side=None,
     symbol=None,
@@ -153,8 +154,9 @@ async def scaled_order(
         )
         take_profit_price = take_profit.get_manged_order_take_profits(
             maker,
-            group_orders_settings.take_profit,
-            side,
+            order_block=order_block,
+            take_profit_settings=group_orders_settings.take_profit,
+            entry_side=side,
             current_price=current_price,
             entry_price=entry_price,
             stop_loss_price=stop_loss_prices[order_index]

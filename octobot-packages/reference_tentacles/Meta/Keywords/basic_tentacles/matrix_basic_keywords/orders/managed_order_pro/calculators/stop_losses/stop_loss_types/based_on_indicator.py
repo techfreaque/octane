@@ -19,24 +19,23 @@
 # please contact me at max@a42.ch
 
 import decimal
+
+import numpy
 import octobot_trading.enums as trading_enums
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords import matrix_enums
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.calculators.stop_losses.stop_loss_utilities as stop_loss_utilities
-# import tentacles.Meta.Keywords.pro_tentacles.standalone_data_source.standalone_data_sources as standalone_data_sources
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.tools.utilities import (
+    cut_data_to_same_len,
+)
 
 
-def get_stop_loss_based_on_indicator(
-    maker,
+async def get_stop_loss_based_on_indicator(
+    order_block,
     stop_loss_settings,
     trading_side: str,
     entry_price: decimal.Decimal,
 ):
-    sl_indicator_value = decimal.Decimal(
-        str(
-            standalone_data_sources.get_standalone_data_source(
-                stop_loss_settings.sl_indicator_id, maker
-            )
-        )
-    )
+    sl_indicator_value = order_block.get_indicator_value(stop_loss_settings)
     if trading_side in (
         trading_enums.PositionSide.LONG.value,
         trading_enums.TradeOrderSide.BUY.value,

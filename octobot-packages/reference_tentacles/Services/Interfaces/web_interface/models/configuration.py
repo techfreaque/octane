@@ -1218,7 +1218,7 @@ def get_exchanges_details(exchanges_config) -> dict:
         details[exchange_name] = {
             "has_websockets": trading_api.supports_websockets(exchange_name, tentacles_setup_config),
             "configurable": False if exchange_class is None else exchange_class.is_configurable(),
-            "supported_exchange_types": trading_api.get_supported_exchange_types(exchange_name),
+            "supported_exchange_types": trading_api.get_supported_exchange_types(exchange_name, tentacles_setup_config),
             "default_exchange_type": trading_api.get_default_exchange_type(exchange_name),
         }
     return details

@@ -29,6 +29,7 @@ import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.mana
 
 def get_manged_order_take_profits(
     maker,
+    order_block,
     take_profit_settings,
     entry_side: str,
     current_price: decimal.Decimal,
@@ -88,7 +89,7 @@ def get_manged_order_take_profits(
             == tp_settings.ManagedOrderSettingsTPTypes.SINGLE_INDICATOR_DESCRIPTION
         ):
             return based_on_indicator.calculate_take_profit_based_on_indicator(
-                maker=maker,
+                order_block=order_block,
                 take_profit_settings=take_profit_settings,
                 entry_side=entry_side,
                 current_price=current_price,

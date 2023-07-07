@@ -27,7 +27,7 @@ import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.mana
 
 
 def calculate_take_profit_based_on_indicator(
-    maker,
+    order_block,
     take_profit_settings,
     entry_side: str,
     current_price: decimal.Decimal,
@@ -36,10 +36,7 @@ def calculate_take_profit_based_on_indicator(
     entry_fee: decimal.Decimal,
     market_fee: decimal.Decimal,
 ):
-    tp_indicator_value_float = standalone_data_sources.get_standalone_data_source(
-        take_profit_settings.tp_indicator_id, maker
-    )
-    tp_indicator_value = decimal.Decimal(str(tp_indicator_value_float))
+    tp_indicator_value = order_block.get_indicator_value(take_profit_settings)
 
     if entry_side in (
         trading_enums.TradeOrderSide.BUY.value,

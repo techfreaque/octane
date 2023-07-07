@@ -37,6 +37,7 @@ class ManagedOrder:
     async def initialize_and_trade(
         self,
         maker,
+        order_block,
         trading_side,
         orders_settings: all_settings.ManagedOrdersSettings,
         forced_amount: decimal.Decimal = None,
@@ -55,6 +56,7 @@ class ManagedOrder:
             try:
                 await managed_group.place_managed_entry_and_exits(
                     maker=maker,
+                    order_block=order_block,
                     trading_side=self.trading_side,
                     group_orders_settings=group_orders_settings,
                     managed_orders_settings=self.managed_orders_settings,
