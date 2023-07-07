@@ -85,6 +85,7 @@ class ManagedOrderPlacement:
     async def place_managed_entry_and_exits(
         self,
         maker,
+        order_block,
         trading_side,
         managed_orders_settings,
         group_orders_settings,
@@ -162,7 +163,8 @@ class ManagedOrderPlacement:
                 take_profit_price,
             ) = await self.get_single_order_data(
                 maker,
-                group_orders_settings,
+                order_block=order_block,
+                group_orders_settings=group_orders_settings,
                 entry_price=self.current_price_val,
                 entry_side=self.entry_side,
                 forced_amount=forced_amount,
@@ -229,7 +231,8 @@ class ManagedOrderPlacement:
                 take_profit_price,
             ) = await self.get_single_order_data(
                 maker,
-                group_orders_settings,
+                order_block=order_block,
+                group_orders_settings=group_orders_settings,
                 entry_price=self.average_entry_price,
                 entry_side=self.entry_side,
                 forced_amount=forced_amount,
@@ -296,6 +299,7 @@ class ManagedOrderPlacement:
                     order_tag_id,
                 ) = await scaled_orders.scaled_order(
                     maker,
+                    order_block=order_block,
                     current_price=self.current_price_val,
                     side=self.entry_side,
                     scale_from=scale_from,
@@ -471,6 +475,7 @@ class ManagedOrderPlacement:
     async def get_single_order_data(
         self,
         maker,
+        order_block,
         group_orders_settings,
         entry_price,
         entry_side,
@@ -478,8 +483,9 @@ class ManagedOrderPlacement:
     ):
         stop_loss_price, stop_loss_percent = await stop_loss.get_manged_order_stop_loss(
             maker,
-            group_orders_settings.stop_loss,
-            self.trading_side,
+            order_block=order_block,
+            stop_loss_settings=group_orders_settings.stop_loss,
+            trading_side=self.trading_side,
             entry_price=entry_price,
             current_price=self.current_price_val,
         )
@@ -521,8 +527,9 @@ class ManagedOrderPlacement:
             )
             self.average_take_profit_price = take_profit.get_manged_order_take_profits(
                 maker,
-                group_orders_settings.take_profit,
-                entry_side,
+                order_block=order_block,
+                take_profit_settings=group_orders_settings.take_profit,
+                entry_side=entry_side,
                 current_price=self.current_price_val,
                 entry_price=entry_price,
                 stop_loss_price=stop_loss_price,

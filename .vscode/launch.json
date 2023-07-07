@@ -254,7 +254,7 @@
             },
             "module": "pytest",
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/octobot-packages/OctoBot",
             "args": [
                 "-vv", "tentacles"
             ],

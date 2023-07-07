@@ -27,6 +27,7 @@ import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_public_da
 
 async def get_manged_order_stop_loss(
     maker,
+    order_block,
     stop_loss_settings,
     trading_side,
     entry_price: decimal.Decimal,
@@ -88,8 +89,8 @@ async def get_manged_order_stop_loss(
             stop_loss_settings.sl_type
             == sl_settings.ManagedOrderSettingsSLTypes.BASED_ON_INDICATOR_DESCRIPTION
         ):
-            sl_in_p, sl_price = stop_loss_types.get_stop_loss_based_on_indicator(
-                maker=maker,
+            sl_in_p, sl_price = await stop_loss_types.get_stop_loss_based_on_indicator(
+                order_block=order_block,
                 stop_loss_settings=stop_loss_settings,
                 trading_side=trading_side,
                 entry_price=current_price if get_from_current_price else entry_price,

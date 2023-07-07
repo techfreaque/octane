@@ -4,7 +4,6 @@ pandas_ta
 finta
 newtulipy
 statistics
-scikit-neuralnetwork
 tensorflow
 yfinance
 py_expression_eval
