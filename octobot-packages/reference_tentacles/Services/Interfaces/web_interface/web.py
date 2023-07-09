@@ -16,24 +16,22 @@
 import os
 import threading
 import socket
-import webbrowser
 import time
 import flask_socketio
 from flask_compress import Compress
 
 import octobot_commons.logging as bot_logging
-import octobot_commons.enums as commons_enums
 import octobot_services.constants as services_constants
 import octobot_services.interfaces as services_interfaces
 import octobot_services.interfaces.util as interfaces_util
 import octobot_trading.api as trading_api
-import octobot_trading.constants as trading_constants
 import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.security as security
 import tentacles.Services.Interfaces.web_interface.websockets as websockets
 import tentacles.Services.Interfaces.web_interface.plugins as web_interface_plugins
 import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
+import tentacles.Services.Interfaces.web_interface.util as web_interface_util
 import tentacles.Services.Interfaces.web_interface as web_interface_root
 import tentacles.Services.Services_bases as Service_bases
 import octobot_tentacles_manager.api
@@ -218,11 +216,7 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
             self.websocket_instance = self._prepare_websocket()
 
             if self.should_open_web_interface:
-                # use a thread to prevent blocking on text based browsers
-                browser_open_thread = threading.Thread(
-                    target=self._open_web_interface_on_browser
-                )
-                browser_open_thread.start()
+                self._open_web_interface_on_browser()
 
             self.started = True
             self.websocket_instance.run(server_instance,
@@ -239,7 +233,9 @@ class WebInterface(services_interfaces.AbstractWebInterface, threading.Thread):
 
     def _open_web_interface_on_browser(self):
         try:
-            webbrowser.open(f"http://{socket.gethostbyname(socket.gethostname())}:{self.port}")
+            web_interface_util.open_in_background_browser(
+                f"http://{socket.gethostbyname(socket.gethostname())}:{self.port}"
+            )
         except Exception as e:
             self.logger.warning(f"Impossible to open automatically web interface: {e}")
 

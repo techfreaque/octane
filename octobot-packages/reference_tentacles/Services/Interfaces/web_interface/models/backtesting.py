@@ -42,7 +42,6 @@ import tentacles.Services.Interfaces.web_interface.constants as constants
 import tentacles.Services.Interfaces.web_interface as web_interface_root
 import tentacles.Services.Interfaces.web_interface.enums as web_interface_enums
 import tentacles.Services.Interfaces.web_interface.models.trading as trading_model
-import tentacles.Services.Interfaces.web_interface.models.interface_settings as interface_settings_model
 import tentacles.Services.Interfaces.web_interface.models.profiles as profiles_model
 import tentacles.Services.Interfaces.web_interface.models.configuration as configuration_model
 
@@ -58,8 +57,7 @@ def get_full_candle_history_exchange_list():
 
 
 def get_other_history_exchange_list():
-    full_exchange_list = list(set(ccxt.exchanges))
-    return [exchange for exchange in full_exchange_list if
+    return [exchange for exchange in configuration_model.get_full_exchange_list() if
             exchange not in trading_constants.FULL_CANDLE_HISTORY_EXCHANGES]
 
 

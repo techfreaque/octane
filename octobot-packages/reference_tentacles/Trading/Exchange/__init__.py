@@ -1466,3 +1466,39 @@ if check_tentacle_version('1.0.0', 'yahoo_finance', 'Octane-Default-Tentacles'):
                                            f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
+
+if check_tentacle_version('1.2.0', 'hollaex_autofilled', 'OctoBot-Default-Tentacles'):
+    try:
+        from .hollaex_autofilled import *
+    except Exception as e:
+        get_logger('TentacleLoader').error(f'Error when loading hollaex_autofilled: '
+                                           f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
+                                           f'error persists, try reinstalling your tentacles via '
+                                           f'"python start.py tentacles --install --all".')
+
+if check_tentacle_version('1.2.0', 'hollaex_autofilled_websocket_feed', 'OctoBot-Default-Tentacles'):
+    try:
+        from .hollaex_autofilled_websocket_feed import *
+    except Exception as e:
+        get_logger('TentacleLoader').error(f'Error when loading hollaex_autofilled_websocket_feed: '
+                                           f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
+                                           f'error persists, try reinstalling your tentacles via '
+                                           f'"python start.py tentacles --install --all".')
+
+if check_tentacle_version('1.2.0', 'mexc', 'OctoBot-Default-Tentacles'):
+    try:
+        from .mexc import *
+    except Exception as e:
+        get_logger('TentacleLoader').error(f'Error when loading mexc: '
+                                           f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
+                                           f'error persists, try reinstalling your tentacles via '
+                                           f'"python start.py tentacles --install --all".')
+
+if check_tentacle_version('1.2.0', 'mexc_websocket_feed', 'OctoBot-Default-Tentacles'):
+    try:
+        from .mexc_websocket_feed import *
+    except Exception as e:
+        get_logger('TentacleLoader').error(f'Error when loading mexc_websocket_feed: '
+                                           f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
+                                           f'error persists, try reinstalling your tentacles via '
+                                           f'"python start.py tentacles --install --all".')
