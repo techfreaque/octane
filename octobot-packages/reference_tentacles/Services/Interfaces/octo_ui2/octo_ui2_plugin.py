@@ -67,6 +67,9 @@ class O_UI(plugins.AbstractWebInterfacePlugin):
         if not config:
             config = DEFAULT_CONFIG
         config[octobot_constants.OPTIMIZATION_CAMPAIGN_KEY] = campaign_config
+        config["optimizer_campaigns_to_load"][
+            campaign_config[commons_constants.CONFIG_NAME]
+        ] = True
         config[
             commons_constants.CONFIG_CURRENT_LIVE_ID
         ] = trading_util.get_current_bot_live_id(interfaces_util.get_edited_config())
@@ -96,41 +99,30 @@ optimization_campaign.register_optimization_campaign_name_proxy(
 
 DEFAULT_CONFIG = {
     "backtesting_run_settings": {
-        "data_sources": [
-            "current_bot_data"
-        ],
+        "data_sources": ["current_bot_data"],
         "end_timestamp": None,
-        "exchange_names": [
-        ],
+        "exchange_names": [],
         "exchange_type": "use_current_profile",
-        "start_timestamp": None
+        "start_timestamp": None,
     },
     "display_settings": {
         "graphs": {
             "display_unified_tooltip": True,
             "display_use_log_scale": False,
             "max_candles_before_line_display": 10000,
-            "max_candles_line_sources": [
-                "high",
-                "low"
-            ]
+            "max_candles_line_sources": ["high", "low"],
         }
     },
-    "optimizer_campaigns_to_load": {
-        "default_campaign": True
-    },
+    "optimizer_campaigns_to_load": {"default_campaign": True},
     "optimizer_run_settings": {
-        "data_files": [
-            "current_bot_data"
-        ],
+        "data_files": ["current_bot_data"],
         "end_timestamp": None,
-        "exchange_names": [
-        ],
+        "exchange_names": [],
         "exchange_type": "use_current_profile",
         "idle_cores": 1,
         "notify_when_complete": True,
         "optimizer_id": 1,
         "queue_size": 1000,
-        "start_timestamp": None
-    }
+        "start_timestamp": None,
+    },
 }
