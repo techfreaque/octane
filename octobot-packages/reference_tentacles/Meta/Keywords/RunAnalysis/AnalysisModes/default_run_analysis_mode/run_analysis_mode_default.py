@@ -11,6 +11,7 @@ import tentacles.Meta.Keywords.RunAnalysis.RunAnalysisFactory.abstract_run_analy
 import tentacles.Meta.Keywords.RunAnalysis.RunAnalysisFactory.init_base_data as init_base_data
 import tentacles.Meta.Keywords.RunAnalysis.RunAnalysisFactory.custom_context as custom_context
 import tentacles.Meta.Keywords.RunAnalysis.RunAnalysisFactory.run_analysis_factory as run_analysis_factory
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums import UserInputOtherSchemaValuesTypes
 
 
 class DefaultRunAnalysisMode(abstract_run_analysis_mode.AbstractRunAnalysisMode):
@@ -39,7 +40,7 @@ class DefaultRunAnalysisMode(abstract_run_analysis_mode.AbstractRunAnalysisMode)
                 commons_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True
             },
             title="Live Display Settings",
         )
@@ -53,7 +54,7 @@ class DefaultRunAnalysisMode(abstract_run_analysis_mode.AbstractRunAnalysisMode)
                 commons_enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: True,
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True
             },
             title="Backtesting Display Settings",
         )

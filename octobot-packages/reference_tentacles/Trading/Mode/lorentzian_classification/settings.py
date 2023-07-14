@@ -1,11 +1,14 @@
 import typing
 import octobot_commons.enums as enums
 import octobot_trading.util.config_util as config_util
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums import (
+    UserInputEditorOptionsTypes,
+    UserInputOtherSchemaValuesTypes,
+)
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.ml_utils.classification_functions.classification_utils as classification_utils
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.ml_utils.classification_functions.downsampling as downsampling
 import tentacles.Meta.Keywords.basic_tentacles.basic_modes.mode_base.abstract_mode_base as abstract_mode_base
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.ml_utils.utils as utils
-import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.analysis_enums as analysis_enums
 
 try:
     import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
@@ -13,6 +16,7 @@ except (ImportError, ModuleNotFoundError):
     activate_managed_order = None
 
 GENERAL_SETTINGS_NAME = "general_settings"
+TRAINING_DATA_SETTINGS_NAME = "training_data_settings"
 DATA_SOURCE_SETTINGS_NAME = "data_source_settings"
 FEATURE_ENGINEERING_SETTINGS_NAME = "feature_engineering_settings"
 FILTER_SETTINGS_NAME = "filter_settings"
@@ -56,11 +60,11 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 # enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 # enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
-                analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "RobotOutlined",
+                UserInputEditorOptionsTypes.ANT_ICON.value: "RobotOutlined",
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
-                analysis_enums.UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 2,
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
+                UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 2,
             },
         )
 
@@ -118,6 +122,98 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6},
             order=2,
         )
+        self.UI.user_input(
+            TRAINING_DATA_SETTINGS_NAME,
+            enums.UserInputTypes.OBJECT,
+            None,
+            inputs,
+            title="Training Data Settings",
+            editor_options={
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
+            },
+            parent_input_name=GENERAL_SETTINGS_NAME,
+        )
+        training_data_type_str: int = self.UI.user_input(
+            "training_data_type",
+            enums.UserInputTypes.OPTIONS,
+            utils.YTrainTypeDescriptions.IS_IN_PROFIT_AFTER_4_BARS_CLOSES,
+            inputs,
+            options=[
+                utils.YTrainTypeDescriptions.IS_WINNING_TRADE,
+                utils.YTrainTypeDescriptions.IS_IN_PROFIT_AFTER_4_BARS,
+                utils.YTrainTypeDescriptions.IS_IN_PROFIT_AFTER_4_BARS_CLOSES,
+            ],
+            title="Training data type",
+            parent_input_name=TRAINING_DATA_SETTINGS_NAME,
+            other_schema_values={"description": ""},
+            editor_options={enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12},
+            order=1,
+        )
+        training_data_type: utils.YTrainTypes = utils.Y_TRAIN_DESCRIPTIONS_TO_TYPES[
+            training_data_type_str
+        ]
+        percent_for_a_win: typing.Optional[float] = None
+        percent_for_a_loss: typing.Optional[float] = None
+        is_in_profit_after_x_bars: typing.Optional[int] = None
+        if training_data_type == utils.YTrainTypes.IS_WINNING_TRADE:
+            percent_for_a_win = self.UI.user_input(
+                "percent_for_a_win",
+                enums.UserInputTypes.FLOAT,
+                2,
+                inputs,
+                min_val=0,
+                max_val=100,
+                title="Percent to count as a winning trade",
+                parent_input_name=TRAINING_DATA_SETTINGS_NAME,
+                other_schema_values={
+                    "description": "A trade for the training data will be considered as a win if it hits the win percentge before the loss percentage"
+                },
+                editor_options={
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                },
+                order=2,
+            )
+            percent_for_a_loss = self.UI.user_input(
+                "percent_for_a_loss",
+                enums.UserInputTypes.FLOAT,
+                0.5,
+                inputs,
+                min_val=0,
+                max_val=100,
+                title="Percent to count as a losing trade",
+                parent_input_name=TRAINING_DATA_SETTINGS_NAME,
+                other_schema_values={
+                    "description": "A trade for the training data will be considered as a win if it hits the win percentge before the loss percentage"
+                },
+                editor_options={
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                },
+                order=3,
+            )
+        elif training_data_type in (
+            utils.YTrainTypes.IS_IN_PROFIT_AFTER_4_BARS_CLOSES,
+            utils.YTrainTypes.IS_IN_PROFIT_AFTER_4_BARS,
+        ):
+            is_in_profit_after_x_bars = self.UI.user_input(
+                "is_in_profit_after_x_bars",
+                enums.UserInputTypes.INT,
+                4,
+                inputs,
+                min_val=0,
+                max_val=100,
+                title="Check if trade is in profit after X bars",
+                parent_input_name=TRAINING_DATA_SETTINGS_NAME,
+                other_schema_values={
+                    "description": (
+                        "For each candle in the training data, it will check if the trade would be in profit after X bars. "
+                        "This value is 4 in the TradingView version and cant be changed."
+                    )
+                },
+                editor_options={
+                    enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 6
+                },
+                order=2,
+            )
         required_neighbors: float = neighbors_count / 100 * prediction_threshold
         down_sampling_mode = self.UI.user_input(
             "down_sampler",
@@ -231,9 +327,10 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
             down_sampler=this_down_sampler,
             required_neighbors=required_neighbors,
             training_data_settings=utils.YTrainSettings(
-                training_data_type=utils.YTrainTypes.IS_IN_PROFIT_AFTER_4_BARS,
-                percent_for_a_win=2,
-                percent_for_a_loss=1,
+                training_data_type=training_data_type,
+                percent_for_a_win=percent_for_a_win,
+                percent_for_a_loss=percent_for_a_loss,
+                is_in_profit_after_x_bars=is_in_profit_after_x_bars,
             ),
         )
         # Trade Stats Settings
@@ -289,11 +386,11 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 # enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 # enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
-                analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "FunctionOutlined",
+                UserInputEditorOptionsTypes.ANT_ICON.value: "FunctionOutlined",
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
-                analysis_enums.UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 4,
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
+                UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 4,
             },
         )
         feature_count = self.UI.user_input(
@@ -590,11 +687,11 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 # enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 # enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
-                analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "BulbOutlined",
+                UserInputEditorOptionsTypes.ANT_ICON.value: "BulbOutlined",
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
-                analysis_enums.UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 6,
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
+                UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 6,
             },
         )
         self.kernel_settings: utils.KernelSettings = utils.KernelSettings(
@@ -724,11 +821,11 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 # enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 # enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
-                analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "FilterOutlined",
+                UserInputEditorOptionsTypes.ANT_ICON.value: "FilterOutlined",
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
-                analysis_enums.UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 8,
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
+                UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 8,
             },
         )
         volatility_filter_name = "volatility_filter_settings"
@@ -964,11 +1061,11 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 # enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
                 # enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
-                analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "DollarOutlined",
+                UserInputEditorOptionsTypes.ANT_ICON.value: "DollarOutlined",
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
-                analysis_enums.UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 10,
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
+                UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 10,
             },
         )
         source = self.UI.user_input(
@@ -1135,11 +1232,11 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 # enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 # enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
-                analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "ShoppingCartOutlined",
+                UserInputEditorOptionsTypes.ANT_ICON.value: "ShoppingCartOutlined",
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
-                analysis_enums.UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 12,
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
+                UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 12,
             },
         )
         exit_type = self.UI.user_input(
@@ -1290,11 +1387,11 @@ class LorentzianClassificationModeInputs(abstract_mode_base.AbstractBaseMode):
                 enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
                 # enums.UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
                 # enums.UserInputEditorOptionsTypes.COLLAPSED.value: True,
-                analysis_enums.UserInputEditorOptionsTypes.ANT_ICON.value: "LineChartOutlined",
+                UserInputEditorOptionsTypes.ANT_ICON.value: "LineChartOutlined",
             },
             other_schema_values={
-                analysis_enums.UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
-                analysis_enums.UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 14,
+                UserInputOtherSchemaValuesTypes.DISPLAY_AS_TAB.value: True,
+                UserInputOtherSchemaValuesTypes.TAB_ORDER.value: 14,
             },
         )
         self.display_settings: utils.DisplaySettings = utils.DisplaySettings(
