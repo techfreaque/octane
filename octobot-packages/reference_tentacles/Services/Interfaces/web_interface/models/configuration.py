@@ -132,7 +132,7 @@ markets_by_exchanges = {}
 all_symbols_dict = {}
 exchange_logos = {}
 # can't fetch symbols from coinmarketcap.com (which is in ccxt but is not an exchange and has a paid api)
-exchange_symbol_fetch_blacklist = {"coinmarketcap"}
+exchange_symbol_fetch_blacklist = {"coinmarketcap", "yahoofinance"}
 _LOGGER = None
 
 JSON_PORTFOLIO_SCHEMA = {
@@ -710,7 +710,7 @@ def get_config_activated_strategies(tentacles_setup_config=None):
 
 
 def get_config_activated_evaluators(tentacles_setup_config=None):
-    return evaluators_api.get_activated_evaluators(
+    return evaluators_api.get_activated_evaluators_and_trading_mode(
         tentacles_setup_config or interfaces_util.get_bot_api().get_edited_tentacles_config()
     )
 
@@ -1417,12 +1417,11 @@ def _change_base(pair, new_quote_currency):
 
 
 def send_command_to_activated_tentacles(command, wait_for_processing=True):
-    trading_mode_name = get_config_activated_trading_mode().get_name()
     evaluator_names = [
         evaluator.get_name()
         for evaluator in get_config_activated_evaluators()
     ]
-    send_command_to_tentacles(command, [trading_mode_name] + evaluator_names, wait_for_processing=wait_for_processing)
+    send_command_to_tentacles(command, evaluator_names, wait_for_processing=wait_for_processing)
 
 
 def send_command_to_tentacles(command, tentacle_names: list, wait_for_processing=True):
