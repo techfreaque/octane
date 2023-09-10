@@ -174,7 +174,7 @@ def register_bot_info_routes(plugin):
                 interfaces_util.run_in_bot_async_executor(asyncio.sleep(2))
                 return _bot_info(exchange=exchange, try_counter=try_counter)
             basic_utils.get_octo_ui_2_logger().exception(
-                error, True, "Failed to get bot info"
+                error, False, "Failed to get bot info"
             )
         return {
             "success": True,

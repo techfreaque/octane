@@ -47,12 +47,12 @@ def get_time_frames_from_strategy(strategy_class, config, tentacles_setup_config
 
 def init_required_candles_count_from_evaluators_and_strategies(config, tentacles_setup_config) -> None:
     candles_counts = [util.get_required_candles_count(tentacle_class, tentacles_setup_config)
-                      for tentacle_class in get_activated_evaluators(tentacles_setup_config)]
+                      for tentacle_class in get_activated_evaluators_and_trading_mode(tentacles_setup_config)]
     config[common_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT] = max(candles_counts) if candles_counts \
         else common_constants.DEFAULT_IGNORED_VALUE
 
 
-def get_activated_evaluators(tentacles_setup_config):
+def get_activated_evaluators_and_trading_mode(tentacles_setup_config):
     return get_activated_TA_evaluators_classes(tentacles_setup_config) + \
         get_activated_scripted_evaluators_classes(tentacles_setup_config) + \
         get_activated_real_time_evaluators_classes(tentacles_setup_config) + \

@@ -23,8 +23,8 @@ RUN mkdir -p /octobot
 RUN cp /.env /octobot/.env
 
 RUN pip install -U setuptools wheel pip>=20.0.0
-RUN pip install --prefer-binary -r OctoBot/requirements.txt
 RUN pip install --prefer-binary -r OctoBot/strategy_maker_requirements.txt
+RUN pip install --prefer-binary -r OctoBot/requirements.txt
 RUN pip install --prefer-binary -r Async-Channel/requirements.txt
 RUN pip install --prefer-binary -r OctoBot-Backtesting/requirements.txt
 RUN pip install --prefer-binary -r OctoBot-Commons/requirements.txt

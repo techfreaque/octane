@@ -69,9 +69,10 @@ def register_tentacles_config_routes(plugin):
                         "config"
                     ]
             except IndexError:
-                basic_utils.get_octo_ui_2_logger().error(
-                    f"{clean_tentacle_name} doesnt seem to have a config"
-                )
+                if clean_tentacle_name != "BlankTradingMode":
+                    basic_utils.get_octo_ui_2_logger().error(
+                        f"{clean_tentacle_name} doesnt seem to have a config"
+                    )
             except Exception as error:
                 basic_utils.get_octo_ui_2_logger().exception(
                     error, True, f"Failed to load config for {clean_tentacle_name}"

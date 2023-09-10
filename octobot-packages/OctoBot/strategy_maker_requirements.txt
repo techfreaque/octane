@@ -7,4 +7,5 @@ statistics
 tensorflow
 yfinance
 py_expression_eval
+typing-extensions>4.6.1 # tmp fix
 # requirements inside the octobot-packages folder need to be installed as well
