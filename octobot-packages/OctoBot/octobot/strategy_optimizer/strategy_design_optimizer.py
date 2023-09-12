@@ -724,6 +724,17 @@ class StrategyDesignOptimizer:
                                                                        tentacle_class)
             dict_util.nested_update_dict(current_config, updated_values)
             tentacles_manager_api.update_tentacle_config(local_tentacles_setup_config, tentacle_class, current_config)
+        # tmp fix for neural networks
+        neural_net_folder_name = os.path.join(os.path.dirname(self.base_tentacles_setup_config.config_path), tentacles_manager_constants.TENTACLES_SPECIFIC_CONFIG_FOLDER, "neural_net_models")
+        if os.path.exists(neural_net_folder_name):
+            shutil.copytree(
+                neural_net_folder_name, 
+                os.path.join(
+                    os.path.dirname(local_tentacles_setup_config.config_path),
+                    tentacles_manager_constants.TENTACLES_SPECIFIC_CONFIG_FOLDER,
+                    "neural_net_models"
+                )
+            )
         return local_tentacles_setup_config
 
     @staticmethod
