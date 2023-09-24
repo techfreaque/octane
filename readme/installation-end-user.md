@@ -132,6 +132,12 @@ Make sure you have git and docker installed on your windows machine
     git clone https://github.com/techfreaque/octane
     ```
 
+### Install Visual Studio Build Tools
+
+1. open the just downloaded octane folder and execute the file vs_build_tools.exe in windows_dependecies.
+2. Select "Desktop Development with C++" and install it
+
+
 ### Install / Update / Repair Package
 
 once you have downloaded the repository through git, you can install it by:
