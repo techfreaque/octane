@@ -33,9 +33,14 @@ SIMULATOR_TRADER_STR = "[Simulator] "
 # Trader
 DEFAULT_REFERENCE_MARKET = "BTC"
 CURRENCY_DEFAULT_MAX_PRICE_DIGITS = 8
+ALLOW_SIMULATED_ORDERS_INSTANT_FILL = os_util.parse_boolean_environment_var(
+    "ALLOW_SIMULATED_ORDERS_INSTANT_FILL", "False"
+)
 
 # Order creation
 ORDER_DATA_FETCHING_TIMEOUT = 5 * commons_constants.MINUTE_TO_SECONDS
+CHAINED_ORDER_PRICE_FETCHING_TIMEOUT = 1    # should be instant or ignored
+CHAINED_ORDERS_OUTDATED_PRICE_ALLOWANCE = decimal.Decimal("0.005")  # allows 0.5% outdated price error
 
 # Tentacles
 TRADING_MODE_REQUIRED_STRATEGIES = "required_strategies"
@@ -61,9 +66,13 @@ ENABLE_CCXT_RATE_LIMIT = os_util.parse_boolean_environment_var("ENABLE_CCXT_RATE
 THROTTLED_WS_UPDATES = float(os.getenv("THROTTLED_WS_UPDATES", "0.1"))  # avoid spamming CPU
 ENABLE_LIVE_CANDLES_STORAGE = os_util.parse_boolean_environment_var("ENABLE_LIVE_CANDLES_STORAGE", "False")
 ENABLE_HISTORICAL_ORDERS_UPDATES_STORAGE = os_util.parse_boolean_environment_var("ENABLE_HISTORICAL_ORDERS_UPDATES_STORAGE", "False")
+MAX_CANDLES_IN_RAM = int(os.getenv("MAX_CANDLES_IN_RAM", "3000"))    # max candles per CandlesManager
+STORAGE_ORIGIN_VALUE = "origin_value"
 ENABLE_SIMULATED_CURRENT_ORDERS_STORAGE = os_util.parse_boolean_environment_var("ENABLE_SIMULATED_CURRENT_ORDERS_STORAGE", "False")
 ENABLE_BACKTESTING_CURRENT_ORDERS_STORAGE = os_util.parse_boolean_environment_var("ENABLE_BACKTESTING_CURRENT_ORDERS_STORAGE", "False")
 DISPLAY_TIME_FRAME = commons_enums.TimeFrames.ONE_HOUR
+DEFAULT_SUBACCOUNT_ID = "default_subaccount_id"
+DEFAULT_ACCOUNT_ID = "default_account_id"
 
 # Decimal default values (decimals are immutable, can be stored as constant)
 ZERO = decimal.Decimal(0)
@@ -80,9 +89,9 @@ FULL_CANDLE_HISTORY_EXCHANGES = [
     "bittrex",
     "bitget",
     "bybit",
-    "gateio",
-    "hitbtc",
+    "bingx",
     "hollaex",
+    "htx",
     "yahoofinance",
     "huobi",
     "huobipro",
@@ -90,6 +99,7 @@ FULL_CANDLE_HISTORY_EXCHANGES = [
     "kraken",
     "okcoin",
     "okx",
+    "mexc",
     "binanceusdm",
     "mexc",
 ]
@@ -99,24 +109,28 @@ ADDITIONAL_EXCHANGES = ["yahoofinance"]
 DEFAULT_FUTURE_EXCHANGES = ["binanceusdm", "bybit"]
 TESTED_EXCHANGES = [
     "binance",
-    "okx",
-    "gateio",
-    "huobi",
-    "bitget",
-    "ascendex",
     "kucoin",
+    "okx",
+] + sorted([
     "coinbase",
-    "bybit",
     "cryptocom",
+    "htx",
+    "bitget",
+    "gateio",
+    "ascendex",
+    "bybit",
     "phemex",
     "hollaex",
     "binanceusdm"
     "mexc",
-]
-DEFAULT_FUTURE_EXCHANGES = ["binanceusdm", "bybit"]
-SIMULATOR_TESTED_EXCHANGES = ["bitfinex2", "bithumb", "bitstamp", "bittrex", "coinex",
+    "bingx",
+    "bitget",
+    "coinex",
+])
+DEFAULT_FUTURE_EXCHANGES = sorted(["bybit"])
+SIMULATOR_TESTED_EXCHANGES = sorted(["bitfinex2", "bithumb", "bitstamp", "bittrex",
                               "hitbtc", "kraken", "poloniex", "bitso", "ndax", "upbit",
-                              "wavesexchange"]
+                              "wavesexchange"])
 
 CONFIG_DEFAULT_FEES = 0.001
 CONFIG_DEFAULT_SIMULATOR_FEES = 0

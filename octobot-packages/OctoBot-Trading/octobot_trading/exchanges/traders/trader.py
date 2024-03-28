@@ -114,7 +114,7 @@ class Trader(util.Initializable):
             created_order = await self._create_new_order(order, params, wait_for_creation=wait_for_creation,
                                                          creation_timeout=creation_timeout)
             if created_order is None:
-                self.logger.warning(f"Order not created order on {self.exchange_manager.exchange_name} "
+                self.logger.warning(f"Order not created on {self.exchange_manager.exchange_name} "
                                     f"(failed attempt to create: {order}). This is likely due to "
                                     f"the order being refused by the exchange.")
         except errors.MissingFunds:
@@ -257,7 +257,7 @@ class Trader(util.Initializable):
 
             # get real order from exchange
             updated_order = order_factory.create_order_instance_from_raw(
-                self, created_order, force_open_or_pending_creation=True
+                self, created_order, force_open_or_pending_creation=True, has_just_been_created=True
             )
             is_pending_creation = updated_order.status == enums.OrderStatus.PENDING_CREATION
 
@@ -286,9 +286,22 @@ class Trader(util.Initializable):
             await updated_order.state.wait_for_terminate(creation_timeout)
         return updated_order
 
+    def get_take_profit_order_type(self, base_order, order_type: enums.TraderOrderType) -> enums.TraderOrderType:
+        """
+        Returns the adapted take profit order enums.TraderOrderType.
+        :return: enums.TraderOrderType.TAKE_PROFIT when order can be bundled and considered as a real take profit
+        from exchange and the given order_type otherwise
+        """
+        if not self.simulate and self.exchange_manager.exchange.supports_bundled_order_on_order_creation(
+            base_order, enums.TraderOrderType.TAKE_PROFIT
+        ):
+            # use take profit order type for bundled orders, use default order type otherwise
+            return enums.TraderOrderType.TAKE_PROFIT
+        return order_type
+
     async def bundle_chained_order_with_uncreated_order(
         self, order, chained_order, update_with_triggering_order_fees, **kwargs
-    ):
+    ) -> dict:
         """
         Creates and bundles an order as a chained order to the given order.
         When supported and in real trading, return the stop loss parameters to be given when
@@ -322,10 +335,13 @@ class Trader(util.Initializable):
                     f"Including {chained_order.order_type} chained order into order "
                     f"parameters to handle it directly on exchange."
                 )
+        await self.chain_order(order, chained_order, update_with_triggering_order_fees, is_bundled, **kwargs)
+        return params
+
+    async def chain_order(self, order, chained_order, update_with_triggering_order_fees, is_bundled, **kwargs):
         await chained_order.set_as_chained_order(order, is_bundled, {}, update_with_triggering_order_fees, **kwargs)
         order.add_chained_order(chained_order)
-        self.logger.debug(f"Added chained order [{chained_order}] to [{order}] order.")
-        return params
+        self.logger.info(f"Added chained order [{chained_order}] to [{order}] order.")
 
     async def cancel_order(self, order, ignored_order=None,
                            wait_for_cancelling=True,
@@ -506,7 +522,7 @@ class Trader(util.Initializable):
                         cancelled_orders.append(order)
                     all_cancelled = cancelled and all_cancelled
                 except (errors.OrderCancelError, errors.UnexpectedExchangeSideOrderStateError) as err:
-                    self.logger.warning(f"Skipping order cancel: {err}")
+                    self.logger.warning(f"Skipping order cancel: {err} ({err.__class__.__name__})")
         return all_cancelled, cancelled_orders
 
     async def cancel_all_open_orders_with_currency(
@@ -559,7 +575,7 @@ class Trader(util.Initializable):
                             wait_for_cancelling=wait_for_cancelling,
                             cancelling_timeout=cancelling_timeout, ) and all_cancelled
                 except (errors.OrderCancelError, errors.UnexpectedExchangeSideOrderStateError) as err:
-                    self.logger.warning(f"Skipping order cancel: {err}")
+                    self.logger.warning(f"Skipping order cancel: {err} ({err.__class__.__name__})")
                     all_cancelled = False
         return all_cancelled
 

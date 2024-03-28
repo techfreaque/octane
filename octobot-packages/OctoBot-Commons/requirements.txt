@@ -1,12 +1,14 @@
 # Setup requirements
-numpy==1.23.5
+numpy==1.26.3
 
 # Commons requirements
-jsonschema==3.2.0
+jsonschema==4.20.0
 cryptography
 sortedcontainers
 requests
-psutil==5.9.5
+psutil==5.9.7
 
 # async sqlite connection
-aiosqlite>=0.16.0, <0.17
+# update asap (0.19 working)
+# but required <= 0.17.0 from asyncpraw https://github.com/praw-dev/asyncpraw/blob/master/pyproject.toml
+aiosqlite==0.17.0

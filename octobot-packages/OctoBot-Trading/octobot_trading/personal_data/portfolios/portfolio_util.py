@@ -14,16 +14,20 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import decimal
+
 import octobot_trading.personal_data.portfolios.asset as asset
 import octobot_trading.constants as constants
 import octobot_trading.enums as enums
+import octobot_trading.errors as errors
+
 import octobot_commons.constants as commons_constants
 import octobot_commons.logging as commons_logging
 import octobot_commons.symbols as symbol_util
+
 import numpy as numpy
 
 
-def parse_decimal_portfolio(portfolio):
+def parse_decimal_portfolio(portfolio, as_decimal=True):
     decimal_portfolio = {}
     for symbol, symbol_balance in portfolio.items():
         if isinstance(symbol_balance, dict):
@@ -31,13 +35,15 @@ def parse_decimal_portfolio(portfolio):
             portfolio_to_fill = decimal_portfolio[symbol]
             for balance_type, balance_val in symbol_balance.items():
                 if isinstance(balance_val, (int, float, decimal.Decimal)):
-                    portfolio_to_fill[balance_type] = decimal.Decimal(str(balance_val))
+                    portfolio_to_fill[balance_type] = decimal.Decimal(str(balance_val)) \
+                        if as_decimal else float(balance_val)
     return decimal_portfolio
 
 
 def parse_decimal_config_portfolio(portfolio):
     return {
-        symbol: decimal.Decimal(str(symbol_balance))
+        symbol: {k: decimal.Decimal(str(v)) for k, v in symbol_balance.items()} if isinstance(symbol_balance, dict)
+        else decimal.Decimal(str(symbol_balance))
         for symbol, symbol_balance in portfolio.items()
     }
 
@@ -199,3 +205,27 @@ async def get_coefficient_of_determination(exchange_manager, use_high_instead_of
         coefficient_of_determination = corr ** 2
 
     return round(coefficient_of_determination, 3)
+
+
+def get_asset_price_from_converter_or_tickers(
+    exchange_manager, to_convert_asset: str, target_asset: str, symbol: str, tickers: dict
+):
+    # 1. try with converter
+    try:
+        price = exchange_manager.exchange_personal_data.portfolio_manager. \
+            portfolio_value_holder.value_converter.evaluate_value(
+                to_convert_asset, constants.ONE, raise_error=True,
+                target_currency=target_asset, init_price_fetchers=False
+            )
+        if price == constants.ZERO:
+            raise errors.MissingPriceDataError
+    except errors.MissingPriceDataError:
+        # 2. try with tickers
+        try:
+            price = decimal.Decimal(str(
+                tickers[symbol][enums.ExchangeConstantsTickersColumns.CLOSE.value]
+                or tickers[symbol][enums.ExchangeConstantsTickersColumns.PREVIOUS_CLOSE.value]
+            ))
+        except KeyError:
+            price = None
+    return price

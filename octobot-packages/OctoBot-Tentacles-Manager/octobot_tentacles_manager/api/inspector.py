@@ -21,6 +21,7 @@ import octobot_commons.tentacles_management as tentacles_management
 import octobot_tentacles_manager.constants as constants
 import octobot_tentacles_manager.loaders as loaders
 import octobot_tentacles_manager.enums as manager_enums
+import octobot_tentacles_manager.util as util
 
 
 def get_installed_tentacles_modules() -> set:
@@ -149,6 +150,10 @@ def _load_tentacle_class(tentacle_name):
                 tentacles_services.Interfaces, tentacles_management.default_parents_inspection):
                 return tentacle_class
         except ImportError:
+            pass
+        try:
+            return util.get_tentacle_class_from_extra_tentacles(tentacle_name)
+        except KeyError:
             pass
         raise RuntimeError(f"Can't find tentacle: {tentacle_name}")
     except ImportError as e:

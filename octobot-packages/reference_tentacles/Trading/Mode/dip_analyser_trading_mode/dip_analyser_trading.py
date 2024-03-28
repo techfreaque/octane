@@ -76,32 +76,32 @@ class DipAnalyserTradingMode(trading_modes.AbstractTradingMode):
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.LIGHT_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 0.4, inputs,
             min_val=0, max_val=1,
-            title="Volume multiplier for a buy order on a light price weight signal.",
+            title="Volume multiplier for a buy order on a light volume weight signal.",
         )
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.MEDIUM_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 0.7, inputs,
             min_val=0, max_val=1,
-            title="Volume multiplier for a buy order on a medium price weight signal.",
+            title="Volume multiplier for a buy order on a medium volume weight signal.",
         )
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.HEAVY_VOLUME_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1, inputs,
             min_val=0, max_val=1,
-            title="Volume multiplier for a buy order on a heavy price weight signal.",
+            title="Volume multiplier for a buy order on a heavy volume weight signal.",
         )
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.LIGHT_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.04, inputs,
             min_val=1,
-            title="Price multiplier for the top sell order in a light volume weight signal.",
+            title="Price multiplier for the top sell order in a light price weight signal.",
         )
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.MEDIUM_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.07, inputs,
             min_val=1,
-            title="Price multiplier for the top sell order in a medium volume weight signal.",
+            title="Price multiplier for the top sell order in a medium price weight signal.",
         )
         self.UI.user_input(
             DipAnalyserTradingModeConsumer.HEAVY_PRICE_WEIGHT, commons_enums.UserInputTypes.FLOAT, 1.1, inputs,
             min_val=1,
-            title="Price multiplier for the top sell order in a heavy volume weight signal.",
+            title="Price multiplier for the top sell order in a heavy price weight signal.",
         )
 
     @classmethod
@@ -232,14 +232,22 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     self.exchange_manager, symbol, trading_enums.TradeOrderSide.BUY,
                     price, False, current_symbol_holding, market_quantity
                 )
+
             base = symbol_util.parse_symbol(symbol).base
             created_orders = []
             orders_should_have_been_created = False
             ctx = script_keywords.get_base_context(self.trading_mode, symbol)
+            order_type = trading_enums.TraderOrderType.BUY_MARKET \
+                if self.USE_BUY_MARKET_ORDERS_VALUE else trading_enums.TraderOrderType.BUY_LIMIT
             quantity = await self._get_buy_quantity_from_weight(ctx, volume_weight, max_buy_size, base)
             limit_price = trading_personal_data.decimal_adapt_price(
                 symbol_market,
                 price if self.USE_BUY_MARKET_ORDERS_VALUE else self.get_limit_price(price)
+            )
+            quantity = trading_personal_data.decimal_adapt_order_quantity_because_fees(
+                self.exchange_manager, symbol, order_type, quantity,
+                limit_price, trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER,
+                trading_enums.TradeOrderSide.BUY, current_market_holding
             )
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
@@ -248,8 +256,7 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 orders_should_have_been_created = True
                 current_order = trading_personal_data.create_order_instance(
                     trader=self.exchange_manager.trader,
-                    order_type=trading_enums.TraderOrderType.BUY_MARKET
-                    if self.USE_BUY_MARKET_ORDERS_VALUE else trading_enums.TraderOrderType.BUY_LIMIT,
+                    order_type=order_type,
                     symbol=symbol,
                     current_price=price,
                     quantity=order_quantity,
@@ -408,16 +415,16 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                                     f"Using default sell target: {self.DEFAULT_SELL_TARGET}.")
             return self.DEFAULT_SELL_TARGET
 
-    @staticmethod
-    def get_limit_price(price):
+    def get_limit_price(self, price):
         # buy very close from current price
-        return price * DipAnalyserTradingModeConsumer.LIMIT_PRICE_MULTIPLIER
+        return price * self.LIMIT_PRICE_MULTIPLIER
 
     def _generate_sell_orders(self, sell_orders_count, quantity, sell_weight, sell_base, symbol_market):
         volume_with_price = []
         sell_max = sell_base * self.PRICE_WEIGH_TO_PRICE_PERCENT[sell_weight]
-        adapted_sell_orders_count, increment = \
-            self._check_limits(sell_base, sell_max, quantity, sell_orders_count, symbol_market)
+        adapted_sell_orders_count, increment = trading_personal_data.get_split_orders_count_and_increment(
+            sell_base, sell_max, quantity, sell_orders_count, symbol_market, True
+        )
         if adapted_sell_orders_count:
             order_volume = quantity / adapted_sell_orders_count
             total_volume = 0
@@ -439,71 +446,6 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 full_quantity = volume_with_price[-1][0] + quantity - total_volume
                 volume_with_price[-1] = (full_quantity, volume_with_price[-1][1])
         return volume_with_price
-
-    def _check_limits(self, sell_base, sell_max, quantity, sell_orders_count, symbol_market):
-        min_quantity, max_quantity, min_cost, max_cost, min_price, max_price = \
-            trading_personal_data.get_min_max_amounts(symbol_market)
-        min_quantity = None if min_quantity is None else decimal.Decimal(f"{min_quantity}")
-        max_quantity = None if max_quantity is None else decimal.Decimal(f"{max_quantity}")
-        min_cost = None if min_cost is None else decimal.Decimal(f"{min_cost}")
-        max_cost = None if max_cost is None else decimal.Decimal(f"{max_cost}")
-        min_price = None if min_price is None else decimal.Decimal(f"{min_price}")
-        max_price = None if max_price is None else decimal.Decimal(f"{max_price}")
-
-        orders_count = sell_orders_count
-
-        limit_check = DipAnalyserTradingModeConsumer._ensure_orders_size(
-            sell_base, sell_max, quantity, orders_count,
-            min_quantity, min_cost, min_price,
-            max_quantity, max_cost, max_price)
-
-        while limit_check > 0:
-            if limit_check == 1:
-                if orders_count > 1:
-                    orders_count -= 1
-                else:
-                    # not enough funds to create orders
-                    self.logger.warning(f"Not enough funds to create sell order.")
-                    return 0, 0
-            elif limit_check == 2:
-                if orders_count < 40:
-                    orders_count += 1
-                else:
-                    # too many orders to create, must be a problem
-                    self.logger.error("Too many orders to create: error with _generate_sell_orders.")
-                    return 0, 0
-            limit_check = DipAnalyserTradingModeConsumer._ensure_orders_size(
-                sell_base, sell_max, quantity, orders_count,
-                min_quantity, min_cost, min_price,
-                max_quantity, max_cost, max_price)
-        return orders_count, (sell_max - sell_base) / orders_count
-
-    @staticmethod
-    def _ensure_orders_size(sell_base, sell_max, quantity, sell_orders_count,
-                            min_quantity, min_cost, min_price,
-                            max_quantity, max_cost, max_price):
-        increment = (sell_max - sell_base) / sell_orders_count
-        first_sell = sell_base + increment
-        last_sell = sell_base + (increment * sell_orders_count)
-        order_vol = quantity / sell_orders_count
-
-        if DipAnalyserTradingModeConsumer.orders_too_small(min_quantity, min_cost, min_price, first_sell, order_vol):
-            return 1
-        elif DipAnalyserTradingModeConsumer.orders_too_large(max_quantity, max_cost, max_price, last_sell, order_vol):
-            return 2
-        return 0
-
-    @staticmethod
-    def orders_too_small(min_quantity, min_cost, min_price, sell_price, sell_vol):
-        return (min_price and sell_price < min_price) or \
-               (min_quantity and sell_vol < min_quantity) or \
-               (min_cost and sell_price * sell_vol < min_cost)
-
-    @staticmethod
-    def orders_too_large(max_quantity, max_cost, max_price, sell_price, sell_vol):
-        return (max_price and sell_price > max_price) or \
-               (max_quantity and sell_vol > max_quantity) or \
-               (max_cost and sell_price * sell_vol > max_cost)
 
 
 class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):

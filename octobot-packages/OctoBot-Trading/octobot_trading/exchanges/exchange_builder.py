@@ -14,6 +14,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import typing
 import octobot_commons.logging as logging
 import octobot_commons.constants as commons_constants
 
@@ -34,6 +35,8 @@ class ExchangeBuilder:
 
         self._is_using_trading_modes: bool = True
         self._matrix_id: str = None
+        self.trading_config_by_trading_mode: dict = None
+        self.auto_start_trading_modes: bool = True
 
     async def build(self):
         """
@@ -111,17 +114,21 @@ class ExchangeBuilder:
                     self.logger.warning(f"There wont be any order created on {self.exchange_name}: neither "
                                         f"simulated nor real trader has been activated.")
                 else:
-                    self.exchange_manager.trading_modes = await self._build_trading_modes(trading_mode_class)
+                    self.exchange_manager.trading_modes = await self.build_trading_modes(trading_mode_class)
             else:
                 self.logger.info(f"{self.exchange_name} exchange is online and won't be trading")
 
-    async def _build_trading_modes(self, trading_mode_class):
+    async def build_trading_modes(self, trading_mode_class):
         try:
             self._ensure_trading_mode_compatibility(trading_mode_class)
-            return await modes.create_trading_modes(self.config,
-                                                    self.exchange_manager,
-                                                    trading_mode_class,
-                                                    self.exchange_manager.bot_id)
+            return await modes.create_trading_modes(
+                self.config,
+                self.exchange_manager,
+                trading_mode_class,
+                self.exchange_manager.bot_id,
+                trading_config_by_trading_mode=self.trading_config_by_trading_mode,
+                auto_start=self.auto_start_trading_modes,
+            )
         except errors.TradingModeIncompatibility as e:
             raise e
         except Exception as e:
@@ -211,12 +218,20 @@ class ExchangeBuilder:
         self.exchange_manager.exchange_only = True
         return self
 
-    def is_loading_markets(self, is_loading_markets):
-        self.exchange_manager.is_loading_markets = is_loading_markets
+    def use_cached_markets(self, use_cached_markets: bool):
+        self.exchange_manager.use_cached_markets = use_cached_markets
+        return self
+
+    def use_market_filter(self, market_filter: typing.Union[None, typing.Callable[[dict], bool]]):
+        self.exchange_manager.market_filter = market_filter
         return self
 
     def is_ignoring_config(self, ignore_config=True):
         self.exchange_manager.ignore_config = ignore_config
+        return self
+
+    def is_broker_enabled(self, is_broker_enabled=False):
+        self.exchange_manager.is_broker_enabled = is_broker_enabled
         return self
 
     def is_without_auth(self):
@@ -241,6 +256,14 @@ class ExchangeBuilder:
 
     def has_matrix(self, matrix_id):
         self._matrix_id = matrix_id
+        return self
+
+    def use_trading_config_by_trading_mode(self, trading_config_by_trading_mode):
+        self.trading_config_by_trading_mode = trading_config_by_trading_mode
+        return self
+
+    def set_auto_start_trading_modes(self, auto_start_trading_modes):
+        self.auto_start_trading_modes = auto_start_trading_modes
         return self
 
 

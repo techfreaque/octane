@@ -1,5 +1,7 @@
+import functools
 import octobot_commons.os_util as os_util
 import tentacles.Services.Interfaces.web_interface.login as login
+import tentacles.Services.Interfaces.web_interface.flask_util.cors as cors_util
 
 
 CORS_ENABLED = os_util.parse_boolean_environment_var("CORS_MODE_ENABLED", "False")
@@ -20,30 +22,31 @@ def import_cross_origin_if_enabled(get_anyway: bool = False):
         return cross_origin
 
 
-def create_env_dependent_route(
-    plugin, route: str, route_method, can_be_shared=False, **kwargs
+def octane_route(
+    blueprint,
+    route: str,
+    methods: list[str] = None,
+    login_always_required: bool = False,
+    can_be_shared_public: bool = False,
 ):
-    cross_origin = import_cross_origin_if_enabled()
-    __func_name__ = f"_{route_method.__name__}"
-    if can_be_shared and SHARE_YOUR_OCOBOT:
-        _cross_origin = import_cross_origin_if_enabled(True)
+    def decorator(func):
+        @blueprint.route(route, methods=methods)
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            if cross_origin := import_cross_origin_if_enabled():
+                return cross_origin(
+                    origins=cors_util.get_user_defined_cors_allowed_origins()
+                )(login.login_required_when_activated(func))(*args, **kwargs)
+            elif login_always_required:
+                if dev_mode_is_on():
+                    return login.login_required_when_activated(func)(*args, **kwargs)
+                else:
+                    return login.active_login_required(func)(*args, **kwargs)
+            else:
+                if can_be_shared_public and SHARE_YOUR_OCOBOT:
+                    return func(*args, **kwargs)
+                return login.login_required_when_activated(func)(*args, **kwargs)
 
-        @plugin.route(route)
-        @_cross_origin(origins="*")
-        def __func_name__(**kwargs):
-            return route_method(**kwargs)
+        return wrapper
 
-    elif cross_origin:
-
-        @plugin.route(route)
-        @cross_origin(origins="*")
-        @login.login_required_when_activated
-        def __func_name__(**kwargs):
-            return route_method(**kwargs)
-
-    else:
-
-        @plugin.route(route)
-        @login.login_required_when_activated
-        def __func_name__(**kwargs):
-            return route_method(**kwargs)
+    return decorator

@@ -18,56 +18,36 @@ import flask
 import octobot_commons.logging as bot_logging
 import octobot.constants as constants
 import octobot.disclaimer as disclaimer
-from tentacles.Services.Interfaces.octo_ui2.models.octo_ui2 import (
-    import_cross_origin_if_enabled,
-)
-import tentacles.Services.Interfaces.web_interface as web_interface
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.octo_ui2.models.octo_ui2 as octo_ui2_models
 
 logger = bot_logging.get_logger("ServerInstance Controller")
 
 
-@web_interface.server_instance.route("/about")
-@login.login_required_when_activated
-def about():
-    return flask.render_template('about.html',
-                                 octobot_beta_program_form_url=constants.OCTOBOT_BETA_PROGRAM_FORM_URL,
-                                 beta_env_enabled_in_config=models.get_beta_env_enabled_in_config(),
-                                 metrics_enabled=models.get_metrics_enabled(),
-                                 disclaimer=disclaimer.DISCLAIMER)
-
-
-route = "/commands/<cmd>"
-methods = ["POST", "GET"]
-if cross_origin := import_cross_origin_if_enabled():
-
-    @web_interface.server_instance.route(route, methods=methods)
-    @cross_origin(origins="*")
+def register(blueprint):
+    @blueprint.route("/about")
     @login.login_required_when_activated
+    def about():
+        return flask.render_template('about.html',
+                                     octobot_beta_program_form_url=constants.OCTOBOT_BETA_PROGRAM_FORM_URL,
+                                     beta_env_enabled_in_config=models.get_beta_env_enabled_in_config(),
+                                     metrics_enabled=models.get_metrics_enabled(),
+                                     disclaimer=disclaimer.DISCLAIMER)
+
+    @octo_ui2_models.octane_route(blueprint, route="/commands/<cmd>", methods=['GET', 'POST'])
     def commands(cmd=None):
-        return _commands(cmd)
+        if cmd == "restart":
+            models.schedule_delayed_command(models.restart_bot, delay=0.1)
+            return flask.jsonify("Success")
 
-else:
+        elif cmd == "stop":
+            models.schedule_delayed_command(models.stop_bot, delay=0.1)
+            return flask.jsonify("Success")
 
-    @web_interface.server_instance.route(route, methods=methods)
-    @login.login_required_when_activated
-    def commands(cmd=None):
-        return _commands(cmd)
+        elif cmd == "update":
+            models.schedule_delayed_command(models.update_bot, delay=0.1)
+            return flask.jsonify("Update started")
 
-
-def _commands(cmd=None):
-    if cmd == "restart":
-        models.schedule_delayed_command(models.restart_bot, delay=0.1)
-        return flask.jsonify("Success")
-
-    elif cmd == "stop":
-        models.schedule_delayed_command(models.stop_bot, delay=0.1)
-        return flask.jsonify("Success")
-
-    elif cmd == "update":
-        models.schedule_delayed_command(models.update_bot, delay=0.1)
-        return flask.jsonify("Update started")
-
-    else:
-        raise RuntimeError("Unknown command")
+        else:
+            raise RuntimeError("Unknown command")

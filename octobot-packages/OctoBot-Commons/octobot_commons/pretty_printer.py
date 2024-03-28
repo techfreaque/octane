@@ -150,7 +150,7 @@ def _get_max_digits(number):
         return 6
     if abs_number < 1:
         return 4
-    if abs_number < 1000:
+    if abs_number < 10000:
         return 2
     return 0
 

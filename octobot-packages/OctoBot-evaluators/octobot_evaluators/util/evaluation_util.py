@@ -60,7 +60,6 @@ def local_trading_context(evaluator, symbol, time_frame, trigger_cache_timestamp
             symbol,
             evaluator.matrix_id,
             cryptocurrency,
-            symbol,
             time_frame,
             evaluator.logger,
             trading_modes[0].__class__,

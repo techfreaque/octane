@@ -137,6 +137,13 @@ class DocumentDatabase:
         self.get_logger().debug("hard resetting database")
         return await self.adaptor.hard_reset()
 
+    def is_hard_reset_error(self, err: Exception) -> bool:
+        """
+        returns True if the given error should trigger
+        a hard reset of the database
+        """
+        return self.adaptor.is_hard_reset_error(err)
+
     async def flush(self):
         """
         Flushes the database cache

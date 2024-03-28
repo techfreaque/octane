@@ -4,6 +4,273 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.66] - 2024-03-19
+### Updated
+- [CCXT] to 4.2.77
+### Fixed
+- non trading exchange error
+
+## [2.4.65] - 2024-03-19
+### Updated
+- [CCXT] to 4.2.76
+
+## [2.4.64] - 2024-03-17
+### Added
+- [ScriptingKeywords] add allow_holdings_adaptation to get_amount_from_input_amount
+
+## [2.4.63] - 2024-03-15
+### Added
+- [ScriptingKeywords] DELTA_QUOTE price offset
+
+## [2.4.62] - 2024-03-15
+### Added
+- [ScriptingKeywords] price offsets
+
+## [2.4.61] - 2024-03-12
+### Fixed
+- [Orders] chained orders quantity after fees decimals
+
+## [2.4.60] - 2024-03-12
+### Updated
+- [TradingModes] add exchange order ids to cancel_symbol_open_orders
+- [Orders] handle "b" order quantity type
+
+## [2.4.59] - 2024-03-11
+### Fixed
+- [TradingModes] Fix convert_asset_to_target_asset to properly handle fees
+
+## [2.4.58] - 2024-03-07
+### Fixed
+- [ChainedOrders] Outdated limit price
+- [Backtesting] Invalid order fill price
+
+## [2.4.57] - 2024-03-06
+### Updated
+- [Exchange] log last request url on failed retry
+
+## [2.4.56] - 2024-03-05
+### Updated
+- [Exchanges] add details to retrier errors
+
+## [2.4.55] - 2024-02-14
+### Updated
+- [Exchanges] support tentacle exchange market status fixes
+
+## [2.4.54] - 2024-02-13
+### Updated
+- [TradingMode] integrate tags in orders creation
+### Fixed
+- [Orders] cancel_symbol_open_orders return value
+
+## [2.4.53] - 2024-02-02
+### Fixed
+- [Orders] Handle quote-based fees in exchange simulator
+
+## [2.4.52] - 2024-01-30
+### Added
+- [API] Trades utility
+### Fixed
+- [Exchanges] Unidentified auth error in market status loading
+- [Exchanges] Fetch balance error spam on auth error
+
+## [2.4.51] - 2024-01-18
+### Added
+- [CoinEx] Support CoinEx exchange
+
+## [2.4.50] - 2024-01-18
+### Updated
+- [Websocket] Fix websocket reconnection after binance auto disconnect
+
+## [2.4.49] - 2024-01-08
+### Updated
+- [Exchanges] replace Huobi by HTX
+- [CCXT] 4.2.10
+
+## [2.4.48] - 2023-12-15
+### Fixed
+- [Orders] futures orders quantity parsing
+
+## [2.4.47] - 2023-12-11
+### Fixed
+- candles fetch IndexError
+
+## [2.4.46] - 2023-12-11
+### Updated
+- [Kline] always updated database
+- [Candles] fix fetch issues
+
+## [2.4.45] - 2023-12-10
+### Updated
+- [CCXT] 4.1.82
+
+## [2.4.44] - 2023-12-08
+### Added
+- [TradingMode] Health check
+
+## [2.4.43] - 2023-12-06
+### Added
+- [Exchanges] Market status cache
+- [Orders] decimal_adapt_order_quantity_because_fees
+### Updated
+- [CCXT] 4.1.77
+
+## [2.4.42] - 2023-11-17
+### Added
+- [Portfolio] parse_decimal_portfolio: as_decimal param
+
+## [2.4.41] - 2023-11-15
+### Fixed
+- [Orders] Fix parsing issues
+
+## [2.4.40] - 2023-11-01
+### Fixed
+- [Context] Fix rare desynched symbol attribute and remove signal_symbol 
+
+## [2.4.39] - 2023-10-30
+### Fixed
+- [Config] Realtime timeframe issues
+
+## [2.4.38] - 2023-10-29
+### Fixed
+- [Config] handle malformed pairs in get_all_currencies
+
+## [2.4.37] - 2023-10-27
+### Added
+- [API] get_candles_as_list
+
+## [2.4.36] - 2023-10-24
+### Added
+- [Stats] skip history on simulated trading
+
+## [2.4.35] - 2023-10-18
+### Added
+- [TradingModes] add are_initialization_orders_pending
+
+## [2.4.34] - 2023-10-15
+### Added
+- [Orders] add ALLOW_SIMULATED_ORDERS_INSTANT_FILL env var
+- [Backtesting] handle accurate price timeframe when available
+
+## [2.4.33] - 2023-10-11
+### Updated
+- [TradingModes] Missing funds log
+
+## [2.4.32] - 2023-10-11
+### Added
+- [TradingModes] Portfolio optimization basis
+
+## [2.4.31] - 2023-10-04
+### Added
+- [Signals] Sorting
+### Updated
+- [Orders] Chained orders creation issues log
+### Fixed
+- [Orders] Rare filled order crash
+
+## [2.4.30] - 2023-09-26
+### Updated
+- [Storage] increase storage update interval
+
+## [2.4.29] - 2023-09-25
+### Updated
+- [Storage] push open orders
+
+## [2.4.28] - 2023-09-24
+### Updated
+- [Trades] push USD-like volume
+
+## [2.4.27] - 2023-09-12
+### Fixed
+- [Orders] get_split_orders_count_and_increment: take exchange precision into account
+
+## [2.4.26] - 2023-09-07
+### Fixed
+- [PNL] Division error
+- [Exchanges] Stop issues
+
+## [2.4.25] - 2023-09-05
+### Updated
+- [Signals] set UPDATE_WITH_TRIGGERING_ORDER_FEES
+
+## [2.4.24] - 2023-09-03
+### Updated
+- [Backtesting] use local time channel name
+
+## [2.4.23] - 2023-09-01
+### Fixed
+- [ExchangeData] format
+
+## [2.4.22] - 2023-09-01
+### Added
+- [Credentials] warning when sandboxed exchange in credential check
+### Updated
+- [Tickers] ensure seconds in timestamp
+
+## [2.4.21] - 2023-08-30
+### Added
+- [Trades] exchange side trade id handling
+- [Trades] trades aggregate by order id
+### Updated
+- [Orders] raise AuthenticationError on missing trading permissions
+
+## [2.4.20] - 2023-08-25
+### Updated
+- [Dataclasses] use FlexibleDataclass
+
+## [2.4.19] - 2023-08-23
+### Updated
+- [Exchanges] support info and parsed forced markets
+
+## [2.4.18] - 2023-08-17
+### Updated
+- [CCXT] to version 4.0.65
+### Fixed
+- [Storage] handle corrupted db files auto fix
+
+## [2.4.17] - 2023-08-16
+### Added
+- [Orders] %s and %t amounts
+### Fixed
+- [Backtesting] fees on small amounts
+
+## [2.4.16] - 2023-08-14
+### Fixed
+- [Exchanges] unwanted market status load
+
+## [2.4.15] - 2023-08-14
+### Updated
+- [Backtesting] handle forced market statuses
+### Fixed
+- [Exchanges] randomness in symbols processing
+
+## [2.4.14] - 2023-08-07
+### Updated
+- [PortfolioStorage] update profitability
+
+## [2.4.13] - 2023-08-05
+### Updated
+- [Orders][TradingMode] Improve flexibility
+- logs clarity
+
+## [2.4.12] - 2023-07-28
+### Updated
+- [Orders] include minimal info in storage
+
+## [2.4.11] - 2023-07-26
+### Fixed
+- [Portfolio] simulated portfolio history load
+
+## [2.4.10] - 2023-07-24
+### Updated
+- [ExchangeData] default value and typing
+
+## [2.4.9] - 2023-07-23
+### Updated
+- [Tests] testing tools
+- [TradingModes] logs on minimum trading volumes
+### Fixed
+- [Websockets] Reconnection issues
+
 ## [2.4.8] - 2023-07-08
 ### Fixed
 - [Positions] Contracts live update

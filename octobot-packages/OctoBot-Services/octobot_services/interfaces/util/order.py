@@ -36,14 +36,20 @@ def get_all_open_orders():
 
 
 def cancel_orders(order_ids):
+    return interfaces.run_in_bot_main_loop(async_cancel_orders(order_ids))
+
+
+async def async_cancel_orders(order_ids):
     removed_count = 0
     if order_ids:
         for order_id in order_ids:
             for exchange_manager in interfaces.get_exchange_managers():
                 if trading_api.is_trader_existing_and_enabled(exchange_manager):
                     try:
-                        removed_count += 1 if interfaces.run_in_bot_main_loop(
-                            trading_api.cancel_order_with_id(exchange_manager, order_id, wait_for_cancelling=False)
+                        removed_count += 1 if (
+                            await trading_api.cancel_order_with_id(
+                                exchange_manager, order_id, wait_for_cancelling=False
+                            )
                         ) else 0
                     except (trading_errors.OrderCancelError, trading_errors.UnexpectedExchangeSideOrderStateError) \
                             as err:
@@ -52,11 +58,13 @@ def cancel_orders(order_ids):
 
 
 def cancel_all_open_orders(currency=None):
+    return interfaces.run_in_bot_main_loop(async_cancel_all_open_orders(currency=currency))
+
+
+async def async_cancel_all_open_orders(currency=None):
     for exchange_manager in interfaces.get_exchange_managers():
         if trading_api.is_trader_existing_and_enabled(exchange_manager):
             if currency is None:
-                interfaces.run_in_bot_main_loop(
-                    trading_api.cancel_all_open_orders(exchange_manager))
+                await trading_api.cancel_all_open_orders(exchange_manager)
             else:
-                interfaces.run_in_bot_main_loop(
-                    trading_api.cancel_all_open_orders_with_currency(exchange_manager, currency))
+                await trading_api.cancel_all_open_orders_with_currency(exchange_manager, currency)

@@ -28,10 +28,11 @@ import octobot_commons.asyncio_tools as asyncio_tools
 class ChannelsManager:
     DEFAULT_REFRESH_TIMEOUT = 50000 # fixes candle timeout issue when optimizer running
 
-    def __init__(self, exchange_ids, matrix_id, refresh_timeout=DEFAULT_REFRESH_TIMEOUT):
+    def __init__(self, exchange_ids, matrix_id, time_chan_name, refresh_timeout=DEFAULT_REFRESH_TIMEOUT):
         self.logger = logging.get_logger(self.__class__.__name__)
         self.exchange_ids = exchange_ids
         self.matrix_id = matrix_id
+        self.time_chan_name = time_chan_name
         self.refresh_timeout = refresh_timeout
         self.producers = []
         self.initial_producers = []
@@ -45,9 +46,11 @@ class ChannelsManager:
         """
         self.logger.debug("Initializing producers...")
         try:
-            self.initial_producers = list_util.flatten_list(_get_backtesting_producers() +
-                                                            self._get_trading_producers() +
-                                                            self._get_evaluator_producers())
+            self.initial_producers = list_util.flatten_list(
+                _get_backtesting_producers(self.time_chan_name) +
+                self._get_trading_producers() +
+                self._get_evaluator_producers()
+            )
             self.producers = copy.copy(self.initial_producers)
 
             self.producers_by_priority_levels = {
@@ -131,10 +134,10 @@ def _get_channel_producers(channel):
     return [channel.get_internal_producer()]
 
 
-def _get_backtesting_producers():
+def _get_backtesting_producers(time_chan_name):
     return [
-        _get_channel_producers(channels.get_chan(channel_name.value))
-        for channel_name in channels_name.OctoBotBacktestingChannelsName
+        _get_channel_producers(channels.get_chan(channel_name))
+        for channel_name in [time_chan_name]
     ]
 
 

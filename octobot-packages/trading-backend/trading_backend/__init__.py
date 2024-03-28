@@ -23,6 +23,7 @@ from trading_backend import errors
 from trading_backend.errors import (
     TimeSyncError,
     ExchangeAuthError,
+    APIKeyPermissionsError,
 )
 
 __all__ = [

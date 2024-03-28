@@ -31,7 +31,8 @@ async def test_get_orders_parameters(okx_exchange):
     await create_order_tests.create_order_mocked_test_args(
         exchange,
         exchange_private_post_order_method_name="privatePostTradeBatchOrders",
-        exchange_request_referral_key="clOrdId",
-        should_contains=True,
+        exchange_request_referral_key="tag",
+        should_contains=False,
         result_is_list=True,
-        post_order_mock_return_value={'data': [{}]})
+        post_order_mock_return_value={'data': [{}]}
+    )

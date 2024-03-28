@@ -29,7 +29,7 @@ class ServiceFactory:
     def get_available_services() -> list:
         return [service_class for service_class in services.AbstractService.__subclasses__()]
 
-    async def create_or_get_service(self, service_class, backtesting_enabled, edited_config) -> bool:
+    async def create_or_get_service(self, service_class, backtesting_enabled, edited_config) -> (bool, str):
         """
         create_or_get_service will create a service instance if it doesn't exist, check the existing one otherwise
         :param service_class: the class of the service to create
@@ -37,9 +37,12 @@ class ServiceFactory:
         """
         service_instance = service_class.instance()
         if service_instance.get_has_been_created():
-            return service_instance.is_healthy()
+            return service_instance.is_healthy(), service_instance.creation_error_message
         else:
-            return await self._create_service(service_instance, backtesting_enabled, edited_config)
+            return (
+                await self._create_service(service_instance, backtesting_enabled, edited_config),
+                service_instance.creation_error_message
+            )
 
     async def _create_service(self, service, backtesting_enabled, edited_config) -> bool:
         service.is_backtesting_enabled = backtesting_enabled
@@ -51,19 +54,21 @@ class ServiceFactory:
             return await self._perform_checkup(service)
         else:
             if service.get_should_warn():
-                self.logger.info(f"{service.get_name()} can't be initialized: configuration "
-                                 f"is missing, wrong or incomplete. This is normal if you did not configure it yet.")
+                service.creation_error_message = \
+                    "Configuration is missing, wrong or incomplete. This is normal if you did not configure it yet."
+                self.logger.info(f"{service.get_name()} can't be initialized: {service.creation_error_message}")
         return False
 
     async def _perform_checkup(self, service) -> bool:
         try:
             await service.prepare()
-            if constants.CONFIG_CATEGORY_SERVICES not in self.config:
-                self.config[constants.CONFIG_CATEGORY_SERVICES] = {}
-            if service.get_type() not in self.config[constants.CONFIG_CATEGORY_SERVICES]:
-                self.config[constants.CONFIG_CATEGORY_SERVICES][service.get_type()] = {}
-            self.config[constants.CONFIG_CATEGORY_SERVICES][service.get_type()][constants.CONFIG_SERVICE_INSTANCE] = \
-                service
+            if self.config:
+                if constants.CONFIG_CATEGORY_SERVICES not in self.config:
+                    self.config[constants.CONFIG_CATEGORY_SERVICES] = {}
+                if service.get_type() not in self.config[constants.CONFIG_CATEGORY_SERVICES]:
+                    self.config[constants.CONFIG_CATEGORY_SERVICES][service.get_type()] = {}
+                self.config[constants.CONFIG_CATEGORY_SERVICES][service.get_type()][
+                    constants.CONFIG_SERVICE_INSTANCE] = service
             if await service.say_hello():
                 return service.is_healthy()
             else:

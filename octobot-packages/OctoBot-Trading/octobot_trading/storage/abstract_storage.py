@@ -22,6 +22,7 @@ import octobot_commons.display as commons_display
 import octobot_commons.logging as logging
 
 import octobot_trading.exchange_channel as exchanges_channel
+import octobot_trading.constants as trading_constants
 
 
 class AbstractStorage:
@@ -30,9 +31,8 @@ class AbstractStorage:
     LIVE_CHANNEL = None
     IS_HISTORICAL = True
     HISTORY_TABLE = None
-    AUTH_UPDATE_DEBOUNCE_DURATION = 1
-    FLUSH_DEBOUNCE_DURATION = 0.5   # avoid disc spam on multiple quick live updated
-    ORIGIN_VALUE_KEY = "origin_value"
+    AUTH_UPDATE_DEBOUNCE_DURATION = 10
+    FLUSH_DEBOUNCE_DURATION = 5   # avoid disc spam on multiple quick live updated
 
     def __init__(self, exchange_manager, plot_settings: commons_display.PlotSettings,
                  use_live_consumer_in_backtesting=None, is_historical=None):
@@ -116,9 +116,9 @@ class AbstractStorage:
     async def get_history(self):
         # override if necessary
         return [
-            copy.copy(document[self.ORIGIN_VALUE_KEY])
+            copy.copy(document[trading_constants.STORAGE_ORIGIN_VALUE])
             for document in await self._get_db().all(self.HISTORY_TABLE)
-            if self.ORIGIN_VALUE_KEY in document
+            if trading_constants.STORAGE_ORIGIN_VALUE in document
         ]
 
     async def _waiting_update_auth_data(self, reset):
@@ -169,3 +169,23 @@ class AbstractStorage:
             elif isinstance(val, types.FunctionType):
                 raise ValueError(f"{val.__name__} is a function, it can't be serialized")
         return sanitized
+
+    @staticmethod
+    def hard_reset_and_retry_if_necessary(fn):
+        """
+        Will retry the given function if a database hard reset error is raised
+        Warning: when it happens, will also completely reset the database
+        """
+        async def wrapper(*args, **kwargs):
+            try:
+                return await fn(*args, **kwargs)
+            except Exception as err:
+                database = args[0]._get_db()    # pylint: disable=protected-access
+                if database.is_hard_reset_error(err):
+                    logging.get_logger(args[0].__class__.__name__).warning(
+                        f"Resetting database due to [{err}] error"
+                    )
+                    await database.hard_reset()
+                    return await fn(*args, **kwargs)
+                raise
+        return wrapper

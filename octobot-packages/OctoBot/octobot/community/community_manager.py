@@ -72,13 +72,13 @@ class CommunityManager:
                 # first ensure this session is not just a configuration test: register after a timer
                 await asyncio.sleep(common_constants.TIMER_BEFORE_METRICS_REGISTRATION_SECONDS)
                 self._init_community_config()
-                await self.register_session()
+                # await self.register_session() # waiting for metrics migration
                 await self._update_authenticated_bot()
                 while self.keep_running:
                     # send a keepalive at periodic intervals
                     await asyncio.sleep(common_constants.TIMER_BETWEEN_METRICS_UPTIME_UPDATE)
                     try:
-                        await self._update_session()
+                        # await self._update_session()  # waiting for metrics migration
                         await self._update_authenticated_bot()
                     except Exception as e:
                         self.logger.debug(f"Exception when handling community data : {e}")
@@ -137,10 +137,10 @@ class CommunityManager:
 
     async def _update_authenticated_bot(self):
         try:
-            await authentication.Authenticator.instance().update_bot_config_and_stats(
-                self.edited_config.profile.name,
-                self._get_profitability()
-            )
+            if authentication.Authenticator.instance().is_logged_in():
+                await authentication.Authenticator.instance().update_bot_config_and_stats(
+                    self._get_profitability()
+                )
         except Exception as err:
             self.logger.debug(f"Exception when pushing config and stats : {err}")
 
@@ -194,7 +194,7 @@ class CommunityManager:
         for exchange_manager in self.exchange_managers:
             profitability, _, _, _, _ = trading_api.get_profitability_stats(exchange_manager)
             total_profitability += float(profitability)
-            total_origin_values += float(trading_api.get_current_portfolio_value(exchange_manager))
+            total_origin_values += float(trading_api.get_origin_portfolio_value(exchange_manager))
 
         return total_profitability * 100 / total_origin_values if total_origin_values > 0 else 0
 
@@ -219,7 +219,7 @@ class CommunityManager:
             exchange_name = trading_api.get_exchange_name(exchange_manager)
             if self.has_real_trader \
                and trading_api.is_sponsoring(exchange_name) \
-               and trading_api.is_valid_account(exchange_manager):
+               and trading_api.is_broker_enabled(exchange_manager):
                 supporting_exchanges.append(exchange_name)
         supports = authentication.Authenticator.instance().user_account.supports
         return {

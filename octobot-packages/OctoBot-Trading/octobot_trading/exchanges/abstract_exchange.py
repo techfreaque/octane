@@ -389,7 +389,7 @@ class AbstractExchange(tentacles_management.AbstractTentacle):
         """
         return order_type not in self.get_supported_elements(enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS)
 
-    def get_trade_fee(self, symbol, order_type, quantity, price, taker_or_maker):
+    def get_trade_fee(self, symbol: str, order_type: enums.TraderOrderType, quantity, price, taker_or_maker):
         """
         Calculates fees resulting to a trade
         :param symbol: the symbol
@@ -471,6 +471,8 @@ class AbstractExchange(tentacles_management.AbstractTentacle):
         t0 = time.time()
         minimal_interval = 0.1
         attempt = 1
+        latest_error = None
+        latest_request_url = None
         while (timeout != 0 and time.time() - t0 < timeout) or (n_times != 0 and attempt <= n_times + 1):
             last_request_time = time.time()
             try:
@@ -478,13 +480,21 @@ class AbstractExchange(tentacles_management.AbstractTentacle):
                 if attempt > 1:
                     self.logger.debug(f"Request retrier success for {request_func.__name__} after {attempt} attempts")
                 return result
-            except errors.FailedRequest:
-                self.logger.debug(f"Request retrier failed for {request_func.__name__} (attempt {attempt})")
+            except errors.FailedRequest as err:
+                latest_error = err
+                latest_request_url = self.get_latest_request_url()
+                self.logger.debug(
+                    f"Request retrier failed for {request_func.__name__}({args} {kwargs}) (attempt {attempt}) ({err})"
+                )
                 if time.time() - last_request_time < minimal_interval:
                     await asyncio.sleep(minimal_interval)
                 attempt += 1
-        raise errors.FailedRequest(f"Failed to successfully run {request_func.__name__} request after {attempt} "
-                                   f"attempts.")
+        latest_error = latest_error or RuntimeError("unknown error, this is unexpected, latest_error should be set")
+        raise errors.FailedRequest(
+            f"Failed to successfully run {request_func.__name__}(args={args}, kwargs={kwargs}) request after {attempt} "
+            f"attempts. Latest error: {latest_error} ({latest_error.__class__.__name__}). "
+            f"Last request url: {latest_request_url}"
+        ) from latest_error
 
     """
     Parsers
@@ -584,6 +594,12 @@ class AbstractExchange(tentacles_management.AbstractTentacle):
         :return: the AccountTypes related to the account
         """
         raise NotImplementedError("parse_account is not implemented")
+
+    def get_latest_request_url(self) -> str:
+        """
+        :return: the URL of the last request
+        """
+        return self.connector.get_latest_request_url()
 
     """
     Uniformization

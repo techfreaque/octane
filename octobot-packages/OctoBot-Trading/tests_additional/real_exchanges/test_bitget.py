@@ -20,6 +20,7 @@ from octobot_trading.enums import ExchangeConstantsMarketStatusColumns as Ecmsc,
     ExchangeConstantsOrderBookInfoColumns as Ecobic, ExchangeConstantsOrderColumns as Ecoc, \
     ExchangeConstantsTickersColumns as Ectc
 from tests_additional.real_exchanges.real_exchange_tester import RealExchangeTester
+import octobot_trading.errors as errors
 from tests_additional.real_exchanges import get_exchange_manager
 # required to catch async loop context exceptions
 from tests import event_loop
@@ -57,6 +58,7 @@ class TestBitgetRealExchangeTester(RealExchangeTester):
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             assert market_status
+            assert market_status[Ecmsc.TYPE.value] == self.MARKET_STATUS_TYPE
             assert market_status[Ecmsc.SYMBOL.value] in (self.SYMBOL, self.SYMBOL_2, self.SYMBOL_3)
             assert market_status[Ecmsc.PRECISION.value]
             # on Bitget, precision is a decimal instead of a number of digits
@@ -79,7 +81,7 @@ class TestBitgetRealExchangeTester(RealExchangeTester):
     async def test_get_symbol_prices(self):
         # without limit
         symbol_prices = await self.get_symbol_prices()
-        assert len(symbol_prices) == 1000
+        assert len(symbol_prices) == 100
         # check candles order (oldest first)
         self.ensure_elements_order(symbol_prices, PriceIndexes.IND_PRICE_TIME.value)
         # check last candle is the current candle
@@ -98,9 +100,7 @@ class TestBitgetRealExchangeTester(RealExchangeTester):
     async def test_get_historical_symbol_prices(self):
         # try with since and limit (used in data collector)
         for limit in (50, None):
-            assert await self.get_symbol_prices(since=self.CANDLE_SINCE, limit=limit) == []
-            # with now time as until: does not give historical candles
-            symbol_prices = await self.get_symbol_prices(since=self.CANDLE_SINCE, limit=limit, until=self.get_ms_time())
+            symbol_prices = await self.get_symbol_prices(since=self.CANDLE_SINCE, limit=limit)
             if limit:
                 assert len(symbol_prices) == limit
             else:
@@ -110,9 +110,11 @@ class TestBitgetRealExchangeTester(RealExchangeTester):
             # check that fetched candles are historical candles
             max_candle_time = self.get_time_after_time_frames(self.CANDLE_SINCE_SEC, len(symbol_prices))
             assert max_candle_time <= self.get_time()
-            with pytest.raises(AssertionError):  # not supported
-                for candle in symbol_prices:
-                    assert self.CANDLE_SINCE_SEC <= candle[PriceIndexes.IND_PRICE_TIME.value] <= max_candle_time
+            for candle in symbol_prices:
+                assert self.CANDLE_SINCE_SEC <= candle[PriceIndexes.IND_PRICE_TIME.value] <= max_candle_time
+
+    async def test_get_historical_ohlcv(self):
+        await self.get_historical_ohlcv()
 
     async def test_get_kline_price(self):
         kline_price = await self.get_kline_price()

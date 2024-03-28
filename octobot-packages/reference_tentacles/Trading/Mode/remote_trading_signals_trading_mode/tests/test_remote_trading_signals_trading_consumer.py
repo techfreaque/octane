@@ -47,9 +47,9 @@ async def test_internal_callback(local_trader, mocked_sell_limit_signal):
     with mock.patch.object(consumer, "_handle_signal_orders",
                            new=mock.AsyncMock(side_effect=errors.MissingMinimalExchangeTradeVolume)) \
          as _handle_signal_orders_mock:
-        await consumer.internal_callback("trading_mode_name", "cryptocurrency", "symbol", "time_frame", "final_note",
+        await consumer.internal_callback("trading_mode_name", "cryptocurrency", "symbol/x", "time_frame", "final_note",
                                          "state", "data")
-        _handle_signal_orders_mock.assert_called_once_with("symbol", "data")
+        _handle_signal_orders_mock.assert_called_once_with("symbol/x", "data")
         consumer.logger.info.assert_called_once()
         consumer.logger.exception.assert_not_called()
         consumer.logger.info.reset_mock()
@@ -57,9 +57,9 @@ async def test_internal_callback(local_trader, mocked_sell_limit_signal):
     with mock.patch.object(consumer, "_handle_signal_orders",
                            new=mock.AsyncMock(side_effect=RuntimeError)) \
          as _handle_signal_orders_mock:
-        await consumer.internal_callback("trading_mode_name", "cryptocurrency", "symbol", "time_frame", "final_note",
+        await consumer.internal_callback("trading_mode_name", "cryptocurrency", "symbol/x", "time_frame", "final_note",
                                          "state", "data")
-        _handle_signal_orders_mock.assert_called_once_with("symbol", "data")
+        _handle_signal_orders_mock.assert_called_once_with("symbol/x", "data")
         consumer.logger.info.assert_not_called()
         consumer.logger.exception.assert_called_once()
 
@@ -111,7 +111,7 @@ async def test_handle_signal_orders(local_trader, mocked_bundle_stop_loss_in_sel
     assert isinstance(orders[0], trading_personal_data.StopLossOrder)
     assert isinstance(orders[0].order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)    # not balance group anymore
     assert orders[0].order_group.name == "new_group_id"
-    assert orders[0].origin_quantity == decimal.Decimal("0.339282105005844")    # changed quantity
+    assert orders[0].origin_quantity == decimal.Decimal("0.3392821050783528672")    # changed quantity according to fees
     assert orders[0].origin_price == decimal.Decimal("2000")    # changed price
     assert isinstance(orders[1], trading_personal_data.BuyLimitOrder)   # not sell order (sell is cancelled)
     trades = list(exchange_manager.exchange_personal_data.trades_manager.trades.values())

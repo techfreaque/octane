@@ -79,6 +79,64 @@ class YFinanceClient:
         "PLUG/USDT",
         "USB/USDT",
         "CSX/USDT",
+        "ABBV/USDT",
+        "ACN/USDT",
+        "ADBE/USDT",
+        "AEP/USDT",
+        "AIG/USDT",
+        "ALL/USDT",
+        "AMAT/USDT",
+        "AMGN/USDT",
+        "AON/USDT",
+        "AXP/USDT",
+        "BA/USDT",
+        "BK/USDT",
+        "BLK/USDT",
+        "BMY/USDT",
+        "BSX/USDT",
+        "CAT/USDT",
+        "CME/USDT",
+        "CMI/USDT",
+        "COP/USDT",
+        "COST/USDT",
+        "CRM/USDT",
+        "CVS/USDT",
+        "D/USDT",
+        "DD/USDT",
+        "DHR/USDT",
+        "DUK/USDT",
+        "EMR/USDT",
+        "EOG/USDT",
+        "EQR/USDT",
+        "EXC/USDT",
+        "GD/USDT",
+        "GM/USDT",
+        "GS/USDT",
+        "HAL/USDT",
+        "HIG/USDT",
+        "HON/USDT",
+        "HPE/USDT",
+        "HUM/USDT",
+        "IBM/USDT",
+        "ICE/USDT",
+        "JCI/USDT",
+        "JNJ/USDT",
+        "JPM/USDT",
+        "KO/USDT",
+        "LLY/USDT",
+        "LOW/USDT",
+        "MCD/USDT",
+        "MDLZ/USDT",
+        "MET/USDT",
+        "MMM/USDT",
+        "MO/USDT",
+        "MRK/USDT",
+        "NEE/USDT",
+        "NKE/USDT",
+        "NTRS/USDT",
+        "ORCL/USDT",
+        "PEP/USDT",
+        "PNC/USDT",
     }
     _TIMEFRAME_MAP = {
         commons_enums.TimeFrames.ONE_MINUTE.value: YFinanceTimeFrames.ONE_MINUTE.value,
@@ -188,20 +246,29 @@ class YFinanceClient:
         start = start_datetime.strftime("%Y-%m-%d")
         end_datetime = start_datetime + datetime.timedelta(days=history_length)
         end = end_datetime.strftime("%Y-%m-%d")
-        downloaded_data = yfinance.download(
-            tickers=parsed_symbol.base,  # list of tickers
-            start=start,
-            end=end,
-            interval=self.convert_timeframe_to_yfinance_timeframe(time_frame),
-            prepost=False,  # download pre/post market hours data?
-            repair=False,  # repair obvious price errors e.g. 100x?
-            progress=False,
-            ignore_tz=True,
-        )
-        errors = yfinance.shared._ERRORS.get(parsed_symbol.base)
+        errors = None
+        downloaded_data = None
+        try:
+            downloaded_data = yfinance.download(
+                tickers=parsed_symbol.base,  # list of tickers
+                start=start,
+                end=end,
+                interval=self.convert_timeframe_to_yfinance_timeframe(time_frame),
+                prepost=False,  # download pre/post market hours data?
+                repair=False,  # repair obvious price errors e.g. 100x?
+                progress=False,
+                ignore_tz=True,
+            )
+            errors = yfinance.shared._ERRORS.get(parsed_symbol.base)
+        except Exception as error:
+            errors = [error]
         if errors is not None:
             test = 1
-        timestamps = get_unixtime(numpy.array(downloaded_data.index))
+        timestamps = (
+            get_unixtime(numpy.array(downloaded_data.index))
+            if downloaded_data is not None
+            else []
+        )
         if not len(timestamps):
             end_time_stamp = end_datetime.timestamp()
             if c_time > end_time_stamp:

@@ -15,6 +15,7 @@
 #  License along with this library.
 import asyncio
 import abc
+import threading
 
 import octobot_commons.logging as logging
 
@@ -29,7 +30,6 @@ class ReturningStartable:
         raise NotImplementedError(f"_async_run is not implemented for {self.__class__.__name__}")
 
     # Override this method if this has to be run in a thread using this body
-    # (with this extending threading.Thread)
     #
     # async def _inner_start(self) -> bool:
     #   threading.Thread.start(self)
@@ -46,6 +46,13 @@ class ReturningStartable:
             logger = logging.get_logger(class_name)
             logger.exception(e, True, f"{class_name} start error: {e}")
             return False
+
+    def get_name(self):
+        raise NotImplementedError
+
+    def threaded_start(self):
+        threading.Thread(target=self.run, name=self.get_name()).start()
+        return True
 
     # Called by threading.Thread.start(self) when a this is threaded
     def run(self) -> None:

@@ -37,25 +37,6 @@ class TestBinanceFuturesRealExchangeTester(RealFuturesExchangeTester):
     SYMBOL_2 = "BTC/USD:BTC"
     SYMBOL_3 = "XRP/USD:XRP"
 
-    @contextlib.asynccontextmanager
-    async def get_exchange_manager(self):
-        # allows to fetch both linear and inverse markets
-        # (same as having bot ccxt binanceusdm and binancecoinm
-        # to add in tentacles
-        additional_config = {
-            ccxt_constants.CCXT_OPTIONS: {
-                'fetchMarkets': [
-                    'linear',
-                    'inverse',
-                ],
-            }
-        }
-        with mock.patch.object(
-            exchanges.RestExchange, "get_additional_connector_config", mock.Mock(return_value=additional_config)
-        ):
-            async with super().get_exchange_manager() as exchange_manager:
-                yield exchange_manager
-
     async def test_time_frames(self):
         time_frames = await self.time_frames()
         assert all(time_frame in time_frames for time_frame in (
@@ -79,6 +60,7 @@ class TestBinanceFuturesRealExchangeTester(RealFuturesExchangeTester):
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             assert market_status
+            assert market_status[Ecmsc.TYPE.value] == self.MARKET_STATUS_TYPE
             assert market_status[Ecmsc.SYMBOL.value] in (self.SYMBOL, self.SYMBOL_2, self.SYMBOL_3)
             assert market_status[Ecmsc.PRECISION.value]
             assert int(market_status[Ecmsc.PRECISION.value][Ecmsc.PRECISION_AMOUNT.value]) == \
@@ -130,6 +112,9 @@ class TestBinanceFuturesRealExchangeTester(RealFuturesExchangeTester):
             for candle in symbol_prices:
                 assert self.CANDLE_SINCE_SEC <= candle[PriceIndexes.IND_PRICE_TIME.value] <= max_candle_time
 
+    async def test_get_historical_ohlcv(self):
+        await super().test_get_historical_ohlcv()
+
     async def test_get_kline_price(self):
         kline_price = await self.get_kline_price()
         assert len(kline_price) == 1
@@ -162,8 +147,8 @@ class TestBinanceFuturesRealExchangeTester(RealFuturesExchangeTester):
 
     async def test_get_funding_rate(self):
         funding_rate, ticker_funding_rate = await self.get_funding_rate()
-        # patch NEXT_FUNDING_TIME in tentacle
-        self._check_funding_rate(funding_rate)
+        # patch LAST_FUNDING_TIME in tentacle
+        self._check_funding_rate(funding_rate, has_last_time=False)
         # no funding info in ticker
         self._check_funding_rate(ticker_funding_rate, has_rate=False, has_last_time=False,
                                  has_next_rate=False, has_next_time=False)

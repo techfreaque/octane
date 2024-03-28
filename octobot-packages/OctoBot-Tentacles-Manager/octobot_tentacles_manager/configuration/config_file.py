@@ -15,7 +15,6 @@
 #  License along with this library.
 import os.path as path
 
-import octobot_commons.configuration as configuration
 import octobot_commons.json_util as json_util
 
 
@@ -26,7 +25,4 @@ def read_config(config_file: str, raise_errors: bool = True) -> dict:
 
 
 def write_config(config_file: str, content: dict) -> None:
-    # create config content before opening file not to clear file or json dump exception
-    config_content = configuration.dump_formatted_json(content)
-    with open(config_file, "w+") as config_file_w:
-        config_file_w.write(config_content)
+    json_util.safe_dump(content, config_file)

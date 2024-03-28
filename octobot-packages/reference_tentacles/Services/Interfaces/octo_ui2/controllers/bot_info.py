@@ -3,6 +3,7 @@ import os
 import time
 import flask
 import flask_login
+
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons
 import octobot_commons.optimization_campaign as optimization_campaign
@@ -111,9 +112,9 @@ def register_bot_info_routes(plugin):
                 )
                 exchange_names.append(_exchange_manager.exchange_name)
                 exchange_ids.append(_exchange_manager.id)
-                ids_by_exchange_name[
-                    _exchange_manager.exchange_name
-                ] = _exchange_manager.id
+                ids_by_exchange_name[_exchange_manager.exchange_name] = (
+                    _exchange_manager.id
+                )
             # current exchange data
             (
                 exchange_manager,

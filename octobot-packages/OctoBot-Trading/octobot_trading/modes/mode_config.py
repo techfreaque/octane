@@ -86,13 +86,22 @@ def is_trading_signal_emitter(trading_mode) -> bool:
 
 
 def _get_order_amount_title(side):
-    return f"Amount per {side} order. To specify the amount per order, " \
+    return f"Amount per {side} order. {get_order_amount_value_desc()}"
+
+
+def get_order_amount_value_desc():
+    return "To specify the amount per order, " \
         f"use the following syntax: " \
         f"0.1 to trade 0.1 BTC on BTC/USD (amount in base currency); " \
         f"25q to trade 25 USD worth of BTC on BTC/USD (amount in quote currency); " \
         f"2{dsl.QuantityType.PERCENT.value} to trade 2% of the total holdings of the asset; " \
-        f"12{dsl.QuantityType.AVAILABLE_PERCENT.value} to trade 12% of the available holdings. " \
-        f"Leave empty to auto-compute the amount."
+        f"12{dsl.QuantityType.AVAILABLE_PERCENT.value} to trade 12% of the available holdings; " \
+        f"5{dsl.QuantityType.CURRENT_SYMBOL_ASSETS_PERCENT.value} to trade 5% of the available " \
+           f"holdings associated to the current traded symbol; " \
+        f"5{dsl.QuantityType.TRADED_SYMBOLS_ASSETS_PERCENT.value} to trade 5% of the available " \
+           f"holdings associated to all configured trading pairs. " \
+        f"Leave empty to auto-compute the amount. Checkout the order amounts syntax from trading modes guides " \
+        f"for more details."
 
 
 def user_select_order_amount(trading_mode, inputs: dict, include_buy=True, include_sell=True,
@@ -100,7 +109,7 @@ def user_select_order_amount(trading_mode, inputs: dict, include_buy=True, inclu
     if include_buy:
         trading_mode.UI.user_input(
             constants.CONFIG_BUY_ORDER_AMOUNT, common_enums.UserInputTypes.TEXT, "", inputs,
-            title=_get_order_amount_title("buy"),
+            title=_get_order_amount_title("buy/entry"),
             other_schema_values={"minLength": 0},
             editor_options={
                 common_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: buy_dependencies
@@ -109,7 +118,7 @@ def user_select_order_amount(trading_mode, inputs: dict, include_buy=True, inclu
     if include_sell:
         trading_mode.UI.user_input(
             constants.CONFIG_SELL_ORDER_AMOUNT, common_enums.UserInputTypes.TEXT, "", inputs,
-            title=_get_order_amount_title("sell"),
+            title=_get_order_amount_title("sell/exit"),
             other_schema_values={"minLength": 0},
             editor_options={
                 common_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: sell_dependencies

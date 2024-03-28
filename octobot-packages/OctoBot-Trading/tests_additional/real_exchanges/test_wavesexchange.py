@@ -56,6 +56,7 @@ class TestWavesExchangeRealExchangeTester(RealExchangeTester):
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             assert market_status
+            assert market_status[Ecmsc.TYPE.value] == self.MARKET_STATUS_TYPE
             assert market_status[Ecmsc.SYMBOL.value] in (self.SYMBOL, self.SYMBOL_2, self.SYMBOL_3)
             assert market_status[Ecmsc.PRECISION.value]
             assert int(market_status[Ecmsc.PRECISION.value][Ecmsc.PRECISION_AMOUNT.value]) == \
@@ -74,10 +75,7 @@ class TestWavesExchangeRealExchangeTester(RealExchangeTester):
             # todo set RestExchange.DUMP_INCOMPLETE_LAST_CANDLE = True in exchange tentacle
             exchanges.RestExchange.DUMP_INCOMPLETE_LAST_CANDLE = True
             # without limit
-            # broken because last X candles have None prices (raising TypeError)
-            with pytest.raises(errors.UnexpectedAdapterError):
-                symbol_prices = await self.get_symbol_prices()
-            return
+            symbol_prices = await self.get_symbol_prices()
             assert len(symbol_prices) == 1440 - 1 or len(symbol_prices) == 1440  # last candle might be removed
             # check candles order (oldest first)
             self.ensure_elements_order(symbol_prices, PriceIndexes.IND_PRICE_TIME.value)
@@ -118,6 +116,9 @@ class TestWavesExchangeRealExchangeTester(RealExchangeTester):
                 assert self.CANDLE_SINCE_SEC <= candle[PriceIndexes.IND_PRICE_TIME.value] <= max_candle_time
         finally:
             exchanges.RestExchange.DUMP_INCOMPLETE_LAST_CANDLE = previous_DUMP_INCOMPLETE_LAST_CANDLE_value
+
+    async def test_get_historical_ohlcv(self):
+        await super().test_get_historical_ohlcv()
 
     async def test_get_kline_price(self):
         previous_DUMP_INCOMPLETE_LAST_CANDLE_value = exchanges.RestExchange.DUMP_INCOMPLETE_LAST_CANDLE

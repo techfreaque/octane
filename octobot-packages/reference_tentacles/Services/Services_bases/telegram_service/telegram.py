@@ -17,6 +17,7 @@ import logging
 import telegram
 import telegram.ext
 import telegram.request
+import telegram.error
 
 import octobot_commons.logging as bot_logging
 import octobot_services.constants as services_constants
@@ -27,7 +28,8 @@ import octobot.constants as constants
 class TelegramService(services.AbstractService):
     CONNECT_TIMEOUT = 7  # default is 5, use 7 to take slow connections into account
     CHAT_ID = "chat-id"
-    LOGGERS = ["telegram._bot", "hpack.hpack", "hpack.table", "httpx._client"]
+    LOGGERS = ["telegram._bot", "telegram.ext.Updater", "telegram.ext.ExtBot",
+               "hpack.hpack", "hpack.table"]
 
     def __init__(self):
         super().__init__()
@@ -66,7 +68,7 @@ class TelegramService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return f"{constants.OCTOBOT_WEBSITE_URL}/guides/#telegram"
+        return f"{constants.OCTOBOT_DOCS_URL}/octobot-interfaces/telegram"
 
     @staticmethod
     def is_setup_correctly(config):
@@ -121,7 +123,12 @@ class TelegramService(services.AbstractService):
 
     async def _stop_bot(self):
         if self.telegram_app.updater.running:
-            await self.telegram_app.updater.stop()
+            # await self.telegram_app.updater.shutdown()
+            try:
+                await self.telegram_app.updater.stop()
+            except telegram.error.TimedOut as err:
+                # can happen, ignore error
+                self.logger.debug(f"Ignored {err} when stopping telegram bot")
         if self.telegram_app.running:
             await self.telegram_app.stop()
         if self.telegram_app.post_stop:

@@ -14,12 +14,14 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import asyncio
+import logging
 import os.path as path
 import ccxt
 import ccxt.async_support
 import copy
 import requests.adapters
-import requests.packages.urllib3.util.retry
+import urllib3.util.retry
+
 import aiohttp
 import gc
 
@@ -109,6 +111,7 @@ MERGED_CCXT_EXCHANGES = {
     for result, merged in (
         (ccxt.async_support.kucoin, (ccxt.async_support.kucoinfutures, )),
         (ccxt.async_support.binance, (ccxt.async_support.binanceusdm, ccxt.async_support.binancecoinm)),
+        (ccxt.async_support.htx, (ccxt.async_support.huobi, )),
     )
 }
 REMOVED_CCXT_EXCHANGES = set().union(*(set(v) for v in MERGED_CCXT_EXCHANGES.values()))
@@ -132,7 +135,7 @@ markets_by_exchanges = {}
 all_symbols_dict = {}
 exchange_logos = {}
 # can't fetch symbols from coinmarketcap.com (which is in ccxt but is not an exchange and has a paid api)
-exchange_symbol_fetch_blacklist = {"coinmarketcap", "yahoofinance"}
+exchange_symbol_fetch_blacklist = {"coinmarketcap"}
 _LOGGER = None
 
 JSON_PORTFOLIO_SCHEMA = {
@@ -923,6 +926,7 @@ async def _load_market(exchange, results):
                 symbols = client.symbols
         else:
             async with getattr(ccxt.async_support, exchange)({'verbose': False}) as client:
+                client.logger.setLevel(logging.INFO)    # prevent log of each request (huge on market statuses)
                 await client.load_markets()
                 symbols = client.symbols
         # filter symbols with a "." or no "/" because bot can't handle them for now
@@ -1028,8 +1032,7 @@ def get_all_symbols_list():
         try:
             # inspired from https://github.com/man-c/pycoingecko
             session = requests.Session()
-            retries = requests.packages.urllib3.util.retry.Retry(total=3, backoff_factor=0.5,
-                                                                 status_forcelist=[502, 503, 504])
+            retries = urllib3.util.retry.Retry(total=3, backoff_factor=0.5, status_forcelist=[502, 503, 504])
             session.mount('http://', requests.adapters.HTTPAdapter(max_retries=retries))
             # first fetch top 250 currencies then add all currencies and their ids
             for url in (f"{constants.CURRENCIES_LIST_URL}1", constants.ALL_SYMBOLS_URL):
@@ -1287,7 +1290,7 @@ def get_exchanges_details(exchanges_config) -> dict:
 
 
 def get_compatibility_result(exchange_name, auth_success, compatible_account, supporter_account,
-                             configured_account, supporting_exchange, error_message):
+                             configured_account, supporting_exchange, error_message, exchange_type):
     return {
         "exchange": exchange_name,
         "auth_success": auth_success,
@@ -1295,27 +1298,70 @@ def get_compatibility_result(exchange_name, auth_success, compatible_account, su
         "supporter_account": supporter_account,
         "configured_account": configured_account,
         "supporting_exchange": supporting_exchange,
+        "exchange_type": exchange_type,
         "error_message": error_message
     }
 
 
+async def _check_account_with_other_exchange_type_if_possible(
+    exchange_name: str, checked_config: dict, tentacles_setup_config, is_sandboxed: bool, supported_types: list
+):
+    is_compatible = False
+    auth_success = False
+    error = ""
+    ignored_type = checked_config.get(commons_constants.CONFIG_EXCHANGE_TYPE, commons_constants.DEFAULT_EXCHANGE_TYPE)
+    for supported_type in supported_types:
+        if supported_type.value == ignored_type:
+            continue
+        checked_config[commons_constants.CONFIG_EXCHANGE_TYPE] = supported_type.value
+        is_compatible, auth_success, error = await trading_api.is_compatible_account(
+            exchange_name,
+            checked_config,
+            tentacles_setup_config,
+            checked_config.get(commons_constants.CONFIG_EXCHANGE_SANDBOXED, False)
+        )
+        if auth_success:
+            return is_compatible, auth_success, error
+    # failed auth
+    return is_compatible, auth_success, error,
+
+
 async def _fetch_is_compatible_account(exchange_name, to_check_config,
                                        compatibility_results, is_sponsoring, is_supporter):
-    is_compatible, auth_success, error = await trading_api.is_compatible_account(
-        exchange_name,
-        to_check_config,
-        interfaces_util.get_edited_tentacles_config(),
-        to_check_config.get(commons_constants.CONFIG_EXCHANGE_SANDBOXED, False)
-    )
-    compatibility_results[exchange_name] = get_compatibility_result(
-        exchange_name,
-        auth_success,
-        is_compatible,
-        is_supporter,
-        True,
-        is_sponsoring,
-        error
-    )
+    try:
+        checked_config = copy.deepcopy(to_check_config)
+        tentacles_setup_config = interfaces_util.get_edited_tentacles_config()
+        is_compatible, auth_success, error = await trading_api.is_compatible_account(
+            exchange_name,
+            checked_config,
+            tentacles_setup_config,
+            checked_config.get(commons_constants.CONFIG_EXCHANGE_SANDBOXED, False)
+        )
+        if not auth_success:
+            supported_types = trading_api.get_supported_exchange_types(exchange_name, tentacles_setup_config)
+            if len(supported_types) > 1:
+                is_compatible, auth_success, error = await _check_account_with_other_exchange_type_if_possible(
+                    exchange_name,
+                    checked_config,
+                    interfaces_util.get_edited_tentacles_config(),
+                    checked_config.get(commons_constants.CONFIG_EXCHANGE_SANDBOXED, False),
+                    supported_types
+                )
+        compatibility_results[exchange_name] = get_compatibility_result(
+            exchange_name,
+            auth_success,
+            is_compatible,
+            is_supporter,
+            True,
+            is_sponsoring,
+            error,
+            checked_config.get(commons_constants.CONFIG_EXCHANGE_TYPE, commons_constants.DEFAULT_EXCHANGE_TYPE)
+        )
+    except Exception as err:
+        bot_logging.get_logger("ConfigurationWebInterfaceModel").exception(
+            err, True, f"Error when checking {exchange_name} exchange credentials: {err}"
+        )
+
 
 
 def are_compatible_accounts(exchange_details: dict) -> dict:
@@ -1351,7 +1397,11 @@ def are_compatible_accounts(exchange_details: dict) -> dict:
                 is_supporter,
                 is_configured,
                 is_sponsoring,
-                error
+                error,
+                to_check_config.get(
+                    commons_constants.CONFIG_EXCHANGE_TYPE,
+                    commons_constants.DEFAULT_EXCHANGE_TYPE
+                )
             )
     if check_coro:
         async def gather_wrapper(coros):
@@ -1385,6 +1435,14 @@ def get_current_exchange():
         return trading_api.get_exchange_name(exchange_manager)
     else:
         return DEFAULT_EXCHANGE
+
+
+def get_sandbox_exchanges() -> list:
+    return [
+        trading_api.get_exchange_name(exchange_manager)
+        for exchange_manager in interfaces_util.get_exchange_managers()
+        if trading_api.get_exchange_manager_is_sandboxed(exchange_manager)
+    ]
 
 
 def change_reference_market_on_config_currencies(old_base_currency: str, new_quote_currency: str) -> bool:
@@ -1464,10 +1522,10 @@ def reload_tentacle_config(tentacle_name):
         raise
 
 
-def update_config_currencies(currencies: list, replace: bool=False):
+def update_config_currencies(currencies: dict, replace: bool=False):
     """
-    Update the configured currencies list
-    :param currencies: currencies list
+    Update the configured currencies dict
+    :param currencies: currencies dict
     :param replace: replace the current list
     :return: bool, str
     """
@@ -1475,8 +1533,26 @@ def update_config_currencies(currencies: list, replace: bool=False):
     message = "Currencies list updated"
     try:
         config_currencies = interfaces_util.get_edited_config()[commons_constants.CONFIG_CRYPTO_CURRENCIES]
-        config_currencies = currencies if replace else \
-            configuration.merge_dictionaries_by_appending_keys(config_currencies, currencies, merge_sub_array=True)
+        # prevent format issues
+        checked_currencies = {
+            currency: {
+                commons_constants.CONFIG_CRYPTO_PAIRS: values[commons_constants.CONFIG_CRYPTO_PAIRS],
+                commons_constants.CONFIG_ENABLED_OPTION: values.get(commons_constants.CONFIG_ENABLED_OPTION, True)
+            }
+            for currency, values in currencies.items()
+            if (
+                isinstance(values.get(commons_constants.CONFIG_ENABLED_OPTION, True), bool)
+                and commons_constants.CONFIG_CRYPTO_PAIRS in values
+                and isinstance(values[commons_constants.CONFIG_CRYPTO_PAIRS], list)
+                and all(isinstance(pair, str) for pair in commons_constants.CONFIG_CRYPTO_PAIRS)
+            )
+        }
+        interfaces_util.get_edited_config()[commons_constants.CONFIG_CRYPTO_CURRENCIES] = (
+            checked_currencies if replace
+            else configuration.merge_dictionaries_by_appending_keys(
+                config_currencies, checked_currencies, merge_sub_array=True
+            )
+        )
         interfaces_util.get_edited_config(dict_only=False).save()
     except Exception as e:
         message = f"Error while updating currencies list: {e}"

@@ -113,8 +113,8 @@ class TAEvaluator(evaluator.AbstractEvaluator):
             if self.get_is_time_frame_wildcard() else \
             [self.time_frame] if self.time_frame in data.get(constants.EVALUATOR_CHANNEL_DATA_TIME_FRAMES, []) else []
         if not self.enable_reevaluation():
-            self.logger.debug(f"Ignoring re-evaluation ({data[constants.EVALUATOR_CHANNEL_DATA_ACTION]}): "
-                              f"enable_reevaluation() is False")
+            self.logger.debug(f"Ignoring re-evaluation ({data[constants.EVALUATOR_CHANNEL_DATA_ACTION]}) "
+                              f"for {symbol}/{time_frame} on {exchange_name}: enable_reevaluation() is False")
             return
         # re-evaluation processes
         if data[constants.EVALUATOR_CHANNEL_DATA_ACTION] == constants.TA_RE_EVALUATION_TRIGGER_UPDATED_DATA:

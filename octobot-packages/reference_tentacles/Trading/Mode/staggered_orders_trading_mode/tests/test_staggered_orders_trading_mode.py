@@ -22,18 +22,25 @@ import decimal
 import contextlib
 
 import async_channel.util as channel_util
+
 import octobot_tentacles_manager.api as tentacles_manager_api
+
 import octobot_backtesting.api as backtesting_api
+
 import octobot_commons.asyncio_tools as asyncio_tools
 import octobot_commons.constants as commons_constants
 import octobot_commons.tests.test_config as test_config
+
 import octobot_trading.api as trading_api
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.constants as trading_constants
+import octobot_trading.modes
+
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
+
 import tests.test_utils.config as test_utils_config
 import tests.test_utils.memory_check_util as memory_check_util
 import tests.test_utils.test_exchanges as test_exchanges
@@ -52,6 +59,7 @@ async def _init_trading_mode(config, exchange_manager, symbol):
     # add mode to exchange manager so that it can be stopped and freed from memory
     exchange_manager.trading_modes.append(mode)
     mode.producers[0].PRICE_FETCHING_TIMEOUT = 0.5
+    mode.producers[0].allow_order_funds_redispatch = True
     test_trading_modes.set_ready_to_start(mode.producers[0])
     return mode, mode.producers[0]
 
@@ -77,6 +85,7 @@ async def _get_tools(symbol, btc_holdings=None, additional_portfolio={}, fees=No
         # use backtesting not to spam exchanges apis
         exchange_manager.is_simulated = True
         exchange_manager.is_backtesting = True
+        exchange_manager.use_cached_markets = False
         backtesting = await backtesting_api.initialize_backtesting(
             config,
             exchange_ids=[exchange_manager.id],
@@ -128,6 +137,7 @@ async def _get_tools_multi_symbol():
         # use backtesting not to spam exchanges apis
         exchange_manager.is_simulated = True
         exchange_manager.is_backtesting = True
+        exchange_manager.use_cached_markets = False
         backtesting = await backtesting_api.initialize_backtesting(
             config,
             exchange_ids=[exchange_manager.id],
@@ -522,11 +532,11 @@ async def test_create_orders_without_existing_orders_symmetrical_case_all_modes_
     btc_holdings = 400
     await _test_mode(staggered_orders_trading.StrategyModes.NEUTRAL, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
-    await _test_mode(staggered_orders_trading.StrategyModes.MOUNTAIN, 25, 23918, price, lowest_buy, highest_sell,
+    await _test_mode(staggered_orders_trading.StrategyModes.MOUNTAIN, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
     await _test_mode(staggered_orders_trading.StrategyModes.VALLEY, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
-    await _test_mode(staggered_orders_trading.StrategyModes.BUY_SLOPE, 25, 23918, price, lowest_buy, highest_sell,
+    await _test_mode(staggered_orders_trading.StrategyModes.BUY_SLOPE, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
     await _test_mode(staggered_orders_trading.StrategyModes.SELL_SLOPE, 25, 28793, price, lowest_buy, highest_sell,
                      btc_holdings)
@@ -719,7 +729,7 @@ async def test_start_with_existing_valid_orders():
         post_available = trading_api.get_portfolio_currency(exchange_manager, "USD").available
         assert len(trading_api.get_open_orders(exchange_manager)) == producer.operational_depth - len(to_cancel)
 
-        producer.RECENT_TRADES_ALLOWED_TIME = 0
+        producer.RECENT_TRADES_ALLOWED_TIME = -1
         await producer._ensure_staggered_orders()
         await asyncio.create_task(_wait_for_orders_creation(producer.operational_depth))
         # restored orders
@@ -774,7 +784,9 @@ async def test_price_going_out_of_range():
         producer.current_price = price
         existing_orders = trading_api.get_open_orders(exchange_manager)
         sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
-        missing_orders, state, candidate_flat_increment = producer._analyse_current_orders_situation(sorted_orders, [])
+        missing_orders, state, candidate_flat_increment = producer._analyse_current_orders_situation(
+            sorted_orders, [], sorted_orders[0].origin_price, sorted_orders[-1].origin_price, price
+        )
         assert missing_orders is None
         assert candidate_flat_increment is None
         assert state == producer.ERROR
@@ -785,7 +797,9 @@ async def test_price_going_out_of_range():
         producer.current_price = price
         existing_orders = trading_api.get_open_orders(exchange_manager)
         sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
-        missing_orders, state, candidate_flat_increment = producer._analyse_current_orders_situation(sorted_orders, [])
+        missing_orders, state, candidate_flat_increment = producer._analyse_current_orders_situation(
+            sorted_orders, [], sorted_orders[0].origin_price, sorted_orders[-1].origin_price, price
+        )
         assert missing_orders is None
         assert candidate_flat_increment is None
         assert state == producer.ERROR
@@ -816,7 +830,7 @@ async def test_start_after_offline_filled_orders():
         price = 96
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
         # force not use recent trades
-        producer.RECENT_TRADES_ALLOWED_TIME = 0
+        producer.RECENT_TRADES_ALLOWED_TIME = -1
         await producer._ensure_staggered_orders()
         # restored orders
         await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
@@ -865,8 +879,8 @@ async def test_compute_minimum_funds_1():
         sell_min_funds = producer._get_min_funds(decimal.Decimal(str(2475.25)), decimal.Decimal(str(0.00001)),
                                                  staggered_orders_trading.StrategyModes.MOUNTAIN,
                                                  decimal.Decimal(100))
-        assert buy_min_funds == decimal.Decimal(str(0.05))
-        assert sell_min_funds == decimal.Decimal(str(0.049505))
+        assert buy_min_funds == decimal.Decimal(str(0.05)) * staggered_orders_trading.TEN_PERCENT_DECIMAL
+        assert sell_min_funds == decimal.Decimal(str(0.049505)) * staggered_orders_trading.TEN_PERCENT_DECIMAL
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").available = buy_min_funds
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").total = buy_min_funds
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = sell_min_funds
@@ -877,8 +891,8 @@ async def test_compute_minimum_funds_1():
         await asyncio.create_task(_wait_for_orders_creation(producer.operational_depth))
         orders = trading_api.get_open_orders(exchange_manager)
         assert len(orders) == producer.operational_depth
-        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.SELL]) == 26
-        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.BUY]) == 24
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.SELL]) == 25
+        assert len([o for o in orders if o.side == trading_enums.TradeOrderSide.BUY]) == 25
 
 
 async def test_compute_minimum_funds_2():
@@ -895,8 +909,8 @@ async def test_compute_minimum_funds_2():
         sell_min_funds = producer._get_min_funds(decimal.Decimal(str(2475)), decimal.Decimal(str(0.00001)),
                                                  staggered_orders_trading.StrategyModes.MOUNTAIN,
                                                  decimal.Decimal(str(100)))
-        assert buy_min_funds == decimal.Decimal(str(0.05))
-        assert sell_min_funds == decimal.Decimal(str(0.0495))
+        assert buy_min_funds == decimal.Decimal(str(0.05)) * staggered_orders_trading.TEN_PERCENT_DECIMAL
+        assert sell_min_funds == decimal.Decimal(str(0.0495)) * staggered_orders_trading.TEN_PERCENT_DECIMAL
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").available = buy_min_funds * decimal.Decimal("0.99999")
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("USD").total = buy_min_funds * decimal.Decimal("0.99999")
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio("BTC").available = sell_min_funds * decimal.Decimal("0.99999")
@@ -1136,35 +1150,74 @@ async def test_order_fill_callback_with_mirror_delay():
 async def test_compute_mirror_order_volume():
     async with _get_tools("BTC/USD", fees=0) as tools:
         producer, _, exchange_manager = tools
-        # no profit reinvesting
+        # no ignore_exchange_fees
         # no fixed volumes
-        producer.reinvest_profits = producer.use_fixed_volume_for_mirror_orders = False
+        producer.ignore_exchange_fees = producer.use_fixed_volume_for_mirror_orders = False
         # 1% max fees
-        producer.max_fees = 0.01
+        producer.max_fees = decimal.Decimal("0.01")
         # take exchange fees into account
-        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 2 * (1 - producer.max_fees)
-        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 2 * (100 / 80) * (1 - producer.max_fees)
+        assert producer._compute_mirror_order_volume(
+            True, decimal.Decimal("100"), decimal.Decimal("120"), decimal.Decimal("2"), None
+        ) == 2 * (1 - producer.max_fees)
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), {}
+        ) == 2 * (decimal.Decimal("100") / decimal.Decimal("80")) * (1 - producer.max_fees)
+        # with given fees
+        fees = {
+            trading_enums.FeePropertyColumns.COST.value: decimal.Decimal("0.032"),
+            trading_enums.FeePropertyColumns.CURRENCY.value: "BTC"
+        }
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), fees
+        ) == 2 * (decimal.Decimal("100") / decimal.Decimal("80")) - decimal.Decimal("0.032")
+        fees = {
+            trading_enums.FeePropertyColumns.COST.value: decimal.Decimal("2.3"),
+            trading_enums.FeePropertyColumns.CURRENCY.value: "USD"
+        }
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), fees
+        ) == 2 * (decimal.Decimal("100") / decimal.Decimal("80")) - (decimal.Decimal("2.3") / decimal.Decimal("100"))
 
-        # with profits reinvesting
-        producer.reinvest_profits = True
+        # with ignore_exchange_fees
+        producer.ignore_exchange_fees = True
         # consider fees already taken, sell everything
-        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 2
-        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 2 * (100 / 80)
+        assert producer._compute_mirror_order_volume(
+            True, decimal.Decimal("100"), decimal.Decimal("120"), decimal.Decimal("2"), None
+        ) == 2
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), {}
+        ) == 2 * (decimal.Decimal("100") / decimal.Decimal("80"))
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), fees
+        ) == 2 * (decimal.Decimal("100") / decimal.Decimal("80"))
 
         # with fixed volumes
-        producer.reinvest_profits = False
+        producer.ignore_exchange_fees = False
         producer.sell_volume_per_order = 3
         # consider fees already taken, sell everything
-        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 3
+        assert producer._compute_mirror_order_volume(
+            True, decimal.Decimal("100"), decimal.Decimal("120"), decimal.Decimal("2"), fees
+        ) == 3
         # buy order
-        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 2 * (100 / 80) * (1 - producer.max_fees)
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), None
+        ) == 2 * (decimal.Decimal("100") / decimal.Decimal("80")) * (1 - producer.max_fees)
         producer.buy_volume_per_order = 5
-        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 5
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), {}
+        ) == 5
 
-        # with fixed volumes and profits reinvesting
-        producer.reinvest_profits = True
-        assert producer._compute_mirror_order_volume(True, 100, 120, 2) == 3
-        assert producer._compute_mirror_order_volume(False, 100, 80, 2) == 5
+        # with fixed volumes and ignore_exchange_fees
+        producer.ignore_exchange_fees = True
+        assert producer._compute_mirror_order_volume(
+            True, decimal.Decimal("100"), decimal.Decimal("120"), decimal.Decimal("2"), None
+        ) == 3
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), {}
+        ) == 5
+        assert producer._compute_mirror_order_volume(
+            False, decimal.Decimal("100"), decimal.Decimal("80"), decimal.Decimal("2"), fees
+        ) == 5
 
 
 async def test_create_order():
@@ -1177,90 +1230,145 @@ async def test_create_order():
         producer.symbol_market = symbol_market
         producer._refresh_symbol_data(symbol_market)
 
-        # SELL
+        _origin_decimal_adapt_order_quantity_because_fees = trading_personal_data.decimal_adapt_order_quantity_because_fees
 
-        # enough quantity in portfolio
-        price = decimal.Decimal(100)
-        quantity = decimal.Decimal(1)
-        side = trading_enums.TradeOrderSide.SELL
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
-        assert created_order.origin_quantity == quantity
+        def _decimal_adapt_order_quantity_because_fees(
+            exchange_manager, symbol: str, order_type: trading_enums.TraderOrderType, quantity: decimal.Decimal,
+            price: decimal.Decimal,
+            taker_or_maker: trading_enums.ExchangeConstantsMarketPropertyColumns, side: trading_enums.TradeOrderSide,
+            quote_available_funds: decimal.Decimal
+        ):
+            return quantity
 
-        # not enough quantity in portfolio
-        price = decimal.Decimal(100)
-        quantity = decimal.Decimal(10)
-        side = trading_enums.TradeOrderSide.SELL
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_order = await consumer.create_order(to_create_order, price, symbol_market)
-        assert created_order == []
+        with mock.patch.object(
+                trading_personal_data, "decimal_adapt_order_quantity_because_fees",
+                mock.Mock(side_effect=_decimal_adapt_order_quantity_because_fees)
+        ) as decimal_adapt_order_quantity_because_fees_mock:
 
-        # just enough quantity in portfolio
-        price = decimal.Decimal(100)
-        quantity = decimal.Decimal(9)
-        side = trading_enums.TradeOrderSide.SELL
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
-        assert created_order.origin_quantity == quantity
-        assert trading_api.get_portfolio_currency(exchange_manager, "BTC").available == decimal.Decimal(0)
+            # SELL
 
-        # not enough quantity anymore
-        price = decimal.Decimal(100)
-        quantity = decimal.Decimal("0.0001")
-        side = trading_enums.TradeOrderSide.SELL
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_orders = await consumer.create_order(to_create_order, price, symbol_market)
-        assert trading_api.get_portfolio_currency(exchange_manager, "BTC").available == decimal.Decimal(0)
-        assert created_orders == []
+            # enough quantity in portfolio
+            price = decimal.Decimal(100)
+            quantity = decimal.Decimal(1)
+            side = trading_enums.TradeOrderSide.SELL
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
+            assert created_order.origin_quantity == quantity
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_with(
+                exchange_manager, symbol, trading_enums.TraderOrderType.SELL_LIMIT,
+                created_order.origin_quantity,
+                created_order.origin_price,
+                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.SELL,
+                decimal.Decimal("0.1")
+            )
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
 
-        # BUY
+            # not enough quantity in portfolio
+            price = decimal.Decimal(100)
+            quantity = decimal.Decimal(10)
+            side = trading_enums.TradeOrderSide.SELL
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_order = await consumer.create_order(to_create_order, price, symbol_market)
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_with(
+                exchange_manager, symbol, trading_enums.TraderOrderType.SELL_LIMIT,
+                decimal.Decimal('10'), decimal.Decimal('100'),
+                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.SELL,
+                decimal.Decimal("0.09")
+            )
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert created_order == []
 
-        # enough quantity in portfolio
-        price = decimal.Decimal(100)
-        quantity = decimal.Decimal(1)
-        side = trading_enums.TradeOrderSide.BUY
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
-        assert created_order.origin_quantity == quantity
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 900
-        assert created_order is not None
+            # just enough quantity in portfolio
+            price = decimal.Decimal(100)
+            quantity = decimal.Decimal(9)
+            side = trading_enums.TradeOrderSide.SELL
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_once()
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert created_order.origin_quantity == quantity
+            assert trading_api.get_portfolio_currency(exchange_manager, "BTC").available == decimal.Decimal(0)
 
-        # not enough quantity in portfolio
-        price = decimal.Decimal(585)
-        quantity = decimal.Decimal(2)
-        side = trading_enums.TradeOrderSide.BUY
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_orders = await consumer.create_order(to_create_order, price, symbol_market)
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 900
-        assert created_orders == []
+            # not enough quantity anymore
+            price = decimal.Decimal(100)
+            quantity = decimal.Decimal("0.0001")
+            side = trading_enums.TradeOrderSide.SELL
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_orders = await consumer.create_order(to_create_order, price, symbol_market)
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_once()
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert trading_api.get_portfolio_currency(exchange_manager, "BTC").available == decimal.Decimal(0)
+            assert created_orders == []
 
-        # enough quantity in portfolio
-        price = decimal.Decimal(40)
-        quantity = decimal.Decimal(2)
-        side = trading_enums.TradeOrderSide.BUY
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
-        assert created_order.origin_quantity == quantity
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 820
+            # BUY
 
-        # enough quantity in portfolio
-        price = decimal.Decimal(205)
-        quantity = decimal.Decimal(4)
-        side = trading_enums.TradeOrderSide.BUY
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
-        assert created_order.origin_quantity == quantity
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 0
-        assert created_order is not None
+            # enough quantity in portfolio
+            price = decimal.Decimal(100)
+            quantity = decimal.Decimal(1)
+            side = trading_enums.TradeOrderSide.BUY
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_with(
+                exchange_manager, symbol, trading_enums.TraderOrderType.BUY_LIMIT,
+                created_order.origin_quantity,
+                created_order.origin_price,
+                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
+                decimal.Decimal("1000")
+            )
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert created_order.origin_quantity == quantity
+            assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 900
+            assert created_order is not None
 
-        # not enough quantity in portfolio anymore
-        price = decimal.Decimal(205)
-        quantity = decimal.Decimal(1)
-        side = trading_enums.TradeOrderSide.BUY
-        to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
-        created_orders = await consumer.create_order(to_create_order, price, symbol_market)
-        assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 0
-        assert created_orders == []
+            # not enough quantity in portfolio
+            price = decimal.Decimal(585)
+            quantity = decimal.Decimal(2)
+            side = trading_enums.TradeOrderSide.BUY
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_orders = await consumer.create_order(to_create_order, price, symbol_market)
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_with(
+                exchange_manager, symbol, trading_enums.TraderOrderType.BUY_LIMIT,
+                decimal.Decimal('2'), decimal.Decimal('585'),
+                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER, trading_enums.TradeOrderSide.BUY,
+                decimal.Decimal("900")
+            )
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 900
+            assert created_orders == []
+
+            # enough quantity in portfolio
+            price = decimal.Decimal(40)
+            quantity = decimal.Decimal(2)
+            side = trading_enums.TradeOrderSide.BUY
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_once()
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert created_order.origin_quantity == quantity
+            assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 820
+
+            # enough quantity in portfolio
+            price = decimal.Decimal(205)
+            quantity = decimal.Decimal(4)
+            side = trading_enums.TradeOrderSide.BUY
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_order = (await consumer.create_order(to_create_order, price, symbol_market))[0]
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_once()
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert created_order.origin_quantity == quantity
+            assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 0
+            assert created_order is not None
+
+            # not enough quantity in portfolio anymore
+            price = decimal.Decimal(205)
+            quantity = decimal.Decimal(1)
+            side = trading_enums.TradeOrderSide.BUY
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_orders = await consumer.create_order(to_create_order, price, symbol_market)
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_once()
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 0
+            assert created_orders == []
 
 
 async def test_create_new_orders():
@@ -1332,6 +1440,53 @@ async def test_ensure_current_price_in_limit_parameters():
             assert _log_window_error_or_warning_mock.mock_calls[0].args[1] is False
             _log_window_error_or_warning_mock.reset_mock()
             assert producer.already_errored_on_out_of_window_price is True
+
+
+async def test_single_exchange_process_optimize_initial_portfolio():
+    async with _get_tools("BTC/USD") as tools:
+        producer, _, exchange_manager = tools
+        mode = producer.trading_mode
+        exchange_manager.exchange_config.traded_symbol_pairs = ["BTC/USD"]
+        exchange_manager.client_symbols = ["BTC/USD"]
+
+        initial_portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
+        assert initial_portfolio["BTC"].available == decimal.Decimal("10")
+        assert initial_portfolio["USD"].available == decimal.Decimal("1000")
+
+        limit_buy = trading_personal_data.BuyLimitOrder(exchange_manager.trader)
+        limit_buy.update(order_type=trading_enums.TraderOrderType.BUY_LIMIT,
+                         symbol="BTC/USD",
+                         current_price=decimal.Decimal(str(50)),
+                         quantity=decimal.Decimal(str(2)),
+                         price=decimal.Decimal(str(50)))
+        await exchange_manager.exchange_personal_data.orders_manager.upsert_order_instance(limit_buy)
+
+        orders = await mode.single_exchange_process_optimize_initial_portfolio(
+            ["BTC", "ETH"], "USD", {"BTC/USD": {trading_enums.ExchangeConstantsTickersColumns.CLOSE.value: 1000}}
+        )
+        cancelled_orders, part_1_orders, part_2_orders = [orders[0], orders[1], orders[2]]
+
+        assert len(cancelled_orders) == 1
+        assert cancelled_orders[0] is limit_buy
+
+        assert len(part_1_orders) == 1
+        part_1_order = part_1_orders[0]
+        assert isinstance(part_1_order, trading_personal_data.SellMarketOrder)
+        assert part_1_order.created_last_price == decimal.Decimal("1000")
+        assert part_1_order.origin_quantity == decimal.Decimal("10")    # 10 BTC to sell into 10 000 USD
+        assert part_1_order.status == trading_enums.OrderStatus.FILLED
+
+        assert part_2_orders
+        part_2_order = part_2_orders[0]
+        assert isinstance(part_2_order, trading_personal_data.BuyMarketOrder)
+        assert part_2_order.created_last_price == decimal.Decimal("1000")
+        assert part_2_order.origin_quantity == decimal.Decimal("5.545")    # 50% of funds
+        assert part_2_order.status == trading_enums.OrderStatus.FILLED
+
+        # check portfolio is rebalanced
+        final_portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio
+        assert final_portfolio["BTC"].available == decimal.Decimal('5.539455')  # 5.545 - fees
+        assert final_portfolio["USD"].available == decimal.Decimal("5545")
 
 
 async def _wait_for_orders_creation(orders_count=1):

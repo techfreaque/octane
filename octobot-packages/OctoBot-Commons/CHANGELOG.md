@@ -4,6 +4,156 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.42] - 2023-02-20
+### Removed
+- usd_like_value from MinimalFund
+
+## [1.9.41] - 2023-02-20
+### Added
+- usd_like_value to MinimalFund
+
+## [1.9.40] - 2023-02-15
+### Fixed
+- ProfileData to profile dict portfolio
+
+## [1.9.39] - 2023-01-18
+### Fixed
+- File download: typo
+
+## [1.9.38] - 2023-01-18
+### Updated
+- File download: add error text when possible
+
+## [1.9.37] - 2023-01-10
+### Updated
+- File download: return last_modified
+
+## [1.9.36] - 2023-01-09
+### Updated
+- dependencies
+
+## [1.9.35] - 2023-12-18
+### Added
+- logging callback
+
+## [1.9.34] - 2023-12-11
+### Added
+- Profiles: extra_backtesting_time_frames
+
+## [1.9.33] - 2023-12-08
+### Added
+- Enums: TRIGGER_HEALTH_CHECK
+
+## [1.9.32] - 2023-12-04
+### Added
+- Profiles: ProfileData import
+
+## [1.9.31] - 2023-11-16
+### Added
+- [Authenticator] use_as_singleton param
+
+## [1.9.30] - 2023-10-29
+### Fixed
+- [Config] handle malformed pairs
+
+## [1.9.29] - 2023-10-27
+### Added
+[Tree] clear
+[TimeFrames] get_last_timeframe_time
+
+## [1.9.28] - 2023-10-11
+### Added
+[TradingData] MinimalFund add from_value_dict
+
+## [1.9.27] - 2023-10-11
+### Updated
+[TradingData] MinimalFund format
+
+## [1.9.26] - 2023-10-11
+### Added
+[enums] INITIAL_PORTFOLIO_OPTIMIZATION
+
+## [1.9.25] - 2023-10-04
+### Added
+[ProfileData] minimal_funds
+
+## [1.9.24] - 2023-10-04
+### Added
+[Signals] add sort_signals to builder
+
+## [1.9.23] - 2023-09-25
+### Added
+- [Authentication] update_orders
+
+## [1.9.22] - 2023-09-24
+### Added
+- [Constants] USD_LIKE_COINS
+
+## [1.9.21] - 2023-09-15
+### Fixed
+- [Config] save files issues
+
+## [1.9.20] - 2023-09-05
+### Fixed
+- [Config] exchange keys format error
+
+## [1.9.19] - 2023-09-05
+### Updated
+- [FlexibleDataclass] add get_field_names
+
+## [1.9.18] - 2023-09-01
+### Updated
+- [FlexibleDataclass] handle any type of field
+
+## [1.9.17] - 2023-08-25
+### Added
+- [Dataclasses] FlexibleDataclass
+
+## [1.9.16] - 2023-08-22
+### Added
+- [Logging] extra data to exceptions
+
+## [1.9.15] - 2023-08-17
+### Added
+- [Databases] is_hard_reset_error
+
+## [1.9.14] - 2023-08-16
+### Added
+- [Logs] set_enable_web_interface_logs
+
+## [1.9.13] - 2023-08-14
+### Added
+- [ProfileData] BacktestingContext
+
+## [1.9.12] - 2023-08-07
+### Updated
+- [Authenticator] update_portfolio params
+
+## [1.9.11] - 2023-08-07
+### Updated
+- ProfileData simplify content
+
+## [1.9.10] - 2023-08-07
+### Updated
+- ProfileData format
+
+## [1.9.9] - 2023-08-03
+### Added
+- UpdatableDataclass
+
+## [1.9.8] - 2023-07-25
+### Added
+- ProfileData default values
+
+## [1.9.7] - 2023-07-23
+### Added
+- ProfileData config_name
+
+## [1.9.6] - 2023-07-22
+### Added
+- ProfileData
+- Singletons: add remove methods
+
 ## [1.9.5] - 2023-05-17
 ### Added
 - DEPENDENCIES to UserInputOtherSchemaValuesTypes

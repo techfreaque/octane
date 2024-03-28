@@ -63,7 +63,7 @@ def register_portfolio_routes(plugin):
         )
         reference_market = interfaces_util.get_reference_market()
         initializing_currencies_prices_set = (
-            models.get_initializing_currencies_prices_set()
+            models.get_initializing_currencies_prices_set(3)
         )
 
         return {

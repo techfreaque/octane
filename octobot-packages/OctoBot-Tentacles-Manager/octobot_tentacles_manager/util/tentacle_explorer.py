@@ -15,10 +15,14 @@
 #  License along with this library.
 import os
 import os.path as path
+import typing
 
 import octobot_commons.logging as logging
 import octobot_tentacles_manager.constants as constants
 import octobot_tentacles_manager.models as models
+
+
+_extra_tentacle_data_by_name: dict[str, tuple[models.TentacleType, typing.ClassVar]] = {}
 
 
 def load_tentacle_with_metadata(tentacle_path: str):
@@ -33,6 +37,19 @@ def get_tentacles_from_package(tentacles, package_name: str):
         for tentacle in tentacles
         if tentacle.origin_package == package_name
     ]
+
+
+def register_extra_tentacle_data(tentacle_name: str, tentacle_type_path: str, tentacle_class):
+    """
+    :param tentacle_name: name of the tentacle
+    :param tentacle_type_path: path of the tentacle, ex "Trading/mode"
+    :param tentacle_class: class of the tentacle
+    """
+    _extra_tentacle_data_by_name[tentacle_name] = (models.TentacleType(tentacle_type_path), tentacle_class)
+
+
+def get_tentacle_class_from_extra_tentacles(tentacle_name: str):
+    return _extra_tentacle_data_by_name[tentacle_name][1]
 
 
 def _load_all_metadata(tentacles):
@@ -52,6 +69,9 @@ def _parse_all_tentacles(root: str):
         for tentacle_entry in os.scandir(path.join(root, tentacle_type.to_path()))
         if not (tentacle_entry.name == constants.PYTHON_INIT_FILE or
                 tentacle_entry.name in constants.FOLDERS_BLACK_LIST)
+    ] + [
+        factory.create_tentacle_from_type(tentacle_name, tentacle_type, [tentacle_name])
+        for tentacle_name, (tentacle_type, _) in _extra_tentacle_data_by_name.items()
     ]
 
 

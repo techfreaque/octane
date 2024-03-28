@@ -35,7 +35,7 @@ class TrailingStopOrder(order_class.Order):
         self.wait_for_stop_price_hit_event_task = None
         self.wait_for_price_hit_event_task = None
         self.trailing_percent = trailing_percent
-        self.allow_instant_fill = True
+        self.allow_instant_fill = constants.ALLOW_SIMULATED_ORDERS_INSTANT_FILL
 
     async def update_order_status(self, force_refresh=False):
         if not self.trader.simulate and (not self.is_synchronized_with_exchange or force_refresh):
@@ -143,11 +143,11 @@ class TrailingStopOrder(order_class.Order):
                                                          f"replacing stop...")
         await self._reset_events(decimal.Decimal(str(prices_manager.mark_price)), prices_manager.mark_price_set_time)
 
-    async def on_filled(self):
+    async def on_filled(self, enable_associated_orders_creation):
         """
         Create an artificial when trailing stop is filled
         """
-        await order_class.Order.on_filled(self)
+        await order_class.Order.on_filled(self, enable_associated_orders_creation)
         # TODO replace with chained order ?
         await self.trader.create_artificial_order(enums.TraderOrderType.SELL_MARKET
                                                   if self.side is enums.TradeOrderSide.SELL

@@ -26,14 +26,14 @@ import octobot_commons.json_util as json_util
 class Tentacle(artifact.Artifact):
     ARTIFACT_NAME = "tentacle"
 
-    def __init__(self, tentacle_root_path, name, tentacle_type):
+    def __init__(self, tentacle_root_path, name, tentacle_type, tentacle_class_names=None):
         super().__init__(name)
         self.tentacle_root_path = tentacle_root_path
         self.tentacle_type = tentacle_type
         self.tentacle_root_type = self.tentacle_type.get_root_type()
         self.tentacle_path = path.join(self.tentacle_root_path, self.tentacle_type.to_path())
         self.tentacle_module_path = None
-        self.tentacle_class_names = []
+        self.tentacle_class_names = tentacle_class_names or []
         self.tentacles_requirements = None
         self.tentacle_group = self.name
         self.in_dev_mode = False

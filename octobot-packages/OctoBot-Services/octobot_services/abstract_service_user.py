@@ -49,14 +49,18 @@ class AbstractServiceUser(util.InitializableWithPostAction):
 
     async def _create_or_get_service_instance(self, service, backtesting_enabled, edited_config):
         service_factory = services.ServiceFactory(self.config)
-        if await service_factory.create_or_get_service(service, backtesting_enabled, edited_config):
+        created, error_message = await service_factory.create_or_get_service(
+            service, backtesting_enabled, edited_config
+        )
+        if created:
             return True
         else:
             log_func = self.get_logger().debug
             # log error when the issue is not related to configuration
             if service.instance().has_required_configuration():
                 log_func = self.get_logger().warning
-            log_func(f"Impossible to start {self.get_name()}: required service {service.get_name()} is not available.")
+            log_func(f"Impossible to start {self.get_name()}: required service {service.get_name()} "
+                     f"is not available ({error_message}).")
             return False
 
     def has_required_services_configuration(self):

@@ -43,7 +43,8 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
     FEED_INITIALIZATION_TIMEOUT = 15 * commons_constants.MINUTE_TO_SECONDS
     MIN_CONNECTION_CLOSE_INTERVAL = 2 * commons_constants.MINUTE_TO_SECONDS
     NO_MESSAGE_DISCONNECTED_TIMEOUT = 4 * commons_constants.MINUTE_TO_SECONDS
-    EXCHANGE_RECONNECT_INTERVAL = None
+    RECREATE_CLIENT_ON_DISCONNECT = False   # when True, a new ccxt websocket client will replace the previous
+    # one when the exchange is disconnected
 
     IGNORED_FEED_PAIRS = {
         # When ticker or future index is available : no need to calculate mark price from recent trades
@@ -275,6 +276,7 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
         """
         try:
             self.initialized_event = asyncio.Event()
+            self.logger.info(f"Loading {self.exchange_manager.exchange_name} websocket exchange markets")
             await self.client.load_markets()
             self._filter_exchange_pairs_and_timeframes()
             self._subscribe_feeds()
@@ -286,10 +288,12 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
     async def _close_exchange_to_force_reconnect(self):
         if time.time() - self._last_close_time > self.MIN_CONNECTION_CLOSE_INTERVAL and not self.should_stop:
             # Close client to force connections re-open. The next watch_xyz will recreate the connection
+            self._last_close_time = time.time()
             self.logger.debug(f"Closing exchange connection.")
             await self.client.close()
+            if self.RECREATE_CLIENT_ON_DISCONNECT:
+                self._create_client()
             self.logger.debug("Exchange connection closed. The next watch-xyz will re-open it.")
-            self._last_close_time = time.time()
             return True
         return False
 
@@ -533,13 +537,18 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
         ws_des = f"{watch_func.__name__} {g_kwargs}"
         subsequent_disconnections = 0
         already_got_feed_stopping_error = False
+        already_got_closed_by_user_error = False
         spamming_logs_warning_interval = 5000
         spamming_logs_debug_interval = 1000
         while not self.should_stop:
             try:
                 update_data = await watch_func(*g_args, **g_kwargs)
+
                 self._last_message_time = time.time()
+                if subsequent_disconnections > 0:
+                    self.logger.debug(f"Reconnected to {ws_des}")
                 subsequent_disconnections = 0
+                already_got_closed_by_user_error = False
                 if update_data:
                     # Use a copy of the update data as it will be edited by adapters.
                     # We should avoid editing the original object since it is also used in ccxt internally buffers
@@ -565,12 +574,14 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
                     message = f"Closed exchange connection to force reconnect. Error: {err}"
                     if subsequent_disconnections > 1 and subsequent_disconnections % 5 == 0:
                         self.logger.error(
-                            f"Multiple disconnections if a row [{subsequent_disconnections}] for {ws_des}. {message}"
+                            f"Multiple disconnections in a row [{subsequent_disconnections}] for {ws_des}. {message}"
                         )
                     else:
                         self.logger.debug(message)
                 await asyncio.sleep(reconnect_delay)
                 self.logger.debug(f"Reconnecting to {ws_des}")
+                # self.client might have changed
+                watch_func = self._get_feed_generator_by_feed()[feed]
                 subsequent_disconnections += 1  # wait for a longer time before the next reconnect
             except ccxt.BadRequest as err:
                 message = f"Impossible to start {ws_des} feed due to exchange refusing the connection request: {err}."
@@ -584,6 +595,8 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
                     return
                 already_got_feed_stopping_error = True
                 await asyncio.sleep(self.LONG_RECONNECT_DELAY)  # avoid spamming
+                # self.client might have changed
+                watch_func = self._get_feed_generator_by_feed()[feed]
             except ccxt.NotSupported as err:
                 self.logger.exception(
                     err,
@@ -593,17 +606,38 @@ class CCXTWebsocketConnector(abstract_websocket_exchange.AbstractWebsocketExchan
                 )
                 return
             except Exception as err:
-                error_count = self._increment_error_counter(g_kwargs.get("time_frame"), err)
-                error_message = f"Unexpected error when handling {ws_des} feed: {err} ({err.__class__.__name__}) " \
-                                f"({error_count} times)"
-                if error_count == 1:
-                    self.logger.exception(err, True, error_message)
-                elif error_count % spamming_logs_warning_interval == 0:
-                    self.logger.warning(error_message)
-                elif error_count % spamming_logs_debug_interval == 0:
-                    self.logger.debug(error_message)
+                count_error = True
+                if isinstance(err, ccxt.ExchangeClosedByUser):
+                    if self.should_stop:
+                        # normal when stopping websocket
+                        self.logger.debug(
+                            f"Disconnected {ws_des}: connection closed as {self.get_name()} is stopping ({err})"
+                        )
+                        return
+                    # happening when auto-stopping websocket (calling self._close_exchange_to_force_reconnect)
+                    # from another task: current task also raised ccxt.ExchangeClosedByUser
+                    # this is normal as long as it happens only once after a reconnection
+                    if not already_got_closed_by_user_error:
+                        count_error = False
+                        self.logger.debug(
+                            f"{ws_des} connection automatically closed, reconnecting in {self.LONG_RECONNECT_DELAY} "
+                            f"seconds ({err})"
+                        )
+                        already_got_closed_by_user_error = True
+                if count_error:
+                    error_count = self._increment_error_counter(g_kwargs.get("time_frame"), err)
+                    error_message = f"Unexpected error when handling {ws_des} feed: {err} ({err.__class__.__name__}) " \
+                                    f"({error_count} times)"
+                    if error_count == 1:
+                        self.logger.exception(err, True, error_message)
+                    elif error_count % spamming_logs_warning_interval == 0:
+                        self.logger.warning(error_message)
+                    elif error_count % spamming_logs_debug_interval == 0:
+                        self.logger.debug(error_message)
                 await asyncio.sleep(self.LONG_RECONNECT_DELAY)  # avoid spamming
                 subsequent_disconnections += 1  # wait for a longer time before the next reconnect
+                # self.client might have changed
+                watch_func = self._get_feed_generator_by_feed()[feed]
 
     def _create_task_if_necessary(self, feed, feed_callback, feed_generator, **kwargs):
         identifier = self._get_feed_identifier(feed_generator, kwargs)

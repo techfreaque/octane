@@ -26,8 +26,18 @@ from octobot_commons.profiles.profile_sharing import (
     export_profile,
     install_profile,
     import_profile,
+    import_profile_data_as_profile,
     download_profile,
     download_and_install_profile,
+)
+
+from octobot_commons.profiles import profile_data
+
+from octobot_commons.profiles.profile_data import (
+    ProfileData,
+    ExchangeData,
+    MinimalFund,
+    OptionsData,
 )
 
 
@@ -36,6 +46,11 @@ __all__ = [
     "export_profile",
     "install_profile",
     "import_profile",
+    "import_profile_data_as_profile",
     "download_profile",
     "download_and_install_profile",
+    "ProfileData",
+    "ExchangeData",
+    "MinimalFund",
+    "OptionsData",
 ]

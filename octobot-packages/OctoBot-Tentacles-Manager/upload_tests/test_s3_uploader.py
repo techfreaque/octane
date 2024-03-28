@@ -32,7 +32,6 @@ import octobot_tentacles_manager.constants as constants
 pytestmark = pytest.mark.asyncio
 
 TEST_S3_DIRECTORY = "s3-tests"
-TEST_S3_PREFIX = "/tests/"
 TEST_S3_PATH = "tentacle-manager/"
 TEST_S3_FILE_NAME = "test"
 
@@ -58,7 +57,7 @@ async def test_upload_file(s3_tests):
                                                           artifact_path=local_file_name,
                                                           artifact_alias=s3_test_file_name) == 0
     # test download file
-    downloaded_file_path: str = await download_file_from_s3(f"{TEST_S3_PREFIX}{TEST_S3_PATH}{s3_test_file_name}",
+    downloaded_file_path: str = await download_file_from_s3(f"/{TEST_S3_PATH}{s3_test_file_name}",
                                                             "downloaded_file")
 
     with open(downloaded_file_path, "r") as downloaded_file:
@@ -83,9 +82,9 @@ async def test_upload_folder(s3_tests):
                                                           artifact_path=test_dir_path,
                                                           artifact_alias=s3_test_file_name) == 0
     # test download folder files
-    downloaded_file_path: str = await download_file_from_s3(f"{TEST_S3_PREFIX}{TEST_S3_PATH}{s3_test_file_name}/test.json",
+    downloaded_file_path: str = await download_file_from_s3(f"/{TEST_S3_PATH}{s3_test_file_name}/test.json",
                                                             "downloaded_test.json")
-    downloaded_zip_path: str = await download_file_from_s3(f"{TEST_S3_PREFIX}{TEST_S3_PATH}{s3_test_file_name}/test.zip",
+    downloaded_zip_path: str = await download_file_from_s3(f"/{TEST_S3_PATH}{s3_test_file_name}/test.zip",
                                                            "downloaded_test.zip")
     with open(downloaded_file_path, "r") as downloaded_file:
         assert json.loads(downloaded_file.read()) == {

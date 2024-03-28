@@ -21,8 +21,10 @@ import octobot_trading.personal_data.orders.states.order_state_factory as order_
 
 
 class OpenOrderState(order_state.OrderState):
-    def __init__(self, order, is_from_exchange_data):
-        super().__init__(order, is_from_exchange_data)
+    def __init__(self, order, is_from_exchange_data, enable_associated_orders_creation=True):
+        super().__init__(
+            order, is_from_exchange_data, enable_associated_orders_creation=enable_associated_orders_creation
+        )
         self.state = enums.States.OPEN if \
             is_from_exchange_data \
             or self.order.simulated \
@@ -63,7 +65,7 @@ class OpenOrderState(order_state.OrderState):
         # skip refresh process if the current order state is not the same as the one triggering this
         # on_refresh_successful to avoid synchronization issues (state already got refreshed by another mean)
         if self.order is None:
-            self.get_logger().warning(f"on_refresh_successful triggered on cleared order: ignoring update.")
+            self.get_logger().debug(f"on_refresh_successful triggered on cleared order: ignoring update.")
         elif self.state is self.order.state.state:
             if self.order.status is enums.OrderStatus.OPEN:
                 self.state = enums.States.OPEN

@@ -13,10 +13,14 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import decimal
 import os
 
+import mock
 import pytest
 from mock import patch, Mock, AsyncMock
+import octobot_commons.constants as commons_constants
+import octobot_trading.personal_data as personal_data
 from octobot_trading.personal_data.orders import BuyMarketOrder, BuyLimitOrder
 
 from tests.exchanges import backtesting_trader, backtesting_config, backtesting_exchange_manager, fake_backtesting
@@ -59,9 +63,6 @@ async def test_handle_balance_update_from_order(backtesting_trader):
     trader.simulate = False
     order = BuyMarketOrder(trader)
 
-    if os.getenv('CYTHON_IGNORE'):
-        return
-
     with patch.object(portfolio_manager, '_refresh_real_trader_portfolio',
                       new=AsyncMock()) as _refresh_real_trader_portfolio_mock, \
         patch.object(portfolio_manager, '_refresh_simulated_trader_portfolio_from_order',
@@ -71,6 +72,13 @@ async def test_handle_balance_update_from_order(backtesting_trader):
         _refresh_real_trader_portfolio_mock.assert_called_once()
         _refresh_simulated_trader_portfolio_from_order_mock.assert_not_called()
         _refresh_real_trader_portfolio_mock.reset_mock()
+        with portfolio_manager.disabled_portfolio_update_from_order():
+            await portfolio_manager.handle_balance_update_from_order(order, False)
+            _refresh_real_trader_portfolio_mock.assert_not_called()
+            _refresh_simulated_trader_portfolio_from_order_mock.assert_not_called()
+            await portfolio_manager.handle_balance_update_from_order(order, True)
+            _refresh_real_trader_portfolio_mock.assert_not_called()
+            _refresh_simulated_trader_portfolio_from_order_mock.assert_not_called()
         await portfolio_manager.handle_balance_update_from_order(order, False)
         _refresh_real_trader_portfolio_mock.assert_not_called()
         _refresh_simulated_trader_portfolio_from_order_mock.assert_called_once()
@@ -82,6 +90,11 @@ async def test_handle_balance_update_from_order(backtesting_trader):
         await portfolio_manager.handle_balance_update_from_order(order, True)
         _refresh_simulated_trader_portfolio_from_order_mock.assert_called_once()
         _refresh_simulated_trader_portfolio_from_order_mock.reset_mock()
+        with portfolio_manager.disabled_portfolio_update_from_order():
+            await portfolio_manager.handle_balance_update_from_order(order, True)
+            _refresh_simulated_trader_portfolio_from_order_mock.assert_not_called()
+            await portfolio_manager.handle_balance_update_from_order(order, False)
+            _refresh_simulated_trader_portfolio_from_order_mock.assert_not_called()
         # ensure no side effect with require_exchange_update param
         await portfolio_manager.handle_balance_update_from_order(order, False)
         _refresh_simulated_trader_portfolio_from_order_mock.assert_called_once()
@@ -99,6 +112,7 @@ async def test_refresh_simulated_trader_portfolio_from_order(backtesting_trader)
     if os.getenv('CYTHON_IGNORE'):
         return
     order = BuyLimitOrder(trader)
+    order.symbol = "BTC/USDT"
     await order.initialize()
     with patch.object(portfolio_manager.portfolio, 'update_portfolio_available',
                       new=Mock()) as update_portfolio_available_mock:
@@ -120,3 +134,33 @@ async def test_refresh_simulated_trader_portfolio_from_order(backtesting_trader)
         update_portfolio_from_filled_order_mock.assert_not_called()
         portfolio_manager._refresh_simulated_trader_portfolio_from_order(order)
         update_portfolio_from_filled_order_mock.assert_called_once()
+
+
+async def test_load_simulated_portfolio_from_history(backtesting_trader):
+    config, exchange_manager, trader = backtesting_trader
+    portfolio_manager = exchange_manager.exchange_personal_data.portfolio_manager
+
+    portfolio_manager.historical_portfolio_value_manager = mock.Mock(
+        historical_ending_portfolio={
+            "BTC": {
+                commons_constants.PORTFOLIO_AVAILABLE: 1,
+                commons_constants.PORTFOLIO_TOTAL: 10.11,
+            },
+            "ETH": {
+                commons_constants.PORTFOLIO_AVAILABLE: -1,
+                commons_constants.PORTFOLIO_TOTAL: 10,
+            },
+            "USDT": {
+                commons_constants.PORTFOLIO_AVAILABLE: 34,
+                commons_constants.PORTFOLIO_TOTAL: 34,
+            }
+        },
+        stop=mock.AsyncMock()
+    )
+    portfolio_manager._load_simulated_portfolio_from_history()
+    # ensure only the total value is loaded in simulated portfolio
+    assert portfolio_manager.portfolio.portfolio == {
+        "BTC": personal_data.SpotAsset("BTC", decimal.Decimal("10.11"), decimal.Decimal("10.11")),
+        "ETH": personal_data.SpotAsset("ETH", decimal.Decimal("10"), decimal.Decimal("10")),
+        "USDT": personal_data.SpotAsset("USDT", decimal.Decimal("34"), decimal.Decimal("34"))
+    }

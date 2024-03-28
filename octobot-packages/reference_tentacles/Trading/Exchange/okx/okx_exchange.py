@@ -22,6 +22,7 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.constants as constants
 import octobot_trading.errors as trading_errors
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
+import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
 import octobot_trading.personal_data as trading_personal_data
 
@@ -88,6 +89,10 @@ class OkxConnector(ccxt_connector.CCXTConnector):
 
 class Okx(exchanges.RestExchange):
     DESCRIPTION = ""
+
+    FIX_MARKET_STATUS = True
+    ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE = True
+
     DEFAULT_CONNECTOR_CLASS = OkxConnector
     MAX_PAGINATION_LIMIT: int = 100  # value from https://www.okex.com/docs/en/#spot-orders_pending
 
@@ -163,9 +168,13 @@ class Okx(exchanges.RestExchange):
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit) if limit else limit
 
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
-                                            adapt_for_contract_size=True)   # todo check
+    async def get_account_id(self, **kwargs: dict) -> str:
+        accounts = await self.connector.client.fetch_accounts()
+        try:
+            return accounts[0]["id"]
+        except IndexError:
+            # should never happen as at least one account should be available
+            return None
 
     async def get_sub_account_list(self):
         sub_account_list = (await self.connector.client.privateGetUsersSubaccountList()).get("data", [])
@@ -232,9 +241,11 @@ class Okx(exchanges.RestExchange):
             return regular_orders
         # add order types of order (different param in api endpoint)
         other_orders = []
-        for order_type in self._get_used_order_types():
-            kwargs["ordType"] = order_type
-            other_orders += await method(symbol=symbol, since=since, limit=limit, **kwargs)
+        if self.exchange_manager.is_future:
+            # stop orders are futures only for now
+            for order_type in self._get_used_order_types():
+                kwargs["ordType"] = order_type
+                other_orders += await method(symbol=symbol, since=since, limit=limit, **kwargs)
         return regular_orders + other_orders
 
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
@@ -290,7 +301,7 @@ class Okx(exchanges.RestExchange):
 
     def _is_oco_order(self, params):
         return all(
-            oco_order_param in params
+            oco_order_param in (params or {})
             for oco_order_param in (
                 self.connector.adapter.OKX_STOP_LOSS_PRICE,
                 self.connector.adapter.OKX_TAKE_PROFIT_PRICE
@@ -442,12 +453,6 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
 
     def fix_order(self, raw, symbol=None, **kwargs):
         fixed = super().fix_order(raw, **kwargs)
-        if self.connector.exchange_manager.is_future \
-                and fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is not None:
-            # amount is in contact, multiply by contract value to get the currency amount (displayed to the user)
-            contract_size = self.connector.get_contract_size(symbol)
-            fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
-                fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] * float(contract_size)
         self._adapt_order_type(fixed)
         return fixed
 
@@ -532,14 +537,10 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
             # no funding info in ticker
             return {}
         fixed = super().parse_funding_rate(fixed, from_ticker=from_ticker, **kwargs)
-        # no previous funding time of rate on okx
         next_funding_timestamp = fixed[trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value]
-        # only the next scheduled funding rate is available: use it for last value
-        next_funding_rate = fixed[trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value]
         fixed.update({
+            # patch LAST_FUNDING_TIME in tentacle
             trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
-                next_funding_timestamp - self.OKX_DEFAULT_FUNDING_TIME,
-            trading_enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value: next_funding_rate,
-            trading_enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value: next_funding_rate,
+                max(next_funding_timestamp - self.OKX_DEFAULT_FUNDING_TIME, 0)
         })
         return fixed

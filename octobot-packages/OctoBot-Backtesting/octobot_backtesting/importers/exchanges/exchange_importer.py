@@ -32,6 +32,7 @@ class ExchangeDataImporter(importers.DataImporter):
         self.symbols = []
         self.time_frames = []
         self.available_data_types = []
+        self.has_all_time_frames_candles_history = False
 
     async def initialize(self) -> None:
         self.load_database()
@@ -42,6 +43,7 @@ class ExchangeDataImporter(importers.DataImporter):
         self.exchange_name = description[enums.DataFormatKeys.EXCHANGE.value]
         self.symbols = description[enums.DataFormatKeys.SYMBOLS.value]
         self.time_frames = description[enums.DataFormatKeys.TIME_FRAMES.value]
+        self.has_all_time_frames_candles_history = bool(description.get(enums.DataFormatKeys.START_TIMESTAMP.value))
         await self._init_available_data_types()
 
         self.logger.info(f"Loaded {self.exchange_name} data file with "

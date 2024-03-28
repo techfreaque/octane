@@ -16,12 +16,16 @@
 import ccxt
 
 import octobot_commons.enums as commons_enums
+import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 
 
 class hollaex(exchanges.RestExchange):
     DESCRIPTION = ""
+
+    FIX_MARKET_STATUS = True
+
     BASE_REST_API = "api.hollaex.com"
     REST_KEY = "rest"
     HAS_WEBSOCKETS_KEY = "has_websockets"
@@ -35,6 +39,9 @@ class hollaex(exchanges.RestExchange):
             or not self.tentacle_config.get(
                 self.HAS_WEBSOCKETS_KEY, not self.exchange_manager.rest_only
             )
+
+    def get_adapter_class(self):
+        return HollaexCCXTAdapter
 
     @classmethod
     def init_user_inputs_from_class(cls, inputs: dict) -> None:
@@ -79,9 +86,6 @@ class hollaex(exchanges.RestExchange):
             limit = self.DEFAULT_MAX_LIMIT
         return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
 
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
-
     async def get_closed_orders(self, symbol: str = None, since: int = None,
                                 limit: int = None, **kwargs: dict) -> list:
         # get_closed_orders sometimes does not return orders use _get_closed_orders_from_my_recent_trades in this case
@@ -91,3 +95,14 @@ class hollaex(exchanges.RestExchange):
                 symbol=symbol, since=since, limit=limit, **kwargs
             )
         )
+
+
+class HollaexCCXTAdapter(exchanges.CCXTAdapter):
+
+    def fix_order(self, raw, symbol=None, **kwargs):
+        raw_order_info = raw[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
+        # average is not supported by ccxt
+        fixed = super().fix_order(raw, **kwargs)
+        if not fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] and "average" in raw_order_info:
+            fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = raw_order_info.get("average", 0)
+        return fixed

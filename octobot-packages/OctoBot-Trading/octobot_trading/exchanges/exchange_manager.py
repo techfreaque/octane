@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import typing
 import uuid
 
 import octobot_commons.configuration as configuration
@@ -47,7 +48,8 @@ class ExchangeManager(util.Initializable):
         self.is_backtesting: bool = False
         self.rest_only: bool = False
         self.ignore_config: bool = False
-        self.is_loading_markets: bool = True
+        self.use_cached_markets: bool = True
+        self.market_filter: typing.Union[None, typing.Callable[[dict], bool]] = None
         self.is_spot_only: bool = False
         self.is_margin: bool = False
         self.is_future: bool = False
@@ -68,8 +70,7 @@ class ExchangeManager(util.Initializable):
         self.trader = None
         self.exchange = None
         self.exchange_backend = None
-        self.is_valid_account = True
-        self.init_error = None
+        self.is_broker_enabled = False
         self.trading_modes = []
 
         self.exchange_web_socket = None
@@ -101,8 +102,11 @@ class ExchangeManager(util.Initializable):
         if self.has_websocket:
             if enable_logs:
                 self.logger.debug("Stopping websocket ...")
-            await self.exchange_web_socket.stop_sockets()
-            await self.exchange_web_socket.close_sockets()
+            try:
+                await self.exchange_web_socket.stop_sockets()
+                await self.exchange_web_socket.close_sockets()
+            except Exception as err:
+                self.logger.exception(err, True, f"Error when stopping exchange websocket: {err}")
             self.exchange_web_socket.clear()
             self.exchange_web_socket = None
             if enable_logs:
@@ -112,7 +116,10 @@ class ExchangeManager(util.Initializable):
         if enable_logs:
             self.logger.debug("Stopping trading modes ...")
         for trading_mode in self.trading_modes:
-            await trading_mode.stop()
+            try:
+                await trading_mode.stop()
+            except Exception as err:
+                self.logger.exception(err, True, f"Error when stopping trading mode: {err}")
         if enable_logs:
             self.logger.debug("Stopped trading modes")
 
@@ -120,30 +127,51 @@ class ExchangeManager(util.Initializable):
         if enable_logs:
             self.logger.debug(f"Stopping exchange channels for exchange_id: {self.id} ...")
         if self.exchange is not None:
-            if not self.exchange_only:
+            try:
+                exchange_channel.get_exchange_channels(self.id)
                 await exchange_channel.stop_exchange_channels(self, should_warn=warning_on_missing_elements)
-            await self.exchange.stop()
+            except KeyError:
+                # no exchange channel to stop
+                pass
+            except Exception as err:
+                self.logger.exception(err, True, f"Error when stopping exchange channels: {err}")
+            try:
+                await self.exchange.stop()
+            except Exception as err:
+                self.logger.exception(err, True, f"Error when stopping exchange: {err}")
             exchanges.Exchanges.instance().del_exchange(
                 self.exchange.name, self.id, should_warn=warning_on_missing_elements
             )
             self.exchange.exchange_manager = None
             self.exchange = None
         if self.exchange_personal_data is not None:
-            await self.exchange_personal_data.stop()
+            try:
+                await self.exchange_personal_data.stop()
+            except Exception as err:
+                self.logger.exception(err, True, f"Error when stopping exchange_personal_data: {err}")
         if self.exchange_symbols_data is not None:
-            await self.exchange_symbols_data.stop()
+            try:
+                await self.exchange_symbols_data.stop()
+            except Exception as err:
+                self.logger.exception(err, True, f"Error when stopping exchange_symbols_data: {err}")
         if enable_logs:
             self.logger.debug(f"Stopped exchange channels for exchange_id: {self.id}")
 
         if enable_logs:
             self.logger.debug("Stopping storages ...")
-        await self.storage_manager.stop()
+        try:
+            await self.storage_manager.stop()
+        except Exception as err:
+            self.logger.exception(err, True, f"Error when stopping storage_manager: {err}")
 
         self.exchange_config = None
         self.exchange_personal_data = None
         self.exchange_symbols_data = None
         if self.exchange_backend is not None:
-            self.exchange_backend.stop()
+            try:
+                self.exchange_backend.stop()
+            except Exception as err:
+                self.logger.exception(err, True, f"Error when stopping exchange_backend: {err}")
         if enable_logs:
             self.logger.debug("Stopping trader ...")
         if self.trader is not None:

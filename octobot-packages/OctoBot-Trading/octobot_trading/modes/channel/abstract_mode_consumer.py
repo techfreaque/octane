@@ -33,6 +33,7 @@ class AbstractTradingModeConsumer(modes_channel.ModeChannelConsumer):
         super().__init__()
         self.trading_mode = trading_mode
         self.exchange_manager = trading_mode.exchange_manager
+        self.previous_call_error_per_symbol = {}    # stores the last order creation issue for symbol
         self.on_reload_config()
 
     def on_reload_config(self):
@@ -44,27 +45,47 @@ class AbstractTradingModeConsumer(modes_channel.ModeChannelConsumer):
     def flush(self):
         self.trading_mode = None
         self.exchange_manager = None
+        self.previous_call_error_per_symbol = None
 
     async def internal_callback(self, trading_mode_name, cryptocurrency, symbol, time_frame, final_note, state, data):
         # creates a new order (or multiple split orders), always check self.can_create_order() first.
         try:
             await self.create_order_if_possible(symbol, final_note, state, data=data)
-        except errors.MissingMinimalExchangeTradeVolume:
-            market_status = self.exchange_manager.exchange.get_market_status(symbol, price_example=None, with_fixer=False)
-            self.logger.info(f"Not enough funds to create a new {symbol} order after {final_note} evaluation: "
-                             f"{self.exchange_manager.exchange_name} exchange minimal order "
-                             f"volume has not been reached. "
-                             f"Exchanges requirements are: {market_status.get(Ecmsc.LIMITS.value)}")
+            self.previous_call_error_per_symbol[symbol] = None
+        except errors.MissingMinimalExchangeTradeVolume as err:
+            self.previous_call_error_per_symbol[symbol] = err
+            self.logger.info(self.get_minimal_funds_error(symbol, final_note))
         except errors.UnhandledContractError as err:
+            self.previous_call_error_per_symbol[symbol] = err
             self.logger.error(f"Unhandled contract error on {self.exchange_manager.exchange_name}: {err}. "
                               f"Please make sure that {symbol} is the full futures contract symbol. "
                               f"Future contract symbols contain the settlement currency after ':'. "
                               f"Example: use BTC/USDT:USDT for linear BTC/USDT contracts and "
                               f"BTC/USD:BTC for inverse BTC/USD contracts.")
-        except errors.OrderCreationError:
+        except errors.OrderCreationError as err:
+            self.previous_call_error_per_symbol[symbol] = err
             self.logger.info(f"Failed {symbol} order creation on: {self.exchange_manager.exchange_name} "
                              f"an unexpected error happened when creating order. This is likely due to "
                              f"the order being refused by the exchange.")
+
+    def get_minimal_funds_error(self, symbol, final_note):
+        market_status = self.exchange_manager.exchange.get_market_status(symbol, price_example=None, with_fixer=False)
+        try:
+            base, quote = symbol_util.parse_symbol(symbol).base_and_quote()
+            portfolio = self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
+            funds = {
+                base: portfolio.get_currency_portfolio(base),
+                quote: portfolio.get_currency_portfolio(quote)
+            }
+        except Exception as err:
+            self.logger.error(f"Error when getting funds for {symbol}: {err}")
+            funds = {}
+        return (
+            f"Not enough funds to create a new {symbol} order after {final_note} evaluation: "
+            f"{self.exchange_manager.exchange_name} exchange minimal order "
+            f"volume has not been reached. Funds: {funds} "
+            f"Exchanges requirements: {market_status.get(Ecmsc.LIMITS.value)}."
+        )
 
     async def init_user_inputs(self, should_clear_inputs):
         pass
@@ -89,16 +110,23 @@ class AbstractTradingModeConsumer(modes_channel.ModeChannelConsumer):
                         raise
                     except errors.MissingFunds:
                         try:
+                            self.logger.debug(f"Missing funds error: force refreshing portfolio")
                             # second chance: force portfolio update and retry
                             await exchange_channel.get_chan(constants.BALANCE_CHANNEL,
                                                             self.exchange_manager.id).get_internal_producer(). \
                                 refresh_real_trader_portfolio(True)
-
+                            self.logger.debug(f"Forced portfolio refresh success")
+                            self.logger.debug(
+                                f"Second call to self.create_new_orders with symbol: {symbol}, final_note: "
+                                f"{final_note}, state: {state}, kwargs: {kwargs}"
+                            )
                             return await self.create_new_orders(symbol, final_note, state, **kwargs)
-                        except errors.MissingFunds as e:
-                            self.logger.error(f"Failed to create order on second attempt : {e})")
-                    except Exception as e:
-                        self.logger.exception(e, True, f"Error when creating order: {e}")
+                        except errors.MissingFunds as err:
+                            self.previous_call_error_per_symbol[symbol] = err
+                            self.logger.error(f"Failed to create order on second attempt : {err})")
+                    except Exception as err:
+                        self.previous_call_error_per_symbol[symbol] = err
+                        self.logger.exception(err, True, f"Error when creating order: {err}")
             self.logger.info(f"Skipping order creation for {symbol} on {self.exchange_manager.exchange_name}: "
                              f"not enough available funds")
             return []
@@ -131,27 +159,33 @@ class AbstractTradingModeConsumer(modes_channel.ModeChannelConsumer):
             max_order_size, _ = personal_data.get_futures_max_order_size(
                 self.exchange_manager, symbol, side, current_price, False, current_symbol_holding, market_quantity
             )
+            can_create_order = max_order_size > symbol_min_amount
             self.logger.debug(
-                f"can_create_order: max_order_size > symbol_min_amount: {max_order_size} > {symbol_min_amount}"
+                f"can_create_order: {can_create_order} = "
+                f"max_order_size > symbol_min_amount = {max_order_size} > {symbol_min_amount}"
             )
-            return max_order_size > symbol_min_amount
+            return can_create_order
 
         # spot, trade asset directly
         # short cases => sell => need this currency
         if state == enums.EvaluatorStates.VERY_SHORT.value or state == enums.EvaluatorStates.SHORT.value:
+            can_create_order = portfolio.get_currency_portfolio(currency).available > symbol_min_amount
             self.logger.debug(
-                f"can_create_order: portfolio.get_currency_portfolio(currency).available > symbol_min_amount: "
+                f"can_create_order: {can_create_order} = "
+                f"portfolio.get_currency_portfolio(currency).available > symbol_min_amount = "
                 f"{portfolio.get_currency_portfolio(currency).available} > {symbol_min_amount}"
             )
-            return portfolio.get_currency_portfolio(currency).available > symbol_min_amount
+            return can_create_order
 
         # long cases => buy => need money(aka other currency in the pair) to buy this currency
         elif state == enums.EvaluatorStates.LONG.value or state == enums.EvaluatorStates.VERY_LONG.value:
+            can_create_order = portfolio.get_currency_portfolio(market).available > order_min_amount
             self.logger.debug(
-                f"can_create_order: portfolio.get_currency_portfolio(market).available > order_min_amount: "
+                f"can_create_order: {can_create_order} = "
+                f"portfolio.get_currency_portfolio(market).available > order_min_amount = "
                 f"{portfolio.get_currency_portfolio(market).available} > {order_min_amount}"
             )
-            return portfolio.get_currency_portfolio(market).available > order_min_amount
+            return can_create_order
 
         # other cases like neutral state or unfulfilled previous conditions
         self.logger.debug("can_create_order: return False")
@@ -195,6 +229,29 @@ class AbstractTradingModeConsumer(modes_channel.ModeChannelConsumer):
                 except asyncio.TimeoutError:
                     self.logger.debug(f"Timeout while waiting for idle position to be active, position: {position}")
         return position.state.is_active()
+
+    async def register_chained_order(
+        self, main_order, price, order_type, side, quantity=None, allow_bundling=True, tag=None
+    ) -> tuple:
+        chained_order = personal_data.create_order_instance(
+            trader=self.exchange_manager.trader,
+            order_type=order_type,
+            symbol=main_order.symbol,
+            current_price=price,
+            quantity=quantity or main_order.origin_quantity,
+            price=price,
+            side=side,
+            associated_entry_id=main_order.order_id,
+            tag=tag,
+        )
+        params = {}
+        if allow_bundling:
+            params = await self.exchange_manager.trader.bundle_chained_order_with_uncreated_order(
+                main_order, chained_order, True
+            )
+        else:
+            await self.exchange_manager.trader.chain_order(main_order, chained_order, True, False)
+        return params, chained_order
 
 
 def check_factor(min_val, max_val, factor):

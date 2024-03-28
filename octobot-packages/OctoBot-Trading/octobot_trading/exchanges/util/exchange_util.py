@@ -14,12 +14,15 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import contextlib
+import typing
+
 import ccxt
 import trading_backend
 
 import octobot_commons.logging as logging
 import octobot_commons.constants as common_constants
 import octobot_commons.enums as common_enums
+import octobot_commons.symbols as common_symbols
 import octobot_commons.tentacles_management as tentacles_management
 
 import octobot_tentacles_manager.api as api
@@ -153,7 +156,7 @@ def _get_docs_url():
         import octobot.constants
         return octobot.constants.OCTOBOT_DOCS_URL
     except ImportError:
-        return "https://www.octobot.info"
+        return "https://www.octobot.cloud/en/guides"
 
 
 def _get_exchanges_docs_url():
@@ -161,17 +164,17 @@ def _get_exchanges_docs_url():
         import octobot.constants
         return octobot.constants.EXCHANGES_DOCS_URL
     except ImportError:
-        return "https://exchanges.octobot.info"
+        return "https://www.octobot.cloud/en/guides/exchanges"
 
 
 def _get_time_sync_error_message(exchange_name, caller_name):
     return f"Time synchronization error when calling {caller_name} on {exchange_name.capitalize()}. " \
         f"To fix this, please synchronize your computer's clock. See " \
-        f"{_get_docs_url()}/installation/installation-troubleshoot#time-synchronization"
+        f"{_get_docs_url()}/octobot-installation/troubleshoot#time-synchronization"
 
 
 def get_partners_explanation_message():
-    return f"More info on partner exchanges on {_get_exchanges_docs_url()}#partner-exchanges-support-octobot"
+    return f"More info on partner exchanges on {_get_exchanges_docs_url()}#partner-exchanges---support-octobot"
 
 
 def _get_minimal_exchange_config(exchange_name, exchange_config):
@@ -202,10 +205,13 @@ def get_enabled_exchanges(config):
 
 @contextlib.asynccontextmanager
 async def get_local_exchange_manager(
-    exchange_name: str, exchange_config: dict, tentacles_setup_config, is_sandboxed: bool, ignore_config=False
+    exchange_name: str, exchange_config: dict, tentacles_setup_config,
+    is_sandboxed: bool, ignore_config=False, builder=None, use_cached_markets=True,
+    is_broker_enabled: bool = False,
+    market_filter: typing.Union[None, typing.Callable[[dict], bool]] = None
 ):
     exchange_type = exchange_config.get(common_constants.CONFIG_EXCHANGE_TYPE, get_default_exchange_type(exchange_name))
-    builder = exchange_builder.ExchangeBuilder(
+    builder = builder or exchange_builder.ExchangeBuilder(
         _get_minimal_exchange_config(exchange_name, exchange_config),
         exchange_name
     )
@@ -215,7 +221,9 @@ async def get_local_exchange_manager(
         .is_using_exchange_type(exchange_type) \
         .is_exchange_only() \
         .is_rest_only() \
-        .is_loading_markets(False) \
+        .is_broker_enabled(is_broker_enabled) \
+        .use_cached_markets(use_cached_markets) \
+        .use_market_filter(market_filter) \
         .is_ignoring_config(ignore_config) \
         .disable_trading_mode() \
         .build()
@@ -241,7 +249,7 @@ async def is_compatible_account(exchange_name: str, exchange_config: dict, tenta
     ) as local_exchange_manager:
         backend = trading_backend.exchange_factory.create_exchange_backend(local_exchange_manager.exchange)
         try:
-            is_compatible, error = await backend.is_valid_account()
+            is_compatible, error = await backend.is_valid_account(always_check_key_rights=True)
             if not local_exchange_manager.is_spot_only:
                 message = f"Future trading on {exchange_name.capitalize()} requires a supporting account. {error}." \
                           f"Please create a new {exchange_name.capitalize()} account to use futures trading. "
@@ -253,14 +261,22 @@ async def is_compatible_account(exchange_name: str, exchange_config: dict, tenta
         except trading_backend.TimeSyncError:
             return False, False, _get_time_sync_error_message(exchange_name, "backend.is_valid_account")
         except trading_backend.ExchangeAuthError:
-            return False, False, f"Invalid {exchange_name.capitalize()} authentication details"
+            message = f"Invalid {exchange_name.capitalize()} authentication details"
+            if is_sandboxed:
+                message = f"{message}. Warning: exchange sandbox is enabled, " \
+                          f"this means that OctoBot is connecting to the testnet/sandbox version of " \
+                          f"{exchange_name.capitalize()} to trade and validate your api key. " \
+                          f"Disable sandbox in your accounts configuration if this is not intended."
+            return False, False, message
+        except trading_backend.APIKeyPermissionsError as err:
+            return False, False, f"Please update your API Key permissions: {err}"
         except (AttributeError, Exception) as e:
             return True, False, f"Error when loading exchange account: {e}"
 
 
 async def get_historical_ohlcv(
     local_exchange_manager, symbol, time_frame, start_time, end_time,
-        request_retry_timeout=constants.HISTORICAL_CANDLES_FETCH_DEFAULT_TIMEOUT
+    request_retry_timeout=constants.HISTORICAL_CANDLES_FETCH_DEFAULT_TIMEOUT
 ):
     """
     Async generator, use as follows:
@@ -271,6 +287,9 @@ async def get_historical_ohlcv(
     """
     reached_max = False
     last_start_time = None
+    time_frame_sec = common_enums.TimeFramesMinutes[time_frame] * common_constants.MINUTE_TO_SECONDS
+    exchange_time = local_exchange_manager.exchange.get_exchange_current_time()
+    max_theoretical_time = exchange_time - exchange_time % time_frame_sec
     while start_time < end_time and not reached_max:
         candles = await local_exchange_manager.exchange.retry_till_success(
             request_retry_timeout,
@@ -282,6 +301,8 @@ async def get_historical_ohlcv(
                 candles.pop(-1)
                 reached_max = True
             if candles:
+                if candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value] >= max_theoretical_time:
+                    reached_max = True
                 yield candles
                 start_time = candles[-1][common_enums.PriceIndexes.IND_PRICE_TIME.value] * 1000
                 if last_start_time == start_time:
@@ -323,36 +344,36 @@ def get_supported_exchange_types(exchange_name, tentacles_setup_config):
 
 
 def update_raw_order_from_raw_trade(order_to_update, raw_trade):
-    order_to_update[enums.ExchangeConstantsOrderColumns.INFO.value] = raw_trade[
-        enums.ExchangeConstantsOrderColumns.INFO.value]
-    order_to_update[enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value] = raw_trade[
-        enums.ExchangeConstantsOrderColumns.ORDER.value]
-    order_to_update[enums.ExchangeConstantsOrderColumns.SYMBOL.value] = raw_trade[
-        enums.ExchangeConstantsOrderColumns.SYMBOL.value]
-    order_to_update[enums.ExchangeConstantsOrderColumns.TYPE.value] = raw_trade[
-        enums.ExchangeConstantsOrderColumns.TYPE.value]
-    order_to_update[enums.ExchangeConstantsOrderColumns.AMOUNT.value] = raw_trade[
-        enums.ExchangeConstantsOrderColumns.AMOUNT.value]
-    order_to_update[enums.ExchangeConstantsOrderColumns.DATETIME.value] = raw_trade[
-        enums.ExchangeConstantsOrderColumns.DATETIME.value]
-    order_to_update[enums.ExchangeConstantsOrderColumns.SIDE.value] = raw_trade[
-        enums.ExchangeConstantsOrderColumns.SIDE.value]
-    order_to_update[enums.ExchangeConstantsOrderColumns.TAKER_OR_MAKER.value] = raw_trade[
-        enums.ExchangeConstantsOrderColumns.TAKER_OR_MAKER.value]
-    order_to_update[enums.ExchangeConstantsOrderColumns.PRICE.value] = raw_trade[
-        enums.ExchangeConstantsOrderColumns.PRICE.value]
+    order_to_update[enums.ExchangeConstantsOrderColumns.INFO.value] = raw_trade.get(
+        enums.ExchangeConstantsOrderColumns.INFO.value)
+    order_to_update[enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value] = raw_trade.get(
+        enums.ExchangeConstantsOrderColumns.ORDER.value)
+    order_to_update[enums.ExchangeConstantsOrderColumns.SYMBOL.value] = raw_trade.get(
+        enums.ExchangeConstantsOrderColumns.SYMBOL.value)
+    order_to_update[enums.ExchangeConstantsOrderColumns.TYPE.value] = raw_trade.get(
+        enums.ExchangeConstantsOrderColumns.TYPE.value)
+    order_to_update[enums.ExchangeConstantsOrderColumns.AMOUNT.value] = raw_trade.get(
+        enums.ExchangeConstantsOrderColumns.AMOUNT.value)
+    order_to_update[enums.ExchangeConstantsOrderColumns.DATETIME.value] = raw_trade.get(
+        enums.ExchangeConstantsOrderColumns.DATETIME.value)
+    order_to_update[enums.ExchangeConstantsOrderColumns.SIDE.value] = raw_trade.get(
+        enums.ExchangeConstantsOrderColumns.SIDE.value)
+    order_to_update[enums.ExchangeConstantsOrderColumns.TAKER_OR_MAKER.value] = raw_trade.get(
+        enums.ExchangeConstantsOrderColumns.TAKER_OR_MAKER.value)
+    order_to_update[enums.ExchangeConstantsOrderColumns.PRICE.value] = raw_trade.get(
+        enums.ExchangeConstantsOrderColumns.PRICE.value)
     order_to_update[enums.ExchangeConstantsOrderColumns.TIMESTAMP.value] = order_to_update.get(
         enums.ExchangeConstantsOrderColumns.TIMESTAMP.value,
         raw_trade[enums.ExchangeConstantsOrderColumns.TIMESTAMP.value])
     order_to_update[enums.ExchangeConstantsOrderColumns.STATUS.value] = enums.OrderStatus.FILLED.value
-    order_to_update[enums.ExchangeConstantsOrderColumns.FILLED.value] = raw_trade[
-        enums.ExchangeConstantsOrderColumns.AMOUNT.value]
-    order_to_update[enums.ExchangeConstantsOrderColumns.COST.value] = raw_trade[
-        enums.ExchangeConstantsOrderColumns.COST.value]
+    order_to_update[enums.ExchangeConstantsOrderColumns.FILLED.value] = raw_trade.get(
+        enums.ExchangeConstantsOrderColumns.AMOUNT.value)
+    order_to_update[enums.ExchangeConstantsOrderColumns.COST.value] = raw_trade.get(
+        enums.ExchangeConstantsOrderColumns.COST.value)
     order_to_update[enums.ExchangeConstantsOrderColumns.REMAINING.value] = 0
     order_to_update[
         enums.ExchangeConstantsOrderColumns.FEE.value
-    ] = raw_trade[enums.ExchangeConstantsOrderColumns.FEE.value]
+    ] = raw_trade.get(enums.ExchangeConstantsOrderColumns.FEE.value)
     return order_to_update
 
 
@@ -387,3 +408,26 @@ def apply_trades_fees(raw_order, raw_trades_by_exchange_order_id):
                 trade[enums.ExchangeConstantsOrderColumns.FEE.value][
                     enums.FeePropertyColumns.EXCHANGE_ORIGINAL_COST.value]
         raw_order[enums.ExchangeConstantsOrderColumns.FEE.value] = order_fee
+
+
+def get_common_traded_quote(exchange_manager) -> typing.Union[str, None]:
+    quote = None
+    for symbol in exchange_manager.exchange_config.traded_symbols:
+        if quote is None:
+            quote = symbol.quote
+        elif quote != symbol.quote:
+            return None
+    return quote
+
+
+def get_associated_symbol(exchange_manager, asset: str, target_asset: str) -> (typing.Union[str, None], bool):
+    symbol = common_symbols.merge_currencies(asset, target_asset)
+    is_reversed_symbol = False
+    if symbol not in exchange_manager.client_symbols:
+        # try reversed
+        reversed_symbol = common_symbols.merge_currencies(target_asset, asset)
+        if reversed_symbol not in exchange_manager.client_symbols:
+            return None, is_reversed_symbol
+        symbol = reversed_symbol
+        is_reversed_symbol = True
+    return symbol, is_reversed_symbol

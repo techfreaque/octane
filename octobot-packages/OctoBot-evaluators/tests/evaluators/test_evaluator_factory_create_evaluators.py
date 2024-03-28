@@ -18,6 +18,7 @@ from mock import patch
 import octobot_evaluators.evaluators.evaluator_factory as evaluator_factory
 from octobot_commons.enums import TimeFrames
 import octobot_commons.symbols
+import octobot_commons.tentacles_management as tentacles_management
 
 
 # All test coroutines will be treated as marked.
@@ -204,11 +205,12 @@ async def _mocked_create_evaluator(evaluator_class,
                                    relevant_evaluators=None,
                                    all_symbols_by_crypto_currencies=None,
                                    time_frames=None,
-                                   real_time_time_frames=None):
+                                   real_time_time_frames=None,
+                                   evaluator_configuration=None):
     return evaluator_class(cryptocurrency, cryptocurrency_name, symbol, time_frame, all_symbols_by_crypto_currencies)
 
 
-class EvaluatorWildCard:
+class EvaluatorWildCard(tentacles_management.AbstractTentacle):
     def __init__(self, cryptocurrency, cryptocurrency_name, symbol, time_frame, all_symbols_by_crypto_currencies):
         self.cryptocurrency = cryptocurrency
         self.cryptocurrency_name = cryptocurrency_name

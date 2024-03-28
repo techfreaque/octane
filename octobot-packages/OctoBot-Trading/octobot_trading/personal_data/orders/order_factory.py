@@ -16,7 +16,6 @@
 import octobot_trading.personal_data as personal_data
 import octobot_trading.enums as enums
 import octobot_trading.constants as constants
-import octobot_trading.storage.orders_storage as orders_storage
 
 
 def create_order_from_raw(trader, raw_order):
@@ -24,9 +23,13 @@ def create_order_from_raw(trader, raw_order):
     return create_order_from_type(trader, order_type)
 
 
-def create_order_instance_from_raw(trader, raw_order, force_open_or_pending_creation=False):
+def create_order_instance_from_raw(
+    trader, raw_order, force_open_or_pending_creation=False, has_just_been_created=False
+):
     order = create_order_from_raw(trader, raw_order)
     order.update_from_raw(raw_order)
+    if has_just_been_created:
+        order.register_broker_applied_if_enabled()
     if force_open_or_pending_creation \
             and order.status not in (enums.OrderStatus.OPEN, enums.OrderStatus.PENDING_CREATION):
         order.status = enums.OrderStatus.OPEN
@@ -120,10 +123,10 @@ def create_order_from_dict(trader, order_dict):
     )
 
 
-async def create_order_from_order_storage_details(order_storage_details, exchange_manager, pending_groups):
+async def create_order_from_order_storage_details(order_storage_details, exchange_manager, pending_groups: dict):
     order = create_order_from_dict(
         exchange_manager.trader,
-        order_storage_details[orders_storage.OrdersStorage.ORIGIN_VALUE_KEY]
+        order_storage_details[constants.STORAGE_ORIGIN_VALUE]
     )
     order.update_from_storage_order_details(order_storage_details)
     await personal_data.create_orders_storage_related_elements(

@@ -16,10 +16,40 @@
 import aiofiles
 import os
 import os.path as path
+import hashlib
+import datetime
 import shutil
 
+import octobot_commons.logging as commons_logging
 import octobot_tentacles_manager.constants as constants
 
+
+def get_file_creation_time(file_path) -> str:
+    try:
+        return datetime.datetime.utcfromtimestamp(os.path.getctime(file_path)).isoformat()
+    except Exception as err:
+        commons_logging.get_logger("tentacles_fetching").exception(
+            err, True, f"Error when computing {file_path} creation date: {err}"
+        )
+    return ""
+
+
+async def log_tentacles_file_details(tentacles_file, last_modified):
+    try:
+        if path.isfile(tentacles_file):
+            async with aiofiles.open(tentacles_file, "rb") as file:
+                file_hash = hashlib.sha256(await file.read()).hexdigest()
+            commons_logging.get_logger("tentacles_fetching").info(
+                f"Tentacles package {tentacles_file if isinstance(tentacles_file, str) else tentacles_file.name}: "
+                f"last_modified: {last_modified}, file_hash: {file_hash}"
+            )
+        elif path.isdir(tentacles_file):
+            for entry in os.scandir(tentacles_file):
+                await log_tentacles_file_details(entry, last_modified)
+    except Exception as err:
+        commons_logging.get_logger("tentacles_fetching").exception(
+            err, True, f"Error when computing {tentacles_file} file details: {err}"
+        )
 
 async def find_or_create(path_to_create, is_directory=True, file_content=""):
     if not path.exists(path_to_create):

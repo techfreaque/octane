@@ -190,9 +190,9 @@ class ScriptedEvaluator(evaluator.AbstractEvaluator):
             self.logger.debug(f"Script execution aborted: {e}")
             self.eval_note = commons_constants.DO_NOT_CACHE
         except ImportError:
-            self.logger.exception(f"Error when importing octobot-trading")
+            self.logger.error(f"Error when importing octobot-trading")
         except Exception as e:
-            self.logger.exception(f"Error when calling evaluation script: {e}", True, e)
+            self.logger.exception(e, True, f"Error when calling evaluation script: {e}")
 
     async def _pre_script_call(self, context):
         try:

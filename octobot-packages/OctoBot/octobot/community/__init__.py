@@ -30,6 +30,14 @@ from octobot.community.models import (
     CommunitySupports,
     CommunityDonation,
     StartupInfo,
+    StrategyData,
+)
+from octobot.community.supabase_backend import (
+    PostgresFunctions,
+    SyncConfigurationStorage,
+    ASyncConfigurationStorage,
+    AuthenticatedAsyncSupabaseClient,
+    CommunitySupabaseClient,
 )
 
 from octobot.community import community_analysis
@@ -66,7 +74,6 @@ from octobot.community.graphql_requests import (
 from octobot.community.feeds import (
     AbstractFeed,
     CommunityWSFeed,
-    CommunityMQTTFeed,
     community_feed_factory,
 )
 from octobot.community.errors_upload import (
@@ -99,6 +106,12 @@ __all__ = [
     "Error",
     "ErrorsUploader",
     "StartupInfo",
+    "StrategyData",
+    "PostgresFunctions",
+    "SyncConfigurationStorage",
+    "ASyncConfigurationStorage",
+    "AuthenticatedAsyncSupabaseClient",
+    "CommunitySupabaseClient",
     "select_startup_info_query",
     "select_bot_query",
     "select_bots_query",
@@ -112,6 +125,5 @@ __all__ = [
     "upsert_historical_bot_portfolio_query",
     "AbstractFeed",
     "CommunityWSFeed",
-    "CommunityMQTTFeed",
     "community_feed_factory",
 ]

@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.10] - 2023-02-13
+### Added
+- API: register_extra_tentacle_data
+
+## [2.9.9] - 2023-01-18
+### Updated
+- tentacles: log url on fetching error
+
+## [2.9.8] - 2023-01-10
+### Updated
+- tentacles: log artifact modification date and hash
+
+## [2.9.7] - 2023-01-09
+### Updated
+- dependencies
+
+## [2.9.6] - 2023-12-04
+### Added
+- API: fill_with_installed_tentacles
+
+## [2.9.5] - 2023-09-15
+### Updated
+- Config: improve config save
+
+## [2.9.4] - 2023-08-22
+### Added
+- API: ensure_tentacle_info
+
+## [2.9.3] - 2023-08-05
+### Added
+- API: set_tentacle_config_proxy context manager
+
+## [2.9.2] - 2023-07-23
+### Added
+- API: set_tentacle_config_proxy
+### Updated
+- TentaclesSetupConfiguration#from_activated_tentacles_classes: accept tentacles classes as str
+
 ## [2.9.1] - 2023-05-05
 ### Fixed
 - Disable tentacles error

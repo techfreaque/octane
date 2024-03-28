@@ -34,7 +34,3 @@ class Bitget(exchanges.Exchange):
         params = super().get_orders_parameters(params)
         params["clientOrderId"] = self._generate_order_id()
         return super().get_orders_parameters(params)
-
-    async def _inner_is_valid_account(self) -> (bool, str):
-        # Nothing to do
-        return await super()._inner_is_valid_account()

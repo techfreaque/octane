@@ -25,6 +25,8 @@ import octobot_commons.enums as common_enums
 import octobot_commons.logging as logging
 import octobot_commons.databases as databases
 import octobot_commons.configuration as commons_configuration
+import octobot_commons.asyncio_tools as asyncio_tools
+
 import octobot_trading.enums as enums
 import octobot_trading.constants as constants
 import octobot_trading.errors as errors
@@ -47,6 +49,7 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
     }
     CONFIG_INIT_TIMEOUT = 1 * common_constants.MINUTE_TO_SECONDS    # let time for orders to be fetched before
     # declaring timeout at first trigger
+    PRODUCER_LOCKS_BY_EXCHANGE_ID = {}  # use to identify exchange-wide actions
     AVAILABLE_API_ACTIONS = []
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
@@ -89,6 +92,10 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
         self._is_ready_to_trade = None
         self.on_reload_config()
 
+        # cleared (awaitable) when inside self.trading_mode_trigger
+        self._is_trigger_completed = asyncio.Event()
+        self._is_trigger_completed.set()
+
     def on_reload_config(self):
         """
         Called at constructor and after the associated trading mode's reload_config.
@@ -121,39 +128,53 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
 
     # noinspection PyArgumentList
     async def start(self) -> None:
-        self._is_ready_to_trade = asyncio.Event()
+        self._is_ready_to_trade = self._is_ready_to_trade or asyncio.Event()
         try:
             await self.inner_start()
         finally:
-            self.logger.debug("Ready to trade")
+            self.logger.debug(
+                f"Ready to trade on {self.exchange_manager.exchange_name}, symbol: {self.trading_mode.symbol}"
+            )
             self._is_ready_to_trade.set()
+
+    def force_is_ready_to_trade(self):
+        if self._is_ready_to_trade is None:
+            self._is_ready_to_trade = asyncio.Event()
+        self._is_ready_to_trade.set()
+
+    def unset_is_ready_to_trade(self):
+        if self._is_ready_to_trade is None:
+            self._is_ready_to_trade = asyncio.Event()
+        if self._is_ready_to_trade.is_set():
+            self._is_ready_to_trade.clear()
 
     async def inner_start(self) -> None:
         """
         Start trading mode channels subscriptions
         """
         registration_topics = self.get_channels_registration()
-        trigger_time_frames = self.get_trigger_time_frames()
-        currency_filter = self.trading_mode.cryptocurrency \
-            if self.trading_mode.cryptocurrency is not None and not self.is_cryptocurrency_wildcard() \
-            else common_constants.CONFIG_WILDCARD
-        symbol_filter = self.trading_mode.symbol \
-            if self.trading_mode.symbol is not None and not self.is_symbol_wildcard() \
-            else common_constants.CONFIG_WILDCARD
-        self.time_frame_filter = self.trading_mode.time_frame \
-            if self.trading_mode.time_frame is not None and self.is_time_frame_wildcard() \
-            else [tf.value
-                  for tf in self.exchange_manager.exchange_config.get_relevant_time_frames()
-                  if tf.value in trigger_time_frames or
-                  trigger_time_frames == common_constants.CONFIG_WILDCARD]
-        if trigger_time_frames != common_constants.CONFIG_WILDCARD and \
-           len(self.time_frame_filter) < len(trigger_time_frames):
-            missing_time_frames = [tf for tf in trigger_time_frames if tf not in self.time_frame_filter]
-            self.logger.error(f"Missing timeframe to satisfy {trigger_time_frames} required time frames. "
-                              f"Please activate those timeframes {missing_time_frames}")
-        self.matrix_id = exchanges.Exchanges.instance().get_exchange(self.exchange_manager.exchange_name,
-                                                                     self.exchange_manager.id).matrix_id
-        await self._subscribe_to_registration_topic(registration_topics, currency_filter, symbol_filter)
+        if registration_topics:
+            trigger_time_frames = self.get_trigger_time_frames()
+            currency_filter = self.trading_mode.cryptocurrency \
+                if self.trading_mode.cryptocurrency is not None and not self.is_cryptocurrency_wildcard() \
+                else common_constants.CONFIG_WILDCARD
+            symbol_filter = self.trading_mode.symbol \
+                if self.trading_mode.symbol is not None and not self.is_symbol_wildcard() \
+                else common_constants.CONFIG_WILDCARD
+            self.time_frame_filter = self.trading_mode.time_frame \
+                if self.trading_mode.time_frame is not None and self.is_time_frame_wildcard() \
+                else [tf.value
+                      for tf in self.exchange_manager.exchange_config.get_relevant_time_frames()
+                      if tf.value in trigger_time_frames or
+                      trigger_time_frames == common_constants.CONFIG_WILDCARD]
+            if trigger_time_frames != common_constants.CONFIG_WILDCARD and \
+               len(self.time_frame_filter) < len(trigger_time_frames):
+                missing_time_frames = [tf for tf in trigger_time_frames if tf not in self.time_frame_filter]
+                self.logger.error(f"Missing timeframe to satisfy {trigger_time_frames} required time frames. "
+                                  f"Please activate those timeframes {missing_time_frames}")
+            self.matrix_id = exchanges.Exchanges.instance().get_exchange(self.exchange_manager.exchange_name,
+                                                                         self.exchange_manager.id).matrix_id
+            await self._subscribe_to_registration_topic(registration_topics, currency_filter, symbol_filter)
         await self.init_user_inputs(False)
         await self._wait_for_bot_init(self.CONFIG_INIT_TIMEOUT)
 
@@ -241,6 +262,7 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
                     await exchanges_channel.get_chan(channel_name, self.exchange_manager.id).remove_consumer(consumer)
                 except (KeyError, ImportError):
                     self.logger.error(f"Can't unregister {channel_name} channel on {self.exchange_name}")
+            self.delete_producer_exchange_wide_lock(self.exchange_manager)
         self.flush()
 
     def flush(self) -> None:
@@ -294,7 +316,7 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
             return
         await self.trigger(matrix_id, cryptocurrency, symbol, time_frame, trigger_source)
 
-    async def trigger(self, matrix_id: str = None, cryptocurrency: str = None, symbol: str = None, time_frame = None,
+    async def trigger(self, matrix_id: str = None, cryptocurrency: str = None, symbol: str = None, time_frame=None,
                       trigger_source: str = common_enums.TriggerSource.UNDEFINED.value) -> None:
         """
         Called by finalize and MANUAL_TRIGGER user command. Override if necessary
@@ -310,13 +332,20 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
             self.logger.exception(
                 e,
                 True,
-                f"Ignored signal: "
+                f"Ignored signal: exchange: {self.exchange_manager.exchange_name} symbol: {symbol}, "
+                f"time_frame: {time_frame}. "
                 f"Trading mode is not yet ready to trade, OctoBot is still initializing and fetching required data."
             )
 
+    async def wait_for_trigger_completion(self, timeout):
+        if self._is_trigger_completed.is_set():
+            return
+        await asyncio.wait_for(self._is_trigger_completed.wait(), timeout=timeout)
+
     @contextlib.asynccontextmanager
-    async def trading_mode_trigger(self):
+    async def trading_mode_trigger(self, skip_health_check=False):
         try:
+            self._is_trigger_completed.clear()
             if not self._is_ready_to_trade.is_set():
                 if self.exchange_manager.is_backtesting:
                     raise asyncio.TimeoutError(f"Trading mode producer has to be started in backtesting")
@@ -326,6 +355,8 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
                 except asyncio.TimeoutError as e:
                     raise errors.InitializingError() from e
                 self.logger.debug("Order initialized")
+            if self.trading_mode.is_health_check_required() and not skip_health_check:
+                await self.trading_mode.health_check([], {})
             yield
         except errors.InitializingError:
             raise
@@ -338,6 +369,7 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
         except Exception as e:
             self.logger.exception(e, True, f"Error when calling trading mode: {e}")
         finally:
+            self._is_trigger_completed.set()
             await self.post_trigger()
 
     async def post_trigger(self):
@@ -370,16 +402,28 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
         """
         raise NotImplementedError("get_should_cancel_loaded_orders not implemented")
 
-    async def cancel_symbol_open_orders(self, symbol) -> bool:
+    async def cancel_symbol_open_orders(self, symbol, side=None, tag=None, exchange_order_ids=None) -> bool:
         """
-        Cancel all trader open orders
+        Cancel all symbol open orders
         """
         cancel_loaded_orders = self.get_should_cancel_loaded_orders()
-
+        cancelled = False
+        failed_to_cancel = False
         if self.exchange_manager.trader.is_enabled:
-            return (await self.exchange_manager.trader.cancel_open_orders(
-                symbol, cancel_loaded_orders, emit_trading_signals=self.trading_mode.should_emit_trading_signal()))[0]
-        return True
+            for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(
+                symbol=symbol, tag=tag
+            ):
+                if (
+                    not (order.is_cancelled() or order.is_closed())
+                    and (cancel_loaded_orders or order.is_from_this_octobot)
+                    and (side is None or (side is order.side))
+                    and (exchange_order_ids is None or (order.exchange_order_id in exchange_order_ids))
+                ):
+                    if await self.trading_mode.cancel_order(order):
+                        cancelled = True
+                    else:
+                        failed_to_cancel = True
+        return cancelled and not failed_to_cancel
 
     def all_databases(self):
         provider = databases.RunDatabasesProvider.instance()
@@ -409,12 +453,21 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
             self.logger.error(f"Initialization took more than {timeout} seconds")
         return False
 
-    async def _wait_for_bot_init(self, timeout) -> bool:
+    async def _wait_for_bot_init(self, timeout, extra_topics: list=None) -> bool:
         try:
-            self.logger.debug("Trading mode start complete. Now waiting for orders full initialisation.")
-            await util.wait_for_topic_init(self.exchange_manager, timeout,
-                                           common_enums.InitializationEventExchangeTopics.ORDERS.value)
-            self.logger.debug("Trading mode start complete. Orders initialisation completed.")
+            topics = [
+                common_enums.InitializationEventExchangeTopics.BALANCE.value,
+                common_enums.InitializationEventExchangeTopics.ORDERS.value
+            ] + (extra_topics if extra_topics else [])
+            if self.trading_mode.REQUIRE_TRADES_HISTORY:
+                topics.append(common_enums.InitializationEventExchangeTopics.TRADES.value)
+            for topic in topics:
+                self.logger.debug(f"Trading mode [{self.exchange_manager.exchange_name}] start complete. "
+                                  f"Now waiting for {topic} full initialisation.")
+                await util.wait_for_topic_init(self.exchange_manager, timeout, topic)
+            self.logger.debug(
+                f"Trading mode requirements init complete: {', '.join(t for t in topics)} initialisation completed."
+            )
             return True
         except (asyncio.TimeoutError, concurrent.futures.TimeoutError):
             self.logger.error(f"Initialization took more than {timeout} seconds")
@@ -455,3 +508,19 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
                 await util.wait_for_topic_init(self.exchange_manager, self.CONFIG_INIT_TIMEOUT,
                                                common_enums.InitializationEventExchangeTopics.CONTRACTS.value)
             await script_keywords.set_leverage(context, await script_keywords.user_select_leverage(context))
+
+    @classmethod
+    def producer_exchange_wide_lock(cls, exchange_manager) -> asyncio_tools.RLock():
+        try:
+            return cls.PRODUCER_LOCKS_BY_EXCHANGE_ID[exchange_manager.id]
+        except KeyError:
+            lock = asyncio_tools.RLock()
+            cls.PRODUCER_LOCKS_BY_EXCHANGE_ID[exchange_manager.id] = lock
+            return lock
+
+    @classmethod
+    def delete_producer_exchange_wide_lock(cls, exchange_manager):
+        if exchange_manager.id in cls.PRODUCER_LOCKS_BY_EXCHANGE_ID:
+            cls.PRODUCER_LOCKS_BY_EXCHANGE_ID.pop(
+                exchange_manager.id, None
+            )

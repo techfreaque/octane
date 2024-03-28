@@ -35,13 +35,12 @@ DOTENV_PATH = os.getenv("DOTENV_PATH", os.path.curdir)
 dotenv.load_dotenv(os.path.join(DOTENV_PATH, ".env"), verbose=False)
 
 # OctoBot urls
-OCTOBOT_WEBSITE_URL = os.getenv("OCTOBOT_ONLINE_URL", "https://www.octobot.online")
-OCTOBOT_DOCS_URL = os.getenv("DOCS_OCTOBOT_ONLINE_URL", "https://www.octobot.info")
-EXCHANGES_DOCS_URL = os.getenv("DOCS_OCTOBOT_ONLINE_URL", "https://exchanges.octobot.info/")
-DEVELOPER_DOCS_URL = os.getenv("DOCS_OCTOBOT_ONLINE_URL", "https://developer.octobot.info/")
-OCTOBOT_ONLINE = os.getenv("TENTACLES_OCTOBOT_ONLINE_URL", "https://static.octobot.online")
-OCTOBOT_FEEDBACK = os.getenv("FEEDBACK_OCTOBOT_ONLINE_URL", "https://feedback.octobot.online/")
-OCTOBOT_CLOUD_URL = os.getenv("OCTOBOT_CLOUD_URL", "https://octobot.cloud/")
+OCTOBOT_WEBSITE_URL = os.getenv("OCTOBOT_ONLINE_URL", "https://www.octobot.cloud")
+OCTOBOT_DOCS_URL = os.getenv("DOCS_OCTOBOT_ONLINE_URL", "https://www.octobot.cloud/en/guides")
+EXCHANGES_DOCS_URL = os.getenv("DOCS_OCTOBOT_ONLINE_URL", "https://www.octobot.cloud/en/guides/exchanges/")
+DEVELOPER_DOCS_URL = os.getenv("DOCS_OCTOBOT_ONLINE_URL", "https://www.octobot.cloud/en/guides/developers/")
+OCTOBOT_ONLINE = os.getenv("TENTACLES_OCTOBOT_ONLINE_URL", "octobot.online")
+OCTOBOT_FEEDBACK = os.getenv("FEEDBACK_OCTOBOT_ONLINE_URL", "https://feedback.octobot.cloud/")
 TENTACLES_REPOSITORY = "tentacles"
 BETA_TENTACLES_REPOSITORY = "dev-tentacles"
 OFFICIALS = "officials"
@@ -50,6 +49,7 @@ TENTACLE_PACKAGE_NAME = "base"
 BETA_TENTACLE_PACKAGE_NAME = "beta"
 TENTACLE_PACKAGES = "packages"
 COMPILED_TENTACLE_CATEGORY = "extra"
+DEFAULT_LOCALE = "en"
 
 OCTOBOT_DONATION_URL = "https://forms.gle/Bagagc7dyjJGDT1t9"
 OCTOBOT_FEEDBACK_FORM_URL = "https://goo.gl/forms/vspraniXPY7rvtKN2"
@@ -58,44 +58,32 @@ AUTOMATION_FEEDBACK_FORM_ID = "n9NKMV"
 WELCOME_FEEDBACK_FORM_ID = os.getenv("WELCOME_FEEDBACK_FORM_ID", None)
 
 COMMUNITY_FEED_CURRENT_MINIMUM_VERSION = "1.0.0"
-COMMUNITY_FEED_DEFAULT_TYPE = octobot.enums.CommunityFeedType.MQTTFeed
+COMMUNITY_FEED_DEFAULT_TYPE = octobot.enums.CommunityFeedType.SupabaseFeed
 
 # production env SHOULD ONLY BE USED THROUGH CommunityIdentifiersProvider
-OCTOBOT_COMMUNITY_URL = os.getenv("COMMUNITY_SERVER_URL", "https://www.octobot.cloud")
-OCTOBOT_COMMUNITY_FEED_URL = os.getenv("OCTOBOT_COMMUNITY_MQTT_URL", "iot.fr-par.scw.cloud")
-COMMUNITY_BACKEND_API_URL = os.getenv("COMMUNITY_BACKEND_API_URL", "https://astro-lab.swell.store/api")
-OCTOBOT_COMMUNITY_RECOVER_PASSWORD_URL = f"{OCTOBOT_COMMUNITY_URL}/auth/forgot-password"
-COMMUNITY_BACKEND_ACCOUNT_URL = f"{COMMUNITY_BACKEND_API_URL}/account"
-COMMUNITY_BACKEND_AUTH_URL = f"{COMMUNITY_BACKEND_ACCOUNT_URL}/login"
-COMMUNITY_BACKEND_PUBLIC_TOKEN = os.getenv("COMMUNITY_BACKEND_PUBLIC_TOKEN", "pk_bw3xUzAtCRyy0HcgKkuY8vQha5qN5Amd")
-COMMUNITY_MONGO_REALM_URL = os.getenv("COMMUNITY_MONGO_REALM_URL", "https://realm.mongodb.com/api/client/v2.0")
-COMMUNITY_MONGO_APP_ID = os.getenv("COMMUNITY_MONGO_APP_ID", "astrolab-uprcv")
-COMMUNITY_GQL_AUTH_URL = f"{COMMUNITY_MONGO_REALM_URL}/app/{COMMUNITY_MONGO_APP_ID}/auth/providers/api-key/login"
-COMMUNITY_GQL_BACKEND_API_URL = os.getenv(
-    "COMMUNITY_GQL_BACKEND_API_URL",
-    f"https://realm.mongodb.com/api/client/v2.0/app/{COMMUNITY_MONGO_APP_ID}/graphql"
-)
+OCTOBOT_COMMUNITY_LANDING_URL = os.getenv("COMMUNITY_SERVER_URL", "https://octobot.cloud")
+OCTOBOT_COMMUNITY_API_URL = os.getenv("COMMUNITY_SERVER_URL", f"{OCTOBOT_COMMUNITY_LANDING_URL}/api/community")
+OCTOBOT_COMMUNITY_URL = os.getenv("COMMUNITY_SERVER_URL", "https://app.octobot.cloud")
+OCTOBOT_COMMUNITY_RECOVER_PASSWORD_URL = OCTOBOT_COMMUNITY_URL
+# default env
+COMMUNITY_BACKEND_URL = os.getenv("COMMUNITY_BACKEND_URL", "https://nwhpvrguwcihhizrnyoe.supabase.co")
+COMMUNITY_BACKEND_KEY = os.getenv("COMMUNITY_BACKEND_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53aHB2cmd1d2NpaGhpenJueW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTU2NDQxMDcsImV4cCI6MjAxMTIyMDEwN30.AILcgv0l6hl_0IUEPlWh1wiu9RIpgrkGZGERM5uXftE")
 
 # staging env SHOULD ONLY BE USED THROUGH CommunityIdentifiersProvider
-STAGING_OCTOBOT_COMMUNITY_URL = os.getenv("COMMUNITY_SERVER_URL", "https://beta.octobot.cloud/")
-STAGING_OCTOBOT_COMMUNITY_FEED_URL = os.getenv("OCTOBOT_COMMUNITY_MQTT_URL", "iot.fr-par.scw.cloud")
-STAGING_COMMUNITY_BACKEND_API_URL = os.getenv("COMMUNITY_BACKEND_API_URL", "https://astro-lab-staging.swell.store/api")
-STAGING_COMMUNITY_RECOVER_PASSWORD_URL = f"{STAGING_OCTOBOT_COMMUNITY_URL}/auth/forgot-password"
-STAGING_COMMUNITY_BACKEND_ACCOUNT_URL = f"{STAGING_COMMUNITY_BACKEND_API_URL}/account"
-STAGING_COMMUNITY_BACKEND_AUTH_URL = f"{STAGING_COMMUNITY_BACKEND_ACCOUNT_URL}/login"
-STAGING_COMMUNITY_BACKEND_PUBLIC_TOKEN = os.getenv("COMMUNITY_BACKEND_PUBLIC_TOKEN",
-                                                   "pk_akVFLvtDFvZlmTVyJwz9Z1N0TQQlycOh")
-STAGING_COMMUNITY_MONGO_REALM_URL = os.getenv("COMMUNITY_MONGO_REALM_URL", "https://realm.mongodb.com/api/client/v2.0")
-STAGING_COMMUNITY_MONGO_APP_ID = os.getenv("COMMUNITY_MONGO_APP_ID", "astrolab-fsuua")
-STAGING_COMMUNITY_GQL_AUTH_URL = f"{STAGING_COMMUNITY_MONGO_REALM_URL}/app/{STAGING_COMMUNITY_MONGO_APP_ID}/" \
-                                 f"auth/providers/api-key/login"
-STAGING_COMMUNITY_GQL_BACKEND_API_URL = os.getenv(
-    "COMMUNITY_GQL_BACKEND_API_URL",
-    f"https://realm.mongodb.com/api/client/v2.0/app/{STAGING_COMMUNITY_MONGO_APP_ID}/graphql"
-)
+STAGING_OCTOBOT_COMMUNITY_LANDING_URL = os.getenv("COMMUNITY_SERVER_URL", "https://beta.octobot.cloud")
+STAGING_OCTOBOT_COMMUNITY_API_URL = os.getenv("COMMUNITY_SERVER_URL", f"{STAGING_OCTOBOT_COMMUNITY_LANDING_URL}/api/community")
+STAGING_OCTOBOT_COMMUNITY_URL = os.getenv("COMMUNITY_SERVER_URL", "https://app-beta.octobot.cloud/")
+STAGING_COMMUNITY_RECOVER_PASSWORD_URL = STAGING_OCTOBOT_COMMUNITY_URL
+STAGING_COMMUNITY_BACKEND_URL = os.getenv("COMMUNITY_BACKEND_URL", "https://wmfkgvgzokyzhvxowbyg.supabase.co")
+STAGING_COMMUNITY_BACKEND_KEY = os.getenv("COMMUNITY_BACKEND_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtZmtndmd6b2t5emh2eG93YnlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTE0NDA1MTEsImV4cCI6MjAwNzAxNjUxMX0.YZQl7LYgvnzO_Jizs0UKfPEaqPoV2EwhjunH8gime8o")
+
+# production env, ignored by CommunityIdentifiersProvider
+COMMUNITY_PRODUCTION_BACKEND_URL = os.getenv("COMMUNITY_PRODUCTION_BACKEND_URL", COMMUNITY_BACKEND_URL)
+COMMUNITY_PRODUCTION_BACKEND_KEY = os.getenv("COMMUNITY_PRODUCTION_BACKEND_KEY", COMMUNITY_BACKEND_KEY)
+
+UPLOAD_TRADING_STATS = os_util.parse_boolean_environment_var("UPLOAD_TRADING_STATS", "false")
 
 CONFIG_COMMUNITY = "community"
-CONFIG_COMMUNITY_TOKEN = "token"
 CONFIG_COMMUNITY_BOT_ID = "bot_id"
 CONFIG_COMMUNITY_ENVIRONMENT = "environment"
 USE_BETA_EARLY_ACCESS = os_util.parse_boolean_environment_var("USE_BETA_EARLY_ACCESS", "false")

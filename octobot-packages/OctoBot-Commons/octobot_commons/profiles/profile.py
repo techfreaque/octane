@@ -14,7 +14,6 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import json
 import copy
 import os
 import shutil
@@ -74,6 +73,7 @@ class Profile:
         self.complexity: enums.ProfileComplexity = enums.ProfileComplexity.MEDIUM
         self.risk: enums.ProfileRisk = enums.ProfileRisk.MODERATE
         self.profile_type: enums.ProfileType = enums.ProfileType.LIVE
+        self.extra_backtesting_time_frames = []
 
         self.config: dict = {}
 
@@ -82,8 +82,14 @@ class Profile:
         Reads a profile from self.path
         :return: self
         """
-        parsed_profile = json_util.read_file(self.config_file())
-        profile_config = parsed_profile.get(constants.CONFIG_PROFILE, {})
+        return self.from_dict(json_util.read_file(self.config_file()))
+
+    def from_dict(self, profile_dict: dict):
+        """
+        Reads a profile from the given dict
+        :return: self
+        """
+        profile_config = profile_dict.get(constants.CONFIG_PROFILE, {})
         self.profile_id = profile_config.get(constants.CONFIG_ID, str(uuid.uuid4()))
         self.name = profile_config.get(constants.CONFIG_NAME, "")
         self.description = profile_config.get(constants.CONFIG_DESCRIPTION, "")
@@ -103,8 +109,11 @@ class Profile:
         self.profile_type = enums.ProfileType(
             profile_config.get(constants.CONFIG_TYPE, enums.ProfileType.LIVE.value)
         )
-        self.config = parsed_profile[constants.PROFILE_CONFIG]
-        if self.avatar:
+        self.extra_backtesting_time_frames = profile_config.get(
+            constants.CONFIG_EXTRA_BACKTESTING_TIME_FRAMES, []
+        )
+        self.config = profile_dict[constants.PROFILE_CONFIG]
+        if self.avatar and self.path:
             avatar_path = os.path.join(self.path, self.avatar)
             if os.path.isfile(avatar_path):
                 self.avatar_path = avatar_path
@@ -169,8 +178,7 @@ class Profile:
         Saves the current profile configuration file
         :return: None
         """
-        with open(self.config_file(), "w") as profile_file:
-            json.dump(self.as_dict(), profile_file, indent=4, sort_keys=True)
+        json_util.safe_dump(self.as_dict(), self.config_file())
 
     def rename_folder(self, new_name, should_raise) -> str:
         """
@@ -242,9 +250,14 @@ class Profile:
                 constants.CONFIG_ORIGIN_URL: self.origin_url,
                 constants.CONFIG_READ_ONLY: self.read_only,
                 constants.CONFIG_IMPORTED: self.imported,
-                constants.CONFIG_COMPLEXITY: self.complexity.value,
-                constants.CONFIG_RISK: self.risk.value,
-                constants.CONFIG_TYPE: self.profile_type.value,
+                constants.CONFIG_COMPLEXITY: self.complexity.value
+                if self.complexity
+                else None,
+                constants.CONFIG_RISK: self.risk.value if self.risk else None,
+                constants.CONFIG_TYPE: self.profile_type.value
+                if self.profile_type
+                else None,
+                constants.CONFIG_EXTRA_BACKTESTING_TIME_FRAMES: self.extra_backtesting_time_frames,
             },
             constants.PROFILE_CONFIG: self.config,
         }

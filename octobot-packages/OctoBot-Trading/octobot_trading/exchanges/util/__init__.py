@@ -19,6 +19,10 @@ from octobot_trading.exchanges.util.exchange_market_status_fixer import (
     ExchangeMarketStatusFixer,
     is_ms_valid,
 )
+from octobot_trading.exchanges.util import symbol_details
+from octobot_trading.exchanges.util.symbol_details import (
+    SymbolDetails,
+)
 from octobot_trading.exchanges.util import exchange_util
 from octobot_trading.exchanges.util.exchange_util import (
     get_rest_exchange_class,
@@ -35,6 +39,8 @@ from octobot_trading.exchanges.util.exchange_util import (
     update_raw_order_from_raw_trade,
     is_missing_trading_fees,
     apply_trades_fees,
+    get_common_traded_quote,
+    get_associated_symbol,
     get_exchange_class_from_name,
     get_auto_filled_exchange_names,
     get_exchange_details,
@@ -50,6 +56,7 @@ from octobot_trading.exchanges.util.websockets_util import (
 __all__ = [
     "ExchangeMarketStatusFixer",
     "is_ms_valid",
+    "SymbolDetails",
     "get_rest_exchange_class",
     "get_order_side",
     "log_time_sync_error",
@@ -64,6 +71,8 @@ __all__ = [
     "update_raw_order_from_raw_trade",
     "is_missing_trading_fees",
     "apply_trades_fees",
+    "get_common_traded_quote",
+    "get_associated_symbol",
     "get_exchange_class_from_name",
     "get_auto_filled_exchange_names",
     "get_exchange_details",

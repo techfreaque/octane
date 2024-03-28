@@ -159,3 +159,13 @@ def is_time_frame(value):
         return True
     except ValueError:
         return False
+
+
+def get_last_timeframe_time(
+    time_frame: enums.TimeFrames, base_timestamp: float
+) -> float:
+    """
+    :return: the exact timestamp of the last give time_frame tick relatively to the given base_timestamp
+    """
+    tf_seconds = enums.TimeFramesMinutes[time_frame] * constants.MINUTE_TO_SECONDS
+    return base_timestamp - (base_timestamp % tf_seconds)

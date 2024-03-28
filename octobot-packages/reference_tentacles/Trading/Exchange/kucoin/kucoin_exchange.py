@@ -17,13 +17,13 @@ import asyncio
 import time
 import decimal
 import typing
+import ccxt
 
 import octobot_commons.logging as logging
 import octobot_trading.errors
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
-import octobot_trading.exchanges.connectors.ccxt.ccxt_client_util as ccxt_client_util
 import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
 import octobot_trading.enums as trading_enums
@@ -34,24 +34,30 @@ def _kucoin_retrier(f):
         for i in range(0, Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT):
             try:
                 return await f(*args, **kwargs)
-            except octobot_trading.errors.FailedRequest as e:
-                if Kucoin.INSTANT_RETRY_ERROR_CODE in str(e):
+            except octobot_trading.errors.FailedRequest:
+                rest_exchange = args[0]  # self
+                if Kucoin.INSTANT_RETRY_ERROR_CODE in rest_exchange.connector.client.last_http_response:
                     # should retry instantly, error on kucoin side
                     # see https://github.com/Drakkar-Software/OctoBot/issues/2000
                     logging.get_logger(Kucoin.get_name()).debug(
-                        f"{Kucoin.INSTANT_RETRY_ERROR_CODE} error on {f.__name__}(args={args} kwargs={kwargs}) "
+                        f"{Kucoin.INSTANT_RETRY_ERROR_CODE} error on {f.__name__}(args={args[1:]} kwargs={kwargs}) "
                         f"request, retrying now. Attempt {i+1} / {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT}."
                     )
                 else:
                     raise
         raise octobot_trading.errors.FailedRequest(
-            f"Failed request after {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT} retries due "
+            f"Failed Kucoin request after {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT} "
+            f"retries on {f.__name__}(args={args[1:]} kwargs={kwargs}) due "
             f"to {Kucoin.INSTANT_RETRY_ERROR_CODE} error code"
         )
     return wrapper
 
 
 class Kucoin(exchanges.RestExchange):
+    FIX_MARKET_STATUS = True
+    REMOVE_MARKET_STATUS_PRICE_LIMITS = True
+    ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE = True
+
     FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT = 5
     INSTANT_RETRY_ERROR_CODE = "429000"
     FUTURES_CCXT_CLASS_NAME = "kucoinfutures"
@@ -117,11 +123,73 @@ class Kucoin(exchanges.RestExchange):
             trading_enums.ExchangeTypes.FUTURE,
         ]
 
+    async def get_account_id(self, **kwargs: dict) -> str:
+        # It is currently impossible to fetch subaccounts account id, use a constant value to identify it.
+        # updated: 29/12/2023
+        try:
+            account_id = None
+            subaccount_id = None
+            sub_accounts = await self.connector.client.private_get_sub_accounts()
+            accounts = sub_accounts.get("data", {}).get("items", {})
+            has_subaccounts = bool(accounts)
+            for account in accounts:
+                if account["subUserId"]:
+                    subaccount_id = account["subName"]
+                else:
+                    # only subaccounts have a subUserId: if this condition is True, we are on the main account
+                    account_id = account["subName"]
+            if subaccount_id:
+                # there is at least a subaccount: ensure the current account is the main account as there is no way
+                # to know the id of the current account (only a list of existing accounts)
+                subaccount_api_key_details = await self.connector.client.private_get_sub_api_key(
+                    {"subName": subaccount_id}
+                )
+                if "data" not in subaccount_api_key_details or "msg" in subaccount_api_key_details:
+                    # subaccounts can't fetch other accounts data, if this is False, we are on a subaccount
+                    self.logger.error(
+                        f"kucoin api changed: it is now possible to call private_get_sub_accounts on subaccounts. "
+                        f"kucoin get_account_id has to be updated. "
+                        f"sub_accounts={sub_accounts} subaccount_api_key_details={subaccount_api_key_details}"
+                    )
+                    return constants.DEFAULT_ACCOUNT_ID
+            if has_subaccounts and account_id is None:
+                self.logger.error(
+                    f"kucoin api changed: can't fetch master account account_id. "
+                    f"kucoin get_account_id has to be updated."
+                    f"sub_accounts={sub_accounts}"
+                )
+                account_id = constants.DEFAULT_ACCOUNT_ID
+            # we are on the master account
+            return account_id or constants.DEFAULT_ACCOUNT_ID
+        except ccxt.AuthenticationError:
+            # when api key is wrong
+            raise
+        except ccxt.ExchangeError as err:
+            # ExchangeError('kucoin This user is not a master user')
+            if "not a master user" not in str(err):
+                self.logger.error(f"kucoin api changed: subaccount error on account id is now: '{err}' "
+                                  f"instead of 'kucoin This user is not a master user'")
+            # raised when calling this endpoint with a subaccount
+            return constants.DEFAULT_SUBACCOUNT_ID
+
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        # on futures, market status gives limits in contracts, convert it to currency units
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
-                                            remove_price_limits=True,
-                                            adapt_for_contract_size=True)
+        """
+        local override to take "minFunds" into account
+        "minFunds	the minimum spot and margin trading amounts" https://docs.kucoin.com/#get-symbols-list
+        """
+        market_status = super().get_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+        min_funds = market_status.get(ccxt_constants.CCXT_INFO, {}).get("minFunds")
+        if min_funds is not None:
+            # should only be for spot and margin, use it if available anyway
+            limit_costs = market_status[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
+                trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_COST.value
+            ]
+            # use max (most restrictive) value
+            limit_costs[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_COST_MIN.value] = max(
+                limit_costs[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS_COST_MIN.value],
+                float(min_funds)
+            )
+        return market_status
 
     @_kucoin_retrier
     async def get_symbol_prices(self, symbol, time_frame, limit: int = 200, **kwargs: dict):
@@ -141,6 +209,19 @@ class Kucoin(exchanges.RestExchange):
     async def get_order_book(self, symbol, limit=20, **kwargs):
         # override default limit to be kucoin complient
         return super().get_order_book(symbol, limit=limit, **kwargs)
+
+    @_kucoin_retrier
+    async def get_order_book(self, symbol, limit=20, **kwargs):
+        # override default limit to be kucoin complient
+        return super().get_order_book(symbol, limit=limit, **kwargs)
+
+    @_kucoin_retrier
+    async def get_price_ticker(self, symbol: str, **kwargs: dict) -> typing.Optional[dict]:
+        return await super().get_price_ticker(symbol, **kwargs)
+
+    @_kucoin_retrier
+    async def get_all_currencies_price_ticker(self, **kwargs: dict) -> typing.Optional[dict[str, dict]]:
+        return await super().get_all_currencies_price_ticker(**kwargs)
 
     def should_log_on_ddos_exception(self, exception) -> bool:
         """
@@ -200,17 +281,23 @@ class Kucoin(exchanges.RestExchange):
 
     @_kucoin_retrier
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
+        if limit is None:
+            # default is 50, The maximum cannot exceed 1000
+            # https://www.kucoin.com/docs/rest/futures-trading/orders/get-order-list
+            limit = 200
         regular_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
-        # add untriggered stop orders (different api endpoint)
-        kwargs["stop"] = True
-        stop_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
+        stop_orders = []
+        if self.exchange_manager.is_future:
+            # stop ordes are futures only for now
+            # add untriggered stop orders (different api endpoint)
+            kwargs["stop"] = True
+            stop_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
         return regular_orders + stop_orders
 
     @_kucoin_retrier
     async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
         return await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
 
-    @_kucoin_retrier
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
@@ -222,6 +309,23 @@ class Kucoin(exchanges.RestExchange):
                                           price=price, stop_price=stop_price,
                                           side=side, current_price=current_price,
                                           reduce_only=reduce_only, params=params)
+
+    # add retried to _create_order_with_retry to avoid catching error in self._order_operation context manager
+    @_kucoin_retrier
+    async def _create_order_with_retry(self, order_type, symbol, quantity: decimal.Decimal,
+                                       price: decimal.Decimal, stop_price: decimal.Decimal,
+                                       side: trading_enums.TradeOrderSide,
+                                       current_price: decimal.Decimal,
+                                       reduce_only: bool, params) -> dict:
+        return await super()._create_order_with_retry(
+            order_type=order_type, symbol=symbol, quantity=quantity, price=price,
+            stop_price=stop_price, side=side, current_price=current_price,
+            reduce_only=reduce_only, params=params
+        )
+
+    @_kucoin_retrier
+    async def get_my_recent_trades(self, symbol: str = None, since: int = None, limit: int = None, **kwargs: dict) -> list:
+        return await super().get_my_recent_trades(symbol=symbol, since=since, limit=limit, **kwargs)
 
     async def get_position(self, symbol: str, **kwargs: dict) -> dict:
         """
@@ -312,17 +416,19 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
     def fix_order(self, raw, symbol=None, **kwargs):
         raw_order_info = raw[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
         fixed = super().fix_order(raw, **kwargs)
-        if self.connector.exchange_manager.is_future \
-                and fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is not None:
-            # amount is in contact, multiply by contract value to get the currency amount (displayed to the user)
-            contract_size = self.connector.get_contract_size(symbol)
-            fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
-                fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] * float(contract_size)
-        if fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] is not None:
+        self._ensure_fees(fixed)
+        if self.connector.exchange_manager.is_future and \
+                fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] is not None:
             fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] = \
                 fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] * \
                 float(raw_order_info.get(self.KUCOIN_LEVERAGE, 1))
         self._adapt_order_type(fixed)
+        return fixed
+
+    def fix_trades(self, raw, **kwargs):
+        fixed = super().fix_trades(raw, **kwargs)
+        for trade in fixed:
+            self._ensure_fees(trade)
         return fixed
 
     def _adapt_order_type(self, fixed):
@@ -359,9 +465,9 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
             # no funding info in ticker
             return {}
         funding_dict = super().parse_funding_rate(fixed, from_ticker=from_ticker, **kwargs)
-        # from super().parse_funding_rate
         previous_funding_timestamp = fixed[trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value]
         fixed.update({
+            # patch NEXT_FUNDING_TIME in tentacle
             trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value:
                 previous_funding_timestamp + self.KUCOIN_DEFAULT_FUNDING_TIME,
         })

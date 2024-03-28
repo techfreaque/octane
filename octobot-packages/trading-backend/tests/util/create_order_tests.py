@@ -13,6 +13,8 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import json
+
 import mock
 
 import trading_backend.exchanges as exchanges
@@ -55,13 +57,22 @@ async def create_order_mocked_test_args(
             assert exchange._get_id() == result
 
 
+def get_content(signed_result, in_body):
+    if in_body:
+        return json.loads(signed_result["body" if in_body else "headers"])
+    return signed_result["headers"]
+
+
 async def sign_test(
     exchange: exchanges.Exchange,
     api,
-    broker_id_header_key: str,
+    broker_id_key: str,
     broker_sign_header_key: str = None,
+    section: str = None,
+    should_contains: bool = False,
+    in_body: bool = False,
+    url_path: str = "url/path"
 ):
-    url_path = "url/path"
     method = "POST"
     params = {}
     headers = None
@@ -75,25 +86,41 @@ async def sign_test(
     ccxt_client.password = password
 
     # without referral patch
-    signed_result = ccxt_client.sign(
-        url_path, api=api, method=method, params=params, headers=headers, body=body
-    )
+    if section:
+        signed_result = ccxt_client.sign(
+            url_path, section=section, method=method, params=params, headers=headers, body=body
+        )
+    else:
+        signed_result = ccxt_client.sign(
+            url_path, api=api, method=method, params=params, headers=headers, body=body
+        )
     assert signed_result
-    headers = signed_result["headers"]
-    assert headers[broker_id_header_key] != exchange._get_id()
+    content = get_content(signed_result, in_body)
+    if should_contains:
+        assert exchange._get_id() not in content[broker_id_key]
+    else:
+        assert content[broker_id_key] != exchange._get_id()
     if broker_sign_header_key:
-        assert headers[broker_sign_header_key]
+        assert content[broker_sign_header_key]
 
     # with referral patch
     exchange.get_orders_parameters()
-    signed_result = ccxt_client.sign(
-        url_path, api=api, method=method, params=params, headers=headers, body=body
-    )
+    if section:
+        signed_result = ccxt_client.sign(
+            url_path, section=section, method=method, params=params, headers=headers, body=body
+        )
+    else:
+        signed_result = ccxt_client.sign(
+            url_path, api=api, method=method, params=params, headers=headers, body=body
+        )
     assert signed_result
-    headers = signed_result["headers"]
-    assert headers[broker_id_header_key] == exchange._get_id()
+    content = get_content(signed_result, in_body)
+    if should_contains:
+        assert exchange._get_id() in content[broker_id_key]
+    else:
+        assert content[broker_id_key] == exchange._get_id()
     if broker_sign_header_key:
-        assert headers[broker_sign_header_key]
+        assert content[broker_sign_header_key]
 
 
 async def exchange_requests_contains_headers_test(exchange: exchanges.Exchange,

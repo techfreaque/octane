@@ -48,6 +48,12 @@ html, body {
     }
 }
 
+@media screen and (min-width: 992px) {  /*equivalent of bootstrap -lg filter*/
+    .w-lg-50 {
+        width: 50% !important;
+    }
+}
+
 body:before {
     content: "";
     position: fixed;
@@ -342,6 +348,14 @@ a.nav-link.active.primary-pill:hover{
     min-width: 4rem;
     max-height: 6rem;
     min-height: 4rem;
+}
+
+.cloud-logo-2x {
+    max-height: 8rem;
+}
+
+.cloud-logo-4x {
+    max-height: 24rem;
 }
 
 /* elegant-color white-text */

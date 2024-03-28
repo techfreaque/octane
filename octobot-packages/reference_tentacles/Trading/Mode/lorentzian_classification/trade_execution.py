@@ -163,19 +163,19 @@ class LorentzianTradeExecution:
         trades_count: int = 0
         for index, candle_time in enumerate(candle_times):
             candle_time: int = int(candle_time)
-            self.start_short_trades_cache[ctx.time_frame][
-                candle_time
-            ] = start_short_trades[index]
-            self.start_long_trades_cache[ctx.time_frame][
-                candle_time
-            ] = start_long_trades[index]
+            self.start_short_trades_cache[ctx.time_frame][candle_time] = (
+                start_short_trades[index]
+            )
+            self.start_long_trades_cache[ctx.time_frame][candle_time] = (
+                start_long_trades[index]
+            )
             if has_exit_signals:
-                self.exit_long_trades_cache[ctx.time_frame][
-                    candle_time
-                ] = exit_long_trades[index]
-                self.exit_short_trades_cache[ctx.time_frame][
-                    candle_time
-                ] = exit_short_trades[index]
+                self.exit_long_trades_cache[ctx.time_frame][candle_time] = (
+                    exit_long_trades[index]
+                )
+                self.exit_short_trades_cache[ctx.time_frame][candle_time] = (
+                    exit_short_trades[index]
+                )
                 if exit_long_trades[index] or exit_short_trades[index]:
                     open_time: int = int(
                         candle_time

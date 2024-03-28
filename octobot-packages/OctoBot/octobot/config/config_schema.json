@@ -19,10 +19,10 @@
     "community": {
       "type": "object",
       "properties": {
-        "device_id": {
+        "bot_id": {
           "type": "string"
         },
-        "token": {
+        "supabase.auth.token": {
           "type": "string"
         },
         "environment": {
@@ -81,6 +81,9 @@
           "type": "boolean"
         },
         "trades": {
+          "type": "boolean"
+        },
+        "other": {
           "type": "boolean"
         },
         "notification-type": {

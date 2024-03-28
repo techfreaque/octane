@@ -45,17 +45,19 @@ class PortfolioManager(util.Initializable):
         self.historical_portfolio_value_manager = None
         self.reference_market = None
         self._is_initialized_event_set = False
-        self._simulated_portfolio_initial_config = None
+        self._forced_portfolio = None
+        self._enable_portfolio_update_from_order = True
 
     async def initialize_impl(self):
         """
         Reset the portfolio instance
         """
 
-        if self.exchange_manager.is_storage_enabled() and self.historical_portfolio_value_manager is None:
+        if (self.exchange_manager.is_storage_enabled() or self.exchange_manager.is_backtesting) \
+                and self.historical_portfolio_value_manager is None:
             self.historical_portfolio_value_manager = personal_data.HistoricalPortfolioValueManager(self)
             await self.historical_portfolio_value_manager.initialize()
-        self.set_simulated_portfolio_initial_config(
+        self.set_forced_portfolio_initial_config(
             self.config[commons_constants.CONFIG_SIMULATOR][commons_constants.CONFIG_STARTING_PORTFOLIO]
         )
         self._reset_portfolio()
@@ -83,7 +85,7 @@ class PortfolioManager(util.Initializable):
         portfolio changes using order data (as in trading simulator)
         :return: True if the portfolio was updated
         """
-        if self.trader.is_enabled:
+        if self.trader.is_enabled and self._enable_portfolio_update_from_order:
             async with self.portfolio_history_update():
                 if self.trader.simulate or not require_exchange_update:
                     return self._refresh_simulated_trader_portfolio_from_order(order)
@@ -180,7 +182,7 @@ class PortfolioManager(util.Initializable):
                 try:
                     await self.historical_portfolio_value_manager.on_portfolio_update()
                 except Exception as err:
-                    self.logger.exception(f"Error when updating portfolio history: {err}")
+                    self.logger.exception(err, True, f"Error when updating portfolio history: {err}")
 
     def handle_profitability_recalculation(self, force_recompute_origin_portfolio):
         """
@@ -200,6 +202,17 @@ class PortfolioManager(util.Initializable):
         return self.portfolio_profitability. \
             update_profitability(force_recompute_origin_portfolio=self.portfolio_value_holder.
                                  update_origin_crypto_currencies_values(symbol, mark_price))
+
+    @contextlib.contextmanager
+    def disabled_portfolio_update_from_order(self):
+        """
+        Can be used to locally disable portfolio refresh when an order is updated
+        """
+        self._enable_portfolio_update_from_order = False
+        try:
+            yield
+        finally:
+            self._enable_portfolio_update_from_order = True
 
     async def _refresh_real_trader_portfolio(self) -> bool:
         """
@@ -253,6 +266,7 @@ class PortfolioManager(util.Initializable):
             if order.is_filled():
                 self.portfolio.update_portfolio_from_filled_order(order)
             else:
+                # order cancelled
                 self.portfolio.update_portfolio_available(order, is_new_order=False)
             return True
         except errors.PortfolioNegativeValueError as portfolio_negative_value_error:
@@ -270,29 +284,40 @@ class PortfolioManager(util.Initializable):
                 if reset_from_config \
                         or self.historical_portfolio_value_manager is None \
                         or not self.historical_portfolio_value_manager.has_previous_session_portfolio():
-                    self._apply_starting_simulated_portfolio()
+                    self.apply_forced_portfolio()
                 else:
                     self._load_simulated_portfolio_from_history()
-            self.logger.info(f"{constants.CURRENT_PORTFOLIO_STRING} {self.portfolio.portfolio}")
+            self.logger.debug(f"{constants.CURRENT_PORTFOLIO_STRING} {self.portfolio.portfolio}")
 
     def _load_simulated_portfolio_from_history(self):
-        #  todo also load available amounts when loading simulated orders
         portfolio_amount_dict = personal_data.parse_decimal_config_portfolio(
             {
-                symbol: value[commons_constants.PORTFOLIO_TOTAL]
+                symbol: value
                 for symbol, value in self.historical_portfolio_value_manager.historical_ending_portfolio.items()
             }
         )
+        for asset_dict in portfolio_amount_dict.values():
+            # ignore loaded available value as simulated orders are not kept throughout instance
+            # and therefore can't lock funds
+            asset_dict[commons_constants.PORTFOLIO_AVAILABLE] = asset_dict[commons_constants.PORTFOLIO_TOTAL]
         self.handle_balance_update(self.portfolio.get_portfolio_from_amount_dict(portfolio_amount_dict))
 
-    def set_simulated_portfolio_initial_config(self, portfolio_config):
-        self._simulated_portfolio_initial_config = copy.deepcopy(portfolio_config)
+    def set_forced_portfolio_initial_config(self, portfolio_config):
+        forced_portfolio_initial_config = copy.deepcopy(portfolio_config)
+        # ensure free and total amounts are present
+        for key in list(forced_portfolio_initial_config):
+            if not isinstance(forced_portfolio_initial_config[key], dict):
+                forced_portfolio_initial_config[key] = {
+                    commons_constants.PORTFOLIO_AVAILABLE: forced_portfolio_initial_config[key],
+                    commons_constants.PORTFOLIO_TOTAL: forced_portfolio_initial_config[key],
+                }
+        self._forced_portfolio = forced_portfolio_initial_config
 
-    def _apply_starting_simulated_portfolio(self):
+    def apply_forced_portfolio(self):
         """
         Load new portfolio from config settings
         """
-        portfolio_amount_dict = personal_data.parse_decimal_config_portfolio(self._simulated_portfolio_initial_config)
+        portfolio_amount_dict = personal_data.parse_decimal_config_portfolio(self._forced_portfolio)
         self.handle_balance_update(self.portfolio.get_portfolio_from_amount_dict(portfolio_amount_dict))
 
     def _set_initialized_event(self):

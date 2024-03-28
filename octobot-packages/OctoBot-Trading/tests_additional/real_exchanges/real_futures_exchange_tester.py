@@ -22,6 +22,7 @@ from tests_additional.real_exchanges.real_exchange_tester import RealExchangeTes
 
 class RealFuturesExchangeTester(RealExchangeTester):
     EXCHANGE_TYPE = enums.ExchangeTypes.FUTURE.value
+    MARKET_STATUS_TYPE = "swap"
 
     async def test_get_funding_rate(self):
         pass
@@ -42,7 +43,8 @@ class RealFuturesExchangeTester(RealExchangeTester):
         has_rate=True,
         has_last_time=True,
         has_next_rate=True,
-        has_next_time=True
+        has_next_time=True,
+        has_next_time_in_the_past=False
     ):
         """
         Used data are
@@ -53,18 +55,22 @@ class RealFuturesExchangeTester(RealExchangeTester):
         """
         assert funding_rate
         if has_rate:
-            assert funding_rate[enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value]
+            assert funding_rate[enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value] \
+                   and not funding_rate[enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value].is_nan()
         else:
             assert funding_rate[enums.ExchangeConstantsFundingColumns.FUNDING_RATE.value].is_nan()
         if has_last_time:
-            assert funding_rate[enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value] <= self.get_time()
+            assert 0 < funding_rate[enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value] <= self.get_time()
         else:
             assert funding_rate[enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value] == constants.ZERO
         if has_next_rate:
-            assert funding_rate[enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value]
+            assert funding_rate[enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value] \
+                   and not funding_rate[enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value].is_nan()
         else:
             assert funding_rate[enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value].is_nan()
-        if has_next_time:
+        if has_next_time_in_the_past:
+            assert funding_rate[enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value] < self.get_time()
+        elif has_next_time:
             assert funding_rate[enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value] >= self.get_time()
         else:
             assert funding_rate[enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value] == constants.ZERO

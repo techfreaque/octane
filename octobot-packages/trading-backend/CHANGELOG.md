@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.14] - 2024-11-24
+### Added
+- Bingx _get_api_key_rights
+
+## [1.2.13] - 2024-01-18
+### Added
+- CoinEx
+
+## [1.2.12] - 2024-01-08
+### Updated
+- update for CCXT 4.2.10
+
+## [1.2.11] - 2023-12-10
+### Added
+- Bingx
+### Updated
+- update for CCXT 4.1.82
+
+## [1.2.10] - 2023-12-06
+### Updated
+- update for CCXT 4.1.77
+
+## [1.2.9] - 2023-08-23
+### Added
+- Kucoin & OKX api key right check
+
+## [1.2.8] - 2023-08-13
+### Added
+- withdrawal right check in api keys
+
+## [1.2.7] - 2023-08-11
+### Added
+- Binance api key permission checks
+
+## [1.2.6] - 2023-07-29
+### Fixed
+- Binance support check
+
 ## [1.2.5] - 2023-06-29
 ### Added
 - Crypto.com

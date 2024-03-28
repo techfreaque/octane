@@ -300,23 +300,100 @@ async def test_trigger_chained_orders(trader_simulator):
 
     base_order = personal_data.Order(trader_inst)
     # does nothing
-    await base_order.on_filled()
+    await base_order.on_filled(True)
 
     # with chained orders
-    order_mock_1 = mock.Mock()
-    order_mock_1.should_be_created = mock.Mock(return_value=True)
-    order_mock_2 = mock.Mock()
-    order_mock_2.should_be_created = mock.Mock(return_value=False)
+    order_mock_1 = mock.Mock(
+        update_price_if_outdated=mock.AsyncMock(),
+        update_quantity_with_order_fees=mock.AsyncMock(return_value=True),
+        should_be_created=mock.Mock(return_value=True)
+    )
+    order_mock_2 = mock.Mock(
+        update_price_if_outdated=mock.AsyncMock(),
+        update_quantity_with_order_fees=mock.AsyncMock(return_value=True),
+        should_be_created=mock.Mock(return_value=False)
+    )
     with mock.patch.object(order_util, "create_as_chained_order", mock.AsyncMock()) as create_as_chained_order_mock:
 
         base_order.add_chained_order(order_mock_1)
         base_order.add_chained_order(order_mock_2)
 
+        # does not triggers chained orders
+        await base_order.on_filled(False)
+        order_mock_1.should_be_created.assert_not_called()
+        order_mock_2.should_be_created.assert_not_called()
+        order_mock_1.update_price_if_outdated.assert_not_called()
+        order_mock_2.update_price_if_outdated.assert_not_called()
+        order_mock_1.update_quantity_with_order_fees.assert_not_called()
+        order_mock_2.update_quantity_with_order_fees.assert_not_called()
+        create_as_chained_order_mock.assert_not_called()
+
         # triggers chained orders
-        await base_order.on_filled()
+        await base_order.on_filled(True)
         order_mock_1.should_be_created.assert_called_once()
         order_mock_2.should_be_created.assert_called_once()
+        order_mock_1.update_price_if_outdated.assert_called_once()
+        order_mock_2.update_price_if_outdated.assert_called_once()
+        order_mock_1.update_quantity_with_order_fees.assert_called_once()
+        order_mock_2.update_quantity_with_order_fees.assert_called_once()
         create_as_chained_order_mock.assert_called_once_with(order_mock_1)
+
+
+def test_update_quantity_with_order_fees(trader_simulator):
+    config, exchange_manager_inst, trader_inst = trader_simulator
+
+    base_order = personal_data.Order(trader_inst)
+    base_order.symbol = "BTC/USDT"
+
+    other_order = personal_data.Order(trader_inst)
+    other_order.symbol = base_order.symbol
+    other_order.origin_quantity = decimal.Decimal(1)
+
+    # case 1: quantity_currency is not the amount unit: nothing changes
+    base_order.fee = {
+        enums.FeePropertyColumns.CURRENCY.value: "USDT",
+        enums.FeePropertyColumns.COST.value: decimal.Decimal("1")
+    }
+    other_order.quantity_currency = "BTC"
+    assert other_order.update_quantity_with_order_fees(base_order) is True
+    assert other_order.origin_quantity == decimal.Decimal(1)    # nothing changed
+
+    # case 2: quantity_currency is the amount unit: other_order quantity is reduced
+    base_order.fee = {
+        enums.FeePropertyColumns.CURRENCY.value: "BTC",
+        enums.FeePropertyColumns.COST.value: decimal.Decimal("0.1")
+    }
+    other_order.quantity_currency = "BTC"
+    assert other_order.update_quantity_with_order_fees(base_order) is True
+    assert other_order.origin_quantity == decimal.Decimal("0.9")    # 1 - 0.1
+    other_order.origin_quantity = decimal.Decimal(1)
+
+    # case 3: quantity_currency is the amount unit and is too large: return False
+    base_order.fee = {
+        enums.FeePropertyColumns.CURRENCY.value: "BTC",
+        enums.FeePropertyColumns.COST.value: decimal.Decimal("1")
+    }
+    other_order.quantity_currency = "BTC"
+    assert other_order.update_quantity_with_order_fees(base_order) is False
+    assert other_order.origin_quantity == decimal.Decimal(1)    # nothing changed
+    base_order.fee = {
+        enums.FeePropertyColumns.CURRENCY.value: "BTC",
+        enums.FeePropertyColumns.COST.value: decimal.Decimal("1.1")
+    }
+    other_order.quantity_currency = "BTC"
+    assert other_order.update_quantity_with_order_fees(base_order) is False
+    assert other_order.origin_quantity == decimal.Decimal(1)    # nothing changed
+
+    # case 4: quantity_currency is the amount unit: other_order quantity is reduced and adapted
+    base_order.fee = {
+        enums.FeePropertyColumns.CURRENCY.value: "BTC",
+        enums.FeePropertyColumns.COST.value: decimal.Decimal("0.111111111111111111111111")
+    }
+    other_order.quantity_currency = "BTC"
+    assert other_order.update_quantity_with_order_fees(base_order) is True
+    # 1 - 0.111111111111111111111111 with truncated digits
+    assert other_order.origin_quantity == decimal.Decimal("0.88888")
+    other_order.origin_quantity = decimal.Decimal(1)
 
 
 async def test_update_from_order(trader_simulator):
@@ -387,6 +464,7 @@ async def test_update_from_order_storage(trader_simulator):
     assert order.exchange_order_id is origin_exchange_order_id
     assert order.has_been_bundled is origin_has_been_bundled
     assert order.associated_entry_ids is origin_associated_entry_ids
+    assert order.broker_applied is False
     assert order.update_with_triggering_order_fees is origin_update_with_triggering_order_fees
 
     # partial update
@@ -404,10 +482,11 @@ async def test_update_from_order_storage(trader_simulator):
 
     # full update
     order.update_from_storage_order_details({
-        orders_storage.OrdersStorage.ORIGIN_VALUE_KEY: {
+        constants.STORAGE_ORIGIN_VALUE: {
             enums.ExchangeConstantsOrderColumns.TAG.value: "t1",
             enums.ExchangeConstantsOrderColumns.ID.value: "11a",
             enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value: "eee1",
+            enums.ExchangeConstantsOrderColumns.BROKER_APPLIED.value: True,
         },
         enums.StoredOrdersAttr.TRADER_CREATION_KWARGS.value: {"plop2": 1},
         enums.StoredOrdersAttr.EXCHANGE_CREATION_PARAMS.value: {"ex": 2, "gg": "yesyes"},
@@ -419,6 +498,7 @@ async def test_update_from_order_storage(trader_simulator):
     assert order.trader_creation_kwargs == {"plop2": 1} != origin_trader_creation_kwargs
     assert order.exchange_creation_params == {"ex": 2, "gg": "yesyes"} != origin_exchange_creation_params
     assert order.order_id == "11a" != origin_order_id
+    assert order.broker_applied is True
     assert order.exchange_order_id == "eee1" != origin_exchange_order_id
     assert order.has_been_bundled is True is not origin_has_been_bundled
     assert order.associated_entry_ids == ["ABC", "2"] != origin_associated_entry_ids

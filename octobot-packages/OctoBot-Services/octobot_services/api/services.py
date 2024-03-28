@@ -35,19 +35,24 @@ def get_available_services() -> list:
     return services.ServiceFactory.get_available_services()
 
 
-async def get_service(service_class, is_backtesting):
+async def get_service(service_class, is_backtesting, config=None):
     # prevent concurrent access when creating a service
     async with _service_async_lock(service_class):
-        if await create_service_factory(
-                interfaces.get_startup_config(dict_only=True)
-        ).create_or_get_service(service_class, is_backtesting, interfaces.get_edited_config(dict_only=True)):
+        created, error_message = await create_service_factory(
+            interfaces.get_startup_config(dict_only=True) if config is None else config
+        ).create_or_get_service(
+            service_class,
+            is_backtesting,
+            interfaces.get_edited_config(dict_only=True) if config is None else config
+        )
+        if created:
             service = service_class.instance()
             if is_backtesting and not service.BACKTESTING_ENABLED:
                 raise errors.UnavailableInBacktestingError(
                     f"{service_class.__name__} service is not available in backtesting"
                 )
             return service
-    raise errors.CreationError(f"{service_class.__name__} service has not been properly created")
+    raise errors.CreationError(f"{service_class.__name__} service is not initialized: {error_message}")
 
 
 def create_service_factory(config) -> services.ServiceFactory:

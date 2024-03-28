@@ -13,13 +13,17 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import copy
 import logging
+import typing
 import ccxt
 import ccxt.pro as ccxt_pro
 
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_trading.constants as constants
+import octobot_trading.enums as enums
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
+import octobot_trading.exchanges.connectors.ccxt.ccxt_clients_cache as ccxt_clients_cache
 import octobot_trading.exchanges.util.exchange_util as exchange_util
 
 
@@ -104,6 +108,21 @@ def set_sandbox_mode(exchange_connector, is_sandboxed):
     return None
 
 
+def load_markets_from_cache(client, market_filter: typing.Union[None, typing.Callable[[dict], bool]] = None):
+    client.set_markets(
+        market
+        for market in ccxt_clients_cache.get_exchange_parsed_markets(ccxt_clients_cache.get_client_key(client))
+        if market_filter is None or market_filter(market)
+    )
+
+
+def set_markets_cache(client):
+    if client.markets:
+        ccxt_clients_cache.set_exchange_parsed_markets(
+            ccxt_clients_cache.get_client_key(client), copy.deepcopy(list(client.markets.values()))
+        )
+
+
 def get_ccxt_client_login_options(exchange_manager):
     """
     :return: ccxt client login option dict, can be overwritten to custom exchange login
@@ -163,6 +182,20 @@ def get_pair_cryptocurrency(client, pair) -> str:
 
 def get_contract_size(client, pair) -> float:
     return client.markets[pair][ccxt_enums.ExchangeConstantsMarketStatusCCXTColumns.CONTRACT_SIZE.value]
+
+
+def get_fees(market_status) -> dict:
+    return {
+        enums.ExchangeConstantsMarketPropertyColumns.TAKER.value:
+            market_status.get(enums.ExchangeConstantsMarketPropertyColumns.TAKER.value,
+                              constants.CONFIG_DEFAULT_FEES),
+        enums.ExchangeConstantsMarketPropertyColumns.MAKER.value:
+            market_status.get(enums.ExchangeConstantsMarketPropertyColumns.MAKER.value,
+                              constants.CONFIG_DEFAULT_FEES),
+        enums.ExchangeConstantsMarketPropertyColumns.FEE.value:
+            market_status.get(enums.ExchangeConstantsMarketPropertyColumns.FEE.value,
+                              constants.CONFIG_DEFAULT_FEES)
+    }
 
 
 def add_headers(client, headers_dict):

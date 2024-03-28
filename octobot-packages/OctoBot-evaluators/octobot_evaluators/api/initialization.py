@@ -28,21 +28,27 @@ import octobot_evaluators.util as util
 from octobot_trading import modes
 
 
-def init_time_frames_from_strategies(config, tentacles_setup_config) -> None:
-    config[common_constants.CONFIG_TIME_FRAME] = get_time_frames_from_strategies(config, tentacles_setup_config)
+def init_time_frames_from_strategies(config, tentacles_setup_config, config_by_strategy=None) -> None:
+    config[common_constants.CONFIG_TIME_FRAME] = get_time_frames_from_strategies(
+        config, tentacles_setup_config, config_by_strategy=config_by_strategy
+    )
 
 
-def get_time_frames_from_strategies(config, tentacles_setup_config) -> list:
+def get_time_frames_from_strategies(config, tentacles_setup_config, config_by_strategy=None) -> list:
+    config_by_strategy = config_by_strategy or {}
     time_frame_list = set(
         time_frame
         for strategies_eval_class in get_activated_strategies_classes(tentacles_setup_config)
-        for time_frame in get_time_frames_from_strategy(strategies_eval_class, config, tentacles_setup_config)
+        for time_frame in get_time_frames_from_strategy(
+            strategies_eval_class, config, tentacles_setup_config,
+            config_by_strategy.get(strategies_eval_class.get_name())
+        )
     )
     return time_frame_manager.sort_time_frames(list(time_frame_list))
 
 
-def get_time_frames_from_strategy(strategy_class, config, tentacles_setup_config) -> list:
-    return strategy_class.get_required_time_frames(config, tentacles_setup_config)
+def get_time_frames_from_strategy(strategy_class, config, tentacles_setup_config, strategy_config=None) -> list:
+    return strategy_class.get_required_time_frames(config, tentacles_setup_config, strategy_config=strategy_config)
 
 
 def init_required_candles_count_from_evaluators_and_strategies(config, tentacles_setup_config) -> None:

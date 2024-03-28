@@ -43,21 +43,26 @@ import octobot.storage as storage
 
 
 class IndependentBacktesting:
-    def __init__(self, config,
-                 tentacles_setup_config,
-                 backtesting_files,
-                 data_file_path=backtesting_constants.BACKTESTING_FILE_PATH,
-                 run_on_common_part_only=True,
-                 join_backtesting_timeout=backtesting_constants.BACKTESTING_DEFAULT_JOIN_TIMEOUT,
-                 start_timestamp=None,
-                 end_timestamp=None,
-                 enable_logs=True,
-                 stop_when_finished=False,
-                 name=None,
-                 enforce_total_databases_max_size_after_run=True,
-                 enable_storage=True,
-                 run_on_all_available_time_frames=False,
-                 backtesting_data=None):
+    def __init__(
+        self,
+        config,
+        tentacles_setup_config,
+        backtesting_files,
+        data_file_path=backtesting_constants.BACKTESTING_FILE_PATH,
+        run_on_common_part_only=True,
+        join_backtesting_timeout=backtesting_constants.BACKTESTING_DEFAULT_JOIN_TIMEOUT,
+        start_timestamp=None,
+        end_timestamp=None,
+        enable_logs=True,
+        stop_when_finished=False,
+        name=None,
+        enforce_total_databases_max_size_after_run=True,
+        enable_storage=True,
+        run_on_all_available_time_frames=False,
+        backtesting_data=None,
+        config_by_tentacle=None,
+        services_config=None,
+    ):
         self.octobot_origin_config = config
         self.tentacles_setup_config = tentacles_setup_config
         self.backtesting_config = {}
@@ -82,18 +87,23 @@ class IndependentBacktesting:
         self.previous_handlers_log_level = commons_logging.get_logger_level_per_handler()
         self.enforce_total_databases_max_size_after_run = enforce_total_databases_max_size_after_run
         self.backtesting_data = backtesting_data
-        self.octobot_backtesting = backtesting.OctoBotBacktesting(self.backtesting_config,
-                                                                  self.tentacles_setup_config,
-                                                                  self.symbols_to_create_exchange_classes,
-                                                                  self.backtesting_files,
-                                                                  run_on_common_part_only,
-                                                                  start_timestamp=start_timestamp,
-                                                                  end_timestamp=end_timestamp,
-                                                                  enable_logs=self.enable_logs,
-                                                                  enable_storage=enable_storage,
-                                                                  run_on_all_available_time_frames=run_on_all_available_time_frames,
-                                                                  backtesting_data=self.backtesting_data,
-                                                                  name=name)
+        self.required_extra_timeframes = config.get(common_constants.CONFIG_REQUIRED_EXTRA_TIMEFRAMES, [])
+        self.octobot_backtesting = backtesting.OctoBotBacktesting(
+            self.backtesting_config,
+            self.tentacles_setup_config,
+            self.symbols_to_create_exchange_classes,
+            self.backtesting_files,
+            run_on_common_part_only,
+            start_timestamp=start_timestamp,
+            end_timestamp=end_timestamp,
+            enable_logs=self.enable_logs,
+            enable_storage=enable_storage,
+            run_on_all_available_time_frames=run_on_all_available_time_frames,
+            backtesting_data=self.backtesting_data,
+            name=name,
+            config_by_tentacle=config_by_tentacle,
+            services_config=services_config,
+        )
 
     async def initialize_and_run(self, log_errors=True):
         try:
@@ -131,6 +141,9 @@ class IndependentBacktesting:
     async def join_backtesting_updater(self, timeout=None):
         if self.octobot_backtesting.backtesting is not None:
             await asyncio.wait_for(self.octobot_backtesting.backtesting.time_updater.finished_event.wait(), timeout)
+
+    async def clear_fetched_data(self):
+        await self.octobot_backtesting.clear_fetched_data()
 
     async def stop(self, memory_check=False, should_raise=False):
         try:
@@ -203,18 +216,19 @@ class IndependentBacktesting:
         return market_delta
 
     async def _register_available_data(self):
-        for data_file in self.backtesting_files:
-            data_file_path = data_file
-            if not path.isfile(data_file_path):
-                data_file_path = path.join(self.data_file_path, data_file)
-            description = await backtesting_data.get_file_description(data_file_path)
-            if description is None:
-                raise RuntimeError(f"Impossible to start backtesting: missing or invalid data file: {data_file}")
-            exchange_name = description[backtesting_enums.DataFormatKeys.EXCHANGE.value]
-            if exchange_name not in self.symbols_to_create_exchange_classes:
-                self.symbols_to_create_exchange_classes[exchange_name] = []
-            for symbol in description[backtesting_enums.DataFormatKeys.SYMBOLS.value]:
-                self.symbols_to_create_exchange_classes[exchange_name].append(symbol_util.parse_symbol(symbol))
+        if not self.symbols_to_create_exchange_classes:
+            for data_file in self.backtesting_files:
+                data_file_path = data_file
+                if not path.isfile(data_file_path):
+                    data_file_path = path.join(self.data_file_path, data_file)
+                description = await backtesting_data.get_file_description(data_file_path)
+                if description is None:
+                    raise RuntimeError(f"Impossible to start backtesting: missing or invalid data file: {data_file}")
+                exchange_name = description[backtesting_enums.DataFormatKeys.EXCHANGE.value]
+                if exchange_name not in self.symbols_to_create_exchange_classes:
+                    self.symbols_to_create_exchange_classes[exchange_name] = []
+                for symbol in description[backtesting_enums.DataFormatKeys.SYMBOLS.value]:
+                    self.symbols_to_create_exchange_classes[exchange_name].append(symbol_util.parse_symbol(symbol))
 
     def _init_default_config_values(self):
         self.risk = copy.deepcopy(self.octobot_origin_config[common_constants.CONFIG_TRADING][
@@ -302,7 +316,9 @@ class IndependentBacktesting:
         for exchange_id in self.octobot_backtesting.exchange_manager_ids:
             exchange_manager = trading_api.get_exchange_manager_from_exchange_id(exchange_id)
             exchange_name = trading_api.get_exchange_name(exchange_manager)
-            self.logger.info(f" ========= Trades on {exchange_name} =========")
+            self.logger.info(
+                f" ========= {len(trading_api.get_trade_history(exchange_manager))} Trades on {exchange_name} ========="
+            )
             self._log_trades_history(exchange_manager, exchange_name)
 
             self.logger.info(f" ========= Prices evolution on {exchange_name} =========")
@@ -339,7 +355,7 @@ class IndependentBacktesting:
         self.logger.info(f"Global market profitability (vs {reference_market}) : "
                          f"{market_average_profitability}% | Octobot : {profitability}%")
 
-        self.logger.info(
+        self.logger.debug(
             f"Simulation lasted "
             f"{round(backtesting_api.get_backtesting_duration(self.octobot_backtesting.backtesting), 3)} sec")
 
@@ -363,6 +379,7 @@ class IndependentBacktesting:
         self.backtesting_config[common_constants.CONFIG_BACKTESTING_ID] = self.backtesting_id
         if self.forced_time_frames:
             self.backtesting_config[evaluator_constants.CONFIG_FORCED_TIME_FRAME] = self.forced_time_frames
+        self.backtesting_config[common_constants.CONFIG_REQUIRED_EXTRA_TIMEFRAMES] = self.required_extra_timeframes
         self._add_config_default_backtesting_values()
 
     def _init_exchange_type(self):

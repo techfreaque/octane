@@ -24,15 +24,16 @@ import octobot_trading.enums as enums
 from octobot_trading.enums import ExchangeConstantsOrderColumns as ecoc
 import octobot_commons.enums as common_enums
 import octobot_commons.constants as common_constants
+import octobot_commons.number_util as number_util
 
 
 class CCXTAdapter(adapters.AbstractAdapter):
-    def fix_order(self, raw, **kwargs):
+    def fix_order(self, raw, symbol=None, **kwargs):
         fixed = super().fix_order(raw, **kwargs)
         try:
             exchange_timestamp = fixed[ecoc.TIMESTAMP.value]
-            fixed[ecoc.TIMESTAMP.value] = \
-                self.get_uniformized_timestamp(exchange_timestamp)
+            fixed[ecoc.TIMESTAMP.value] = self.get_uniformized_timestamp(exchange_timestamp)
+            self.adapt_quantities_with_contract_size(fixed, symbol)
         except KeyError as e:
             self.logger.error(f"Fail to cleanup order dict ({e})")
         self._register_exchange_fees(fixed)
@@ -42,6 +43,22 @@ class CCXTAdapter(adapters.AbstractAdapter):
         # CCXT standard order parsing logic
         return fixed
 
+    def adapt_quantities_with_contract_size(self, order_or_trade, symbol):
+        if self.connector.exchange_manager.is_future:
+            symbol = symbol or order_or_trade.get(ecoc.SYMBOL.value)
+            if symbol is None:
+                # can't get contract size
+                return
+            # amount is in contacts, multiply by contract value to get the currency amount (displayed to the user)
+            contract_size = self.connector.get_contract_size(symbol)
+            if contract_size == constants.ONE:
+                # nothing to do
+                return
+            if amount := order_or_trade.get(enums.ExchangeConstantsOrderColumns.AMOUNT.value):
+                order_or_trade[enums.ExchangeConstantsOrderColumns.AMOUNT.value] = amount * float(contract_size)
+            if filled := order_or_trade.get(enums.ExchangeConstantsOrderColumns.FILLED.value):
+                order_or_trade[enums.ExchangeConstantsOrderColumns.FILLED.value] = filled * float(contract_size)
+
     def _register_exchange_fees(self, order_or_trade):
         try:
             fees = order_or_trade[enums.ExchangeConstantsOrderColumns.FEE.value]
@@ -49,6 +66,18 @@ class CCXTAdapter(adapters.AbstractAdapter):
             fees[enums.FeePropertyColumns.IS_FROM_EXCHANGE.value] = True
         except (KeyError, TypeError):
             pass
+
+    def _ensure_fees(self, order_or_trade):
+        # call if necessary
+        if order_or_trade.get(enums.ExchangeConstantsOrderColumns.FEE.value) is None:
+            order_or_trade[enums.ExchangeConstantsOrderColumns.FEE.value] = {
+                enums.FeePropertyColumns.COST.value: constants.ZERO,
+                enums.FeePropertyColumns.EXCHANGE_ORIGINAL_COST.value: constants.ZERO,
+                enums.FeePropertyColumns.CURRENCY.value: None,
+                enums.FeePropertyColumns.RATE.value: None,
+                enums.FeePropertyColumns.TYPE.value: ccxt_enums.ExchangeOrderCCXTColumns.TAKER_OR_MAKER.value,
+                enums.FeePropertyColumns.IS_FROM_EXCHANGE.value: True,
+            }
 
     def _fix_ohlcv_prices(self, ohlcv):
         for index, value in enumerate(ohlcv[common_enums.PriceIndexes.IND_PRICE_TIME.value + 1:]):
@@ -103,11 +132,31 @@ class CCXTAdapter(adapters.AbstractAdapter):
     def fix_ticker(self, raw, **kwargs):
         fixed = super().fix_ticker(raw, **kwargs)
         # CCXT standard ticker fixing logic
+        if timestamp := fixed.get(enums.ExchangeConstantsTickersColumns.TIMESTAMP.value):
+            fixed[enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = \
+                int(self.get_uniformized_timestamp(timestamp))
         return fixed
 
     def parse_ticker(self, fixed, **kwargs):
         # CCXT standard ticker parsing logic
         return fixed
+
+    def create_ticker_from_kline(self, kline, symbol, **kwargs):
+        return {
+            enums.ExchangeConstantsTickersColumns.SYMBOL.value: symbol,
+            enums.ExchangeConstantsTickersColumns.TIMESTAMP.value: kline[common_enums.PriceIndexes.IND_PRICE_TIME.value],
+            enums.ExchangeConstantsTickersColumns.OPEN.value: kline[common_enums.PriceIndexes.IND_PRICE_OPEN.value],
+            enums.ExchangeConstantsTickersColumns.HIGH.value: kline[common_enums.PriceIndexes.IND_PRICE_HIGH.value],
+            enums.ExchangeConstantsTickersColumns.LOW.value: kline[common_enums.PriceIndexes.IND_PRICE_LOW.value],
+            enums.ExchangeConstantsTickersColumns.CLOSE.value: kline[common_enums.PriceIndexes.IND_PRICE_CLOSE.value],
+            enums.ExchangeConstantsTickersColumns.BASE_VOLUME.value: kline[common_enums.PriceIndexes.IND_PRICE_VOL.value],
+            enums.ExchangeConstantsTickersColumns.LAST.value: kline[common_enums.PriceIndexes.IND_PRICE_CLOSE.value],
+            enums.ExchangeConstantsTickersColumns.BID.value: None,
+            enums.ExchangeConstantsTickersColumns.BID_VOLUME.value: None,
+            enums.ExchangeConstantsTickersColumns.ASK.value: None,
+            enums.ExchangeConstantsTickersColumns.ASK_VOLUME.value: None,
+            enums.ExchangeConstantsTickersColumns.PREVIOUS_CLOSE.value: None,
+        }
 
     def fix_balance(self, raw, **kwargs):
         fixed = super().fix_balance(raw, **kwargs)
@@ -163,11 +212,13 @@ class CCXTAdapter(adapters.AbstractAdapter):
             try:
                 trade[ecoc.TIMESTAMP.value] = \
                     self.get_uniformized_timestamp(trade[ecoc.TIMESTAMP.value])
+                trade[ecoc.EXCHANGE_ID.value] = trade.get(ecoc.ORDER.value)
                 if trade[enums.ExchangeConstantsOrderColumns.TYPE.value] is None:
                     trade[enums.ExchangeConstantsOrderColumns.TYPE.value] = enums.TradeOrderType.MARKET.value \
                         if trade[ccxt_enums.ExchangeOrderCCXTColumns.TAKER_OR_MAKER.value] \
                         == enums.ExchangeConstantsMarketPropertyColumns.TAKER.value \
                         else enums.TradeOrderType.LIMIT.value
+                self.adapt_quantities_with_contract_size(trade, None)
             except KeyError as e:
                 self.logger.error(f"Fail to clean trade dict ({e})")
             self._register_exchange_fees(trade)
@@ -225,23 +276,23 @@ class CCXTAdapter(adapters.AbstractAdapter):
                 # next values are always 0 when the position empty (0 contracts)
                 enums.ExchangeConstantsPositionColumns.COLLATERAL.value: constants.ZERO if is_empty else
                 decimal.Decimal(
-                    f"{fixed.get(ccxt_enums.ExchangePositionCCXTColumns.COLLATERAL.value, 0)}"),
+                    f"{fixed.get(ccxt_enums.ExchangePositionCCXTColumns.COLLATERAL.value, 0) or 0}"),
                 enums.ExchangeConstantsPositionColumns.NOTIONAL.value: constants.ZERO if is_empty else
                 decimal.Decimal(
-                    f"{fixed.get(ccxt_enums.ExchangePositionCCXTColumns.NOTIONAL.value, 0)}"),
+                    f"{fixed.get(ccxt_enums.ExchangePositionCCXTColumns.NOTIONAL.value, 0) or 0}"),
                 enums.ExchangeConstantsPositionColumns.INITIAL_MARGIN.value: constants.ZERO if is_empty else
                 decimal.Decimal(
-                    f"{fixed.get(ccxt_enums.ExchangePositionCCXTColumns.INITIAL_MARGIN.value, 0)}"),
+                    f"{fixed.get(ccxt_enums.ExchangePositionCCXTColumns.INITIAL_MARGIN.value, 0) or 0}"),
                 enums.ExchangeConstantsPositionColumns.UNREALIZED_PNL.value: constants.ZERO if is_empty else
                 decimal.Decimal(
-                    f"{fixed.get(ccxt_enums.ExchangePositionCCXTColumns.UNREALISED_PNL.value, 0)}"),
+                    f"{fixed.get(ccxt_enums.ExchangePositionCCXTColumns.UNREALISED_PNL.value, 0) or 0}"),
                 enums.ExchangeConstantsPositionColumns.REALISED_PNL.value: constants.ZERO if is_empty else
                 decimal.Decimal(
-                    f"{fixed.get(ccxt_enums.ExchangePositionCCXTColumns.REALISED_PNL.value, 0)}"),
+                    f"{fixed.get(ccxt_enums.ExchangePositionCCXTColumns.REALISED_PNL.value, 0) or 0}"),
                 enums.ExchangeConstantsPositionColumns.LIQUIDATION_PRICE.value: liquidation_price,
                 enums.ExchangeConstantsPositionColumns.MARK_PRICE.value: constants.ZERO if is_empty else
                 decimal.Decimal(
-                    f"{fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARK_PRICE.value, 0)}"),
+                    f"{fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARK_PRICE.value, 0) or 0}"),
                 enums.ExchangeConstantsPositionColumns.ENTRY_PRICE.value: constants.ZERO if is_empty else
                 decimal.Decimal(
                     f"{fixed.get(ccxt_enums.ExchangePositionCCXTColumns.ENTRY_PRICE.value, 0)}"),
@@ -264,8 +315,8 @@ class CCXTAdapter(adapters.AbstractAdapter):
                 ),
             enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
                 self.get_uniformized_timestamp(
-                    fixed.get(ccxt_enums.ExchangeFundingCCXTColumns.LAST_FUNDING_TIME.value, 0)
-                    or constants.ZERO
+                    fixed.get(ccxt_enums.ExchangeFundingCCXTColumns.PREVIOUS_FUNDING_TIMESTAMP.value, 0)
+                    or 0
                 ),
             enums.ExchangeConstantsFundingColumns.PREDICTED_FUNDING_RATE.value:
                 self.safe_decimal(
@@ -273,7 +324,7 @@ class CCXTAdapter(adapters.AbstractAdapter):
                 ),
             enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value:
                 self.get_uniformized_timestamp(
-                    fixed.get(ccxt_enums.ExchangeFundingCCXTColumns.NEXT_FUNDING_TIME.value, 0) or constants.ZERO
+                    fixed.get(ccxt_enums.ExchangeFundingCCXTColumns.FUNDING_TIMESTAMP.value, 0) or 0
                 ),
         })
         return fixed
@@ -350,11 +401,29 @@ class CCXTAdapter(adapters.AbstractAdapter):
         # CCXT standard mark_price parsing logic
         return fixed
 
-    def fix_market_status(self, raw, **kwargs):
-        fixed = super().fix_market_status(raw, **kwargs)
+    def fix_market_status(self, raw, remove_price_limits=False, **kwargs):
+        fixed = super().fix_market_status(raw, remove_price_limits=remove_price_limits, **kwargs)
         # CCXT standard market_status fixing logic
+        fixed[enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
+            enums.ExchangeConstantsMarketStatusColumns.PRECISION_AMOUNT.value] = number_util.get_digits_count(
+            fixed[enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
+                enums.ExchangeConstantsMarketStatusColumns.PRECISION_AMOUNT.value]
+        )
+        fixed[enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
+            enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value] = number_util.get_digits_count(
+            fixed[enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
+                enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value]
+        )
+        if remove_price_limits:
+            fixed[enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
+                enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
+                enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MIN.value] = None
+            fixed[enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
+                enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
+                enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MAX.value] = None
+
         return fixed
 
-    def parse_market_status(self, fixed, **kwargs):
+    def parse_market_status(self, fixed, remove_price_limits=False, **kwargs):
         # CCXT standard market_status parsing logic
         return fixed
