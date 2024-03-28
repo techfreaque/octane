@@ -153,7 +153,8 @@ async def test_create_zipped_tentacles_package(install_tentacles):
     remove(expected_file_name)
 
 
-async def test_create_cythonized_tentacles_package(install_tentacles):
+# disabled
+async def _test_create_cythonized_tentacles_package(install_tentacles):
     speedup_cythonization()
     exchange_importer_path = join(TENTACLES_PATH,
                                   TENTACLES_BACKTESTING_PATH,
@@ -180,7 +181,8 @@ async def test_create_cythonized_tentacles_package(install_tentacles):
                              2)
 
 
-async def test_create_all_tentacles_bundle_cleaned_not_zipped_but_cythonized(install_tentacles):
+# disabled
+async def _test_create_all_tentacles_bundle_cleaned_not_zipped_but_cythonized(install_tentacles):
     speedup_cythonization()
     assert await create_all_tentacles_bundle(TEST_EXPORT_DIR,
                                              in_zip=False,

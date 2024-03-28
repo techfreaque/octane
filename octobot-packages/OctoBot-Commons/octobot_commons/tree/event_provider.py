@@ -80,6 +80,12 @@ class EventProvider(singleton.Singleton):
         """
         self._event_tree_by_bot_id[bot_id] = event_tree.EventTree()
 
+    def remove_event_tree(self, bot_id):
+        """
+        Removes the event tree for the given bot_id
+        """
+        self._event_tree_by_bot_id.pop(bot_id, None)
+
     async def wait_for_event(self, bot_id, path, timeout) -> bool:
         """
         Wait for the event at the given path for the given bot_id.

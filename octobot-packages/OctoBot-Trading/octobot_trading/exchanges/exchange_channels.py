@@ -34,10 +34,11 @@ async def create_exchange_channels(exchange_manager) -> None:
                                                          exchange_manager=exchange_manager)
 
 
-async def create_exchange_producers(exchange_manager) -> None:
+async def create_exchange_producers(exchange_manager, forced_producers=None) -> None:
     """
     Create exchange channels producers according to exchange manager context (backtesting, simulator, real)
     :param exchange_manager: the related exchange manager
+    :param forced_producers: producers to create no anyway
     """
     import octobot_trading.personal_data as personal_data
 
@@ -53,6 +54,9 @@ async def create_exchange_producers(exchange_manager) -> None:
     # Simulated producers
     if _should_create_simulated_producers(exchange_manager):
         await _create_producers(exchange_manager, personal_data.AUTHENTICATED_UPDATER_SIMULATOR_PRODUCERS)
+
+    if forced_producers:
+        await _create_producers(exchange_manager, forced_producers)
 
 
 def _should_create_authenticated_producers(exchange_manager):
@@ -168,4 +172,12 @@ def requires_refresh_trigger(exchange_manager, channel):
     :param channel: name of the channel
     :return: True if it should be refreshed via a manual trigger to be exactly up to date
     """
-    return not exchanges.is_channel_managed_by_websocket(exchange_manager, channel)
+    return not (
+        exchanges.is_channel_managed_by_websocket(exchange_manager, channel)
+        or _is_updater_refresh_disabled(exchange_manager)
+    )
+
+
+def _is_updater_refresh_disabled(exchange_manager):
+    # channel updaters are disabled on exchange_only mode
+    return exchange_manager.exchange_only

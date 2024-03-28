@@ -31,25 +31,30 @@ import octobot_tentacles_manager.api as tentacles_manager_api
 LOGGER_NAME = "EvaluatorsAPI"
 
 
-async def create_and_start_all_type_evaluators(tentacles_setup_config: object,
-                                               matrix_id: str,
-                                               exchange_name: str,
-                                               bot_id: str,
-                                               symbols_by_crypto_currencies: dict = None,
-                                               symbols: list = None,
-                                               time_frames: list = None,
-                                               real_time_time_frames: list = None,
-                                               relevant_evaluators=common_constants.CONFIG_WILDCARD,
-                                               ) -> list:
-    return await evaluator.create_and_start_all_type_evaluators(tentacles_setup_config=tentacles_setup_config,
-                                                                matrix_id=matrix_id,
-                                                                exchange_name=exchange_name,
-                                                                bot_id=bot_id,
-                                                                symbols_by_crypto_currencies=symbols_by_crypto_currencies,
-                                                                symbols=symbols,
-                                                                time_frames=time_frames,
-                                                                real_time_time_frames=real_time_time_frames,
-                                                                relevant_evaluators=relevant_evaluators)
+async def create_and_start_all_type_evaluators(
+    tentacles_setup_config: object,
+    matrix_id: str,
+    exchange_name: str,
+    bot_id: str,
+    symbols_by_crypto_currencies: dict = None,
+    symbols: list = None,
+    time_frames: list = None,
+    real_time_time_frames: list = None,
+    relevant_evaluators=common_constants.CONFIG_WILDCARD,
+    config_by_evaluator=None
+) -> list:
+    return await evaluator.create_and_start_all_type_evaluators(
+        tentacles_setup_config=tentacles_setup_config,
+        matrix_id=matrix_id,
+        exchange_name=exchange_name,
+        bot_id=bot_id,
+        symbols_by_crypto_currencies=symbols_by_crypto_currencies,
+        symbols=symbols,
+        time_frames=time_frames,
+        real_time_time_frames=real_time_time_frames,
+        relevant_evaluators=relevant_evaluators,
+        config_by_evaluator=config_by_evaluator
+    )
 
 
 def get_evaluator_classes_from_type(evaluator_type, tentacles_setup_config, activated_only=True) -> list:
@@ -59,12 +64,13 @@ def get_evaluator_classes_from_type(evaluator_type, tentacles_setup_config, acti
     return tentacles_management.get_all_classes_from_parent(evaluator.EvaluatorClassTypes[evaluator_type])
 
 
-async def initialize_evaluators(config, tentacles_setup_config) -> None:
+async def initialize_evaluators(config, tentacles_setup_config, config_by_evaluator=None) -> None:
     """
     :param config: bot config
     :param tentacles_setup_config: tentacles configuration
+    :param config_by_evaluator: dict of evaluator configuration by evaluator name
     """
-    _init_time_frames(config, tentacles_setup_config)
+    _init_time_frames(config, tentacles_setup_config, config_by_evaluator=config_by_evaluator)
     # take evaluators and strategies candles requirements into account if any
     api.init_required_candles_count_from_evaluators_and_strategies(config, tentacles_setup_config)
 
@@ -84,9 +90,9 @@ def update_time_frames_config(evaluator_class, tentacles_setup_config, time_fram
     )
 
 
-def _init_time_frames(config, tentacles_setup_config):
+def _init_time_frames(config, tentacles_setup_config, config_by_evaluator=None):
     # Init time frames using enabled strategies
-    api.init_time_frames_from_strategies(config, tentacles_setup_config)
+    api.init_time_frames_from_strategies(config, tentacles_setup_config, config_by_strategy=config_by_evaluator)
 
 
 def create_matrix() -> str:

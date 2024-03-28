@@ -15,11 +15,10 @@
 #  License along with this library.
 import flask
 import os
-from tentacles.Services.Interfaces.octo_ui2.models.octo_ui2 import import_cross_origin_if_enabled
 
-import tentacles.Services.Interfaces.web_interface as web_interface
-import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
+import tentacles.Services.Interfaces.octo_ui2.models.octo_ui2 as octo_ui2_models
+
 
 
 def _send_file(base_dir, file_path):
@@ -27,71 +26,43 @@ def _send_file(base_dir, file_path):
     return flask.send_from_directory(os.path.join(base_dir, base_path), file_name)
 
 
-@web_interface.server_instance.route('/tentacle_media')
-@web_interface.server_instance.route('/tentacle_media/<path:path>')
-@login.login_required_when_activated
-def tentacle_media(path=None):
-    # images
-    if models.is_valid_tentacle_image_path(path):
-        # reference point is the web interface directory: use OctoBot root folder as a reference
-        return _send_file("../../../..", path)
-
-
-@web_interface.server_instance.route('/profile_media/<path:path>')
-@login.login_required_when_activated
-def profile_media(path):
-    # images
-    if models.is_valid_profile_image_path(path):
-        # reference point is the web interface directory: use OctoBot root folder as a reference
-        return _send_file("../../../..", path)
-
-route = "/exchange_logo/<name>"
-if cross_origin := import_cross_origin_if_enabled():
-
-    @web_interface.server_instance.route(route)
-    @cross_origin(origins="*")
-    @login.login_required_when_activated
+def register(blueprint):
+    @octo_ui2_models.octane_route(blueprint, route="/tentacle_media", can_be_shared_public=True)
+    def tentacle_media():
+        _tentacle_media()
+        
+    @octo_ui2_models.octane_route(blueprint, route="/tentacle_media/<path:path>", can_be_shared_public=True)
+    def tentacle_media_with_path(path=None):
+        _tentacle_media(path=path)
+        
+    def _tentacle_media(path=None):
+        # images
+        if models.is_valid_tentacle_image_path(path):
+            # reference point is the web interface directory: use OctoBot root folder as a reference
+            return _send_file("../../../..", path)
+    
+    
+    @octo_ui2_models.octane_route(blueprint, route="/profile_media/<path:path>", can_be_shared_public=True)
+    def profile_media(path):
+        # images
+        if models.is_valid_profile_image_path(path):
+            # reference point is the web interface directory: use OctoBot root folder as a reference
+            return _send_file("../../../..", path)
+    
+    
+    @octo_ui2_models.octane_route(blueprint, route="/exchange_logo/<name>", can_be_shared_public=True)
     def exchange_logo(name):
-        return _exchange_logo(name)
-
-else:
-
-    @web_interface.server_instance.route(route)
-    @login.login_required_when_activated
-    def exchange_logo(name):
-        return _exchange_logo(name)
-
-
-def _exchange_logo(name):
-    return flask.jsonify(models.get_exchange_logo(name))
-
-
-@web_interface.server_instance.route('/audio_media/<name>')
-@login.login_required_when_activated
-def audio_media(name):
-    if models.is_valid_audio_path(name):
-        # reference point is the web interface directory: use OctoBot root folder as a reference
-        return _send_file("static/audio", name)
-
-
-route = "/currency_logos"
-methods = ["POST"]
-if cross_origin := import_cross_origin_if_enabled():
-
-    @web_interface.server_instance.route(route, methods=methods)
-    @cross_origin(origins="*")
-    @login.login_required_when_activated
+        return flask.jsonify(models.get_exchange_logo(name))
+    
+    
+    @octo_ui2_models.octane_route(blueprint, route="/audio_media/<name>", can_be_shared_public=True)
+    def audio_media(name):
+        if models.is_valid_audio_path(name):
+            # reference point is the web interface directory: use OctoBot root folder as a reference
+            return _send_file("static/audio", name)
+    
+    
+    @octo_ui2_models.octane_route(blueprint, route="/currency_logos", methods=['POST'], can_be_shared_public=True)
     def cryptocurrency_logos():
-        return _cryptocurrency_logos()
-
-else:
-
-    @web_interface.server_instance.route(route, methods=methods)
-    @login.login_required_when_activated
-    def cryptocurrency_logos():
-        return _cryptocurrency_logos()
-
-
-def _cryptocurrency_logos():
-    request_data = flask.request.get_json()
-    return flask.jsonify(models.get_currency_logo_urls(request_data["currency_ids"]))
+        request_data = flask.request.get_json()
+        return flask.jsonify(models.get_currency_logo_urls(request_data["currency_ids"]))

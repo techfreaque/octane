@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.7] - 2023-12-11
+### Added
+- [Backtesting] extra_backtesting_time_frames
+
+## [1.9.6] - 2023-12-06
+### Added
+- [BacktestData] use_cached_markets
+
+## [1.9.5] - 2023-10-27
+### Added
+- [API] adapt_backtesting_channels return value
+
+## [1.9.4] - 2023-10-15
+### Updated
+- [Timeframes] allow accurate price time frame
+
+## [1.9.2] - 2023-09-03
+### Updated
+- [Timeframes] allow minimal available timeframe instead of forcing 1m
+- [TimeChannel] rename to avoid conflicts
+
+## [1.9.1] - 2023-08-14
+### Added
+- [BacktestData] forced_markets
+
 ## [1.9.0] - 2023-05-02
 ### Updated
 - Supported python versions

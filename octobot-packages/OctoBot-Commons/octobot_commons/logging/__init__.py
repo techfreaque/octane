@@ -19,6 +19,7 @@ from octobot_commons.logging.logging_util import (
     BotLogger,
     set_global_logger_level,
     get_global_logger_level,
+    temporary_log_level,
     get_logger_level_per_handler,
     get_logger,
     set_logging_level,
@@ -35,6 +36,8 @@ from octobot_commons.logging.logging_util import (
     get_errors_count,
     reset_errors_count,
     register_error_notifier,
+    register_log_callback,
+    set_enable_web_interface_logs,
 )
 
 from octobot_commons.logging import debugging_report_util
@@ -46,6 +49,7 @@ __all__ = [
     "BotLogger",
     "set_global_logger_level",
     "get_global_logger_level",
+    "temporary_log_level",
     "get_logger_level_per_handler",
     "get_logger",
     "set_logging_level",
@@ -62,5 +66,7 @@ __all__ = [
     "get_errors_count",
     "reset_errors_count",
     "register_error_notifier",
+    "register_log_callback",
+    "set_enable_web_interface_logs",
     "DebuggingReporter",
 ]

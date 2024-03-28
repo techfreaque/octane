@@ -31,13 +31,15 @@ LOGGER_NAME = "BacktestingAPI"
 
 
 async def initialize_backtesting(config, exchange_ids, matrix_id, data_files,
-                                 importers_by_data_file=None, backtest_data=None) -> backtesting_class.Backtesting:
+                                 importers_by_data_file=None, backtest_data=None,
+                                 bot_id=None) -> backtesting_class.Backtesting:
     backtesting_instance = backtesting_class.Backtesting(config=config,
                                                          exchange_ids=exchange_ids,
                                                          matrix_id=matrix_id,
                                                          backtesting_files=data_files,
                                                          importers_by_data_file=importers_by_data_file,
-                                                         backtest_data=backtest_data)
+                                                         backtest_data=backtest_data,
+                                                         bot_id=bot_id)
     await backtesting_instance.create_importers()
     await backtesting_instance.initialize()
 
@@ -49,6 +51,10 @@ async def initialize_backtesting(config, exchange_ids, matrix_id, data_files,
 
 async def initialize_independent_backtesting_config(independent_backtesting) -> dict:
     return await independent_backtesting.initialize_config()
+
+
+def get_backtesting_time_channel_name(backtesting) -> str:
+    return backtesting.get_time_chan_name()
 
 
 async def modify_backtesting_timestamps(backtesting, set_timestamp=None,
@@ -112,17 +118,24 @@ async def _get_min_max_timestamps(importers, run_on_common_part_only, start_time
     return min_timestamp, max_timestamp
 
 
-async def adapt_backtesting_channels(backtesting, config, importer_class, run_on_common_part_only=True,
+async def adapt_backtesting_channels(backtesting, config, importer_class,
+                                     run_on_common_part_only=True,
                                      start_timestamp=None, end_timestamp=None):
     importers = backtesting.get_importers(importer_class)
     if not importers:
         raise RuntimeError("No exchange importer has been found for this data file, backtesting can't start.")
     sorted_time_frames = time_frame_manager.sort_time_frames(time_frame_manager.get_config_time_frame(config))
-    if not sorted_time_frames:
-        # use min timeframe as default if no timeframe is enabled
-        sorted_time_frames = [time_frame_manager.find_min_time_frame([])]
+    sorted_available_time_frames = time_frame_manager.sort_time_frames(api.get_available_time_frames(importers[0]))
+    min_available_time_frame = sorted_available_time_frames[0]
+    if not sorted_time_frames or (
+        backtesting.use_accurate_price_time_frame() and sorted_time_frames[0] != min_available_time_frame
+    ):
+        # use min available timeframe as default if no timeframe is enabled or if add min available timeframe
+        # if not already in handled time frames
+        sorted_time_frames.insert(0, min_available_time_frame)
     min_time_frame_to_consider = sorted_time_frames[0]
     max_time_frame_to_consider = sorted_time_frames[-1]
+    _ensure_extra_time_frames(min_time_frame_to_consider, config)
     min_timestamp, max_timestamp = await _get_min_max_timestamps(importers, run_on_common_part_only,
                                                                  start_timestamp, end_timestamp,
                                                                  min_time_frame_to_consider, max_time_frame_to_consider)
@@ -140,6 +153,16 @@ async def adapt_backtesting_channels(backtesting, config, importer_class, run_on
                                       common_constants.MINUTE_TO_SECONDS)
     except ImportError:
         logging.get_logger(LOGGER_NAME).error("requires OctoBot-Trading package installed")
+    return min_timestamp, max_timestamp
+
+
+def _ensure_extra_time_frames(min_time_frame_to_consider, config):
+    min_tf_minutes = common_enums.TimeFramesMinutes[min_time_frame_to_consider]
+    for required_extra_time_frame in config.get(common_constants.CONFIG_REQUIRED_EXTRA_TIMEFRAMES, []):
+        if common_enums.TimeFramesMinutes[common_enums.TimeFrames(required_extra_time_frame)] < min_tf_minutes:
+            raise errors.MissingTimeFrame(
+                f"Missing required (or lower) time frame in data file: {required_extra_time_frame}"
+            )
 
 
 def set_time_updater_interval(backtesting, interval_in_seconds):
@@ -203,8 +226,9 @@ def get_backtesting_duration(backtesting) -> float:
     return time.time() - backtesting.time_updater.starting_time
 
 
-async def create_and_init_backtest_data(data_files, config, tentacles_config) -> backtest_data.BacktestData:
-    backtest_data_inst = backtest_data.BacktestData(data_files, config, tentacles_config)
+async def create_and_init_backtest_data(data_files, config, tentacles_config, use_accurate_price_time_frame) \
+        -> backtest_data.BacktestData:
+    backtest_data_inst = backtest_data.BacktestData(data_files, config, tentacles_config, use_accurate_price_time_frame)
     await backtest_data_inst.initialize()
     return backtest_data_inst
 

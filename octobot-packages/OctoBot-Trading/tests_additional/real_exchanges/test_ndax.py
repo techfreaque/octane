@@ -54,6 +54,7 @@ class TestNdaxRealExchangeTester(RealExchangeTester):
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             assert market_status
+            assert market_status[Ecmsc.TYPE.value] == self.MARKET_STATUS_TYPE
             assert market_status[Ecmsc.SYMBOL.value] in (self.SYMBOL, self.SYMBOL_2, self.SYMBOL_3)
             assert market_status[Ecmsc.PRECISION.value]
             # on this exchange, precision is a decimal instead of a number of digits
@@ -108,6 +109,9 @@ class TestNdaxRealExchangeTester(RealExchangeTester):
                 for candle in symbol_prices:
                     assert self.CANDLE_SINCE_SEC <= candle[PriceIndexes.IND_PRICE_TIME.value] <= max_candle_time
 
+    async def test_get_historical_ohlcv(self):
+        await super().test_get_historical_ohlcv()
+
     async def test_get_kline_price(self):
         kline_price = await self.get_kline_price()
         assert len(kline_price) == 1
@@ -119,9 +123,9 @@ class TestNdaxRealExchangeTester(RealExchangeTester):
     async def test_get_order_book(self):
         order_book = await self.get_order_book()
         assert len(order_book[Ecobic.ASKS.value]) == 5
-        assert len(order_book[Ecobic.ASKS.value][0]) == 2
+        assert len(order_book[Ecobic.ASKS.value][0]) == 3
         assert len(order_book[Ecobic.BIDS.value]) == 5
-        assert len(order_book[Ecobic.BIDS.value][0]) == 2
+        assert len(order_book[Ecobic.BIDS.value][0]) == 3
 
     async def test_get_recent_trades(self):
         recent_trades = await self.get_recent_trades()
@@ -158,7 +162,7 @@ class TestNdaxRealExchangeTester(RealExchangeTester):
             assert ticker[Ectc.LOW.value] is None
             assert ticker[Ectc.BID.value]
             assert ticker[Ectc.BID_VOLUME.value] is None
-            assert ticker[Ectc.ASK.value]
+            assert ticker[Ectc.ASK.value] is None
             assert ticker[Ectc.ASK_VOLUME.value] is None
             assert ticker[Ectc.OPEN.value] is None
             assert ticker[Ectc.CLOSE.value]

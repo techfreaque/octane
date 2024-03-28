@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import octobot_trading.constants as constants
+import octobot_trading.exchanges.util as exchange_util
 import octobot_trading.exchanges.connectors.simulator.exchange_simulator_connector as exchange_simulator_connector
 import octobot_trading.exchanges.types.rest_exchange as rest_exchange
 
@@ -24,6 +25,7 @@ class ExchangeSimulator(rest_exchange.RestExchange):
     def __init__(self, config, exchange_manager, backtesting):
         self.backtesting = backtesting
         self.exchange_importers = []
+        self.exchange_tentacle = None
         super().__init__(config, exchange_manager)
 
     def _create_connector(self, config, exchange_manager, connector_class):
@@ -37,11 +39,33 @@ class ExchangeSimulator(rest_exchange.RestExchange):
     async def initialize_impl(self):
         await super().initialize_impl()
         self.exchange_importers = self.connector.exchange_importers
+        if self.connector.should_adapt_market_statuses():
+            await self._init_exchange_tentacle()
+
+    async def _init_exchange_tentacle(self):
+        origin_ignore_config = self.exchange_manager.ignore_config
+        try:
+            self.exchange_tentacle = None
+            self.exchange_manager.ignore_config = True
+            # initialize a locale exchange_tentacle to be able to access adapters for market statuses
+            if exchange_class := exchange_util.get_rest_exchange_class(
+                self.exchange_manager.exchange_name, self.exchange_manager.tentacles_setup_config
+            ):
+                self.exchange_tentacle = exchange_class(self.exchange_manager.config, self.exchange_manager)
+        finally:
+            self.exchange_manager.ignore_config = origin_ignore_config
+            # reset ignore_config as soon as possible
+        if self.exchange_tentacle:
+            if adapter_class := self.exchange_tentacle.get_adapter_class():
+                self.connector.adapter.set_tentacles_adapter_proxy(adapter_class)
+            # do not keep the created ccxt exchange
+            await self.exchange_tentacle.stop()
 
     async def stop(self) -> None:
         await super().stop()
         self.backtesting = None
         self.exchange_importers = None
+        self.exchange_tentacle = None
 
     @classmethod
     def is_supporting_exchange(cls, exchange_candidate_name) -> bool:
@@ -54,11 +78,23 @@ class ExchangeSimulator(rest_exchange.RestExchange):
     async def create_backtesting_exchange_producers(self):
         return await self.connector.create_backtesting_exchange_producers()
 
+    def _should_fix_market_status(self):
+        return (self.exchange_tentacle or self).FIX_MARKET_STATUS
+
+    def _should_remove_market_status_limits(self):
+        return (self.exchange_tentacle or self).REMOVE_MARKET_STATUS_PRICE_LIMITS
+
+    def _should_adapt_market_status_for_contract_size(self):
+        return (self.exchange_tentacle or self).ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE
+
     def get_available_time_frames(self):
         return self.connector.get_available_time_frames()
 
     def get_time_frames(self, importer):
         return self.connector.get_time_frames(importer)
+
+    def use_accurate_price_time_frame(self) -> bool:
+        return self.connector.use_accurate_price_time_frame()
 
     def get_current_future_candles(self):
         return self.connector.current_future_candles

@@ -15,6 +15,7 @@
 #  License along with this library.
 
 import octobot_trading.enums as trading_enums
+import octobot_trading.constants as trading_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.errors as commons_errors
 import octobot_commons.constants as commons_constants
@@ -24,7 +25,6 @@ import octobot_backtesting.api as backtesting_api
 import octobot_trading.enums as trading_enums
 import octobot_trading.storage as storage
 import octobot_trading.api as trading_api
-import octobot_trading.storage as trading_storage
 
 
 class DisplayedElements(display.DisplayTranslator):
@@ -41,8 +41,7 @@ class DisplayedElements(display.DisplayTranslator):
     }
 
     async def fill_from_database(self, trading_mode, database_manager, exchange_name, symbol, time_frame, exchange_id,
-                                 with_inputs=True):
-
+                                 with_inputs=True, symbols=None, time_frames=None):
         async with databases.MetaDatabase.database(database_manager) as meta_db:
             graphs_by_parts = {}
             inputs = []
@@ -61,6 +60,10 @@ class DisplayedElements(display.DisplayTranslator):
             run_db = meta_db.get_run_db()
             metadata_rows = await run_db.all(commons_enums.DBTables.METADATA.value)
             metadata = metadata_rows[0] if metadata_rows else None
+            if symbols is not None:
+                symbols.extend(metadata[commons_enums.BacktestingMetadata.SYMBOLS.value])
+            if time_frames is not None:
+                time_frames.extend(metadata[commons_enums.BacktestingMetadata.TIME_FRAMES.value])
             account_type = trading_api.get_account_type_from_run_metadata(metadata) \
                 if database_manager.is_backtesting() \
                 else trading_api.get_account_type_from_exchange_manager(
@@ -246,7 +249,7 @@ class DisplayedElements(display.DisplayTranslator):
         elif table_name == commons_enums.DBTables.ORDERS.value:
             # adapt order details for display
             for display_element in filtered_elements:
-                order_details = display_element[trading_storage.AbstractStorage.ORIGIN_VALUE_KEY]
+                order_details = display_element[trading_constants.STORAGE_ORIGIN_VALUE]
                 side = order_details[trading_enums.ExchangeConstantsOrderColumns.SIDE.value]
                 display_element[commons_enums.PlotAttributes.COLOR.value] = "red" \
                     if side == trading_enums.TradeOrderSide.SELL.value else "green"
@@ -272,10 +275,10 @@ class DisplayedElements(display.DisplayTranslator):
             display_element
             for display_element in elements
             if (
-                display_element.get(commons_enums.DBRows.SYMBOL.value, symbol) == symbol
-                and display_element.get(commons_enums.DBRows.TIME_FRAME.value, time_frame) == time_frame
+                display_element.get(commons_enums.DBRows.SYMBOL.value) == symbol
+                and display_element.get(commons_enums.DBRows.TIME_FRAME.value) == time_frame
             ) or (
-                display_element.get(trading_storage.AbstractStorage.ORIGIN_VALUE_KEY, {})
+                display_element.get(trading_constants.STORAGE_ORIGIN_VALUE, {})
                 .get(trading_enums.ExchangeConstantsOrderColumns.SYMBOL.value, None) == symbol
             )
         ]

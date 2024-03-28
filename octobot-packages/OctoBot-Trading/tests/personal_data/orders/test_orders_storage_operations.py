@@ -20,7 +20,7 @@ import decimal
 
 import octobot_trading.enums as enums
 import octobot_trading.personal_data as personal_data
-import octobot_trading.storage as storage
+import octobot_trading.constants as constants
 
 from tests import event_loop
 from tests.exchanges import exchange_manager, simulated_exchange_manager
@@ -44,7 +44,7 @@ def initialized_mocked_order_storage(trader_simulator):
 async def test_apply_order_storage_details_if_any(initialized_mocked_order_storage):
     mocked_order_storage, exchange_manager_inst, trader_inst = initialized_mocked_order_storage
     mocked_order_storage.get_startup_order_details = mock.AsyncMock(return_value={})
-    mocked_order_storage.should_store_date = mock.Mock(return_value=False)
+    mocked_order_storage.should_store_data = mock.Mock(return_value=False)
 
     order = personal_data.BuyLimitOrder(trader_inst)
     order.update(order_type=enums.TraderOrderType.BUY_LIMIT,
@@ -57,7 +57,7 @@ async def test_apply_order_storage_details_if_any(initialized_mocked_order_stora
     # disabled in trader simulator
     mocked_order_storage.get_startup_order_details.assert_not_awaited()
 
-    mocked_order_storage.should_store_date = mock.Mock(return_value=True)
+    mocked_order_storage.should_store_data = mock.Mock(return_value=True)
     await personal_data.apply_order_storage_details_if_any(order, exchange_manager_inst, {})
     mocked_order_storage.get_startup_order_details.assert_awaited_once_with("plop exchange_id")
 
@@ -70,7 +70,7 @@ async def test_apply_order_storage_details_if_any(initialized_mocked_order_stora
     assert order.order_id != "new id 123"
     assert order.exchange_order_id != "new exchange id 123"
     mocked_order_storage.get_startup_order_details = mock.AsyncMock(return_value={
-        storage.OrdersStorage.ORIGIN_VALUE_KEY: {
+        constants.STORAGE_ORIGIN_VALUE: {
             enums.ExchangeConstantsOrderColumns.ID.value: "new id 123",
             enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value: "new exchange id 123"
         }

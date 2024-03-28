@@ -57,6 +57,12 @@ class SignalBundleBuilder:
             version=self.version,
         )
 
+    def sort_signals(self):
+        """
+        Implement if necessary
+        """
+        return self
+
     def reset(self):
         """
         Remove all registered signals

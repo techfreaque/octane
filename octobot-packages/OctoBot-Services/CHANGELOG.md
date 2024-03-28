@@ -4,6 +4,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.10] - 2023-01-10
+### Added
+- Services: creation_error_message
+
+## [1.6.9] - 2023-01-09
+### Updated
+- fix openai patches by patch_openai_proxies
+
+## [1.6.8] - 2023-01-09
+### Added
+- is_openai_proxy
+
+## [1.6.7] - 2023-01-09
+### Updated
+- dependencies
+
+## [1.6.6] - 2023-12-18
+### Added
+- [interfaces] async api
+
+## [1.6.5] - 2023-10-27
+### Added
+- [get_service] config param
+
+## [1.6.4] - 2023-10-11
+### Added
+- [Webhook] Add CONFIG_NGROK_DOMAIN key
+
+## [1.6.3] - 2023-10-01
+### Updated
+- [Requirements] update dependencies
+
+## [1.6.2] - 2023-08-18
+### Updated
+- [Requirements] update dependencies
+
+## [1.6.1] - 2023-07-23
+### Updated
+- [ReturningStartable] add threaded_start
+
 ## [1.6.0] - 2023-05-02
 ### Updated
 - Supported python versions

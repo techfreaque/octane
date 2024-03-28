@@ -109,6 +109,12 @@ class BaseTree:
         except KeyError:
             raise NodeExistsError
 
+    def clear(self):
+        """
+        Clears the whole tree
+        """
+        self.root = self.TREE_NODE_CLASS(None, None)
+
     def delete_node(self, path, starting_node=None):
         """
         Delete the node at the specified path

@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import trading_backend.exchanges as exchanges
+import trading_backend.enums
 
 
 class OKX(exchanges.Exchange):
@@ -26,11 +27,23 @@ class OKX(exchanges.Exchange):
     def get_name(cls):
         return 'okx'
 
+    async def _get_api_key_rights(self) -> list[trading_backend.enums.APIKeyRights]:
+        accounts = await self._exchange.connector.client.fetch_accounts()
+        if not accounts:
+            return []
+        restrictions = accounts[0]["info"]["perm"].split(",")
+        rights = []
+        if "read_only" in restrictions:
+            rights.append(trading_backend.enums.APIKeyRights.READING)
+        if "trade" in restrictions:
+            rights.append(trading_backend.enums.APIKeyRights.SPOT_TRADING)
+            rights.append(trading_backend.enums.APIKeyRights.MARGIN_TRADING)
+            rights.append(trading_backend.enums.APIKeyRights.FUTURES_TRADING)
+        if "withdraw" in restrictions:
+            rights.append(trading_backend.enums.APIKeyRights.WITHDRAWALS)
+        return rights
+
     def get_orders_parameters(self, params=None) -> dict:
         if self._exchange.connector.client.options.get("brokerId", "") != self._get_id():
             self._exchange.connector.client.options["brokerId"] = self._get_id()
         return super().get_orders_parameters(params)
-
-    async def _inner_is_valid_account(self) -> (bool, str):
-        # Nothing to do
-        return await super()._inner_is_valid_account()

@@ -260,6 +260,7 @@ class ExchangeConstantsMarketStatusColumns(enum.Enum):
     LIMITS_COST = "cost"  # same limits for order cost = price * amount
     LIMITS_COST_MIN = "min"  # order cost should be > min
     LIMITS_COST_MAX = "max"  # order cost should be < max
+    TYPE = "type"
     INFO = "info"
 
 
@@ -301,6 +302,7 @@ class ExchangeConstantsOrderColumns(enum.Enum):
     INFO = "info"
     ID = "id"
     EXCHANGE_ID = "exchange_id"
+    EXCHANGE_TRADE_ID = "exchange_trade_id"
     ORDER_ID = "order_id"
     TIMESTAMP = "timestamp"
     DATETIME = 'datetime'
@@ -332,6 +334,8 @@ class ExchangeConstantsOrderColumns(enum.Enum):
     TAG = "tag"
     SELF_MANAGED = "self-managed"
     ENTRIES = "entries"
+    VOLUME = "volume"
+    BROKER_APPLIED = "broker_applied"
 
 
 class TradeExtraConstants(enum.Enum):

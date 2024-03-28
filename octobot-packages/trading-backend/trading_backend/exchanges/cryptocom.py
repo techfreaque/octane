@@ -17,9 +17,9 @@ import trading_backend.exchanges as exchanges
 
 
 class CryptoCom(exchanges.Exchange):
-    SPOT_ID = "OCTBT_"
-    MARGIN_ID = "OCTBT_"
-    FUTURE_ID = "OCTBT_"
+    SPOT_ID = "OCTBT"
+    MARGIN_ID = "OCTBT"
+    FUTURE_ID = "OCTBT"
     IS_SPONSORING = True
     HEADER_SPOT_KEY = "agentSource"
     HEADER_FUTURE_KEY = "Referer"
@@ -32,7 +32,3 @@ class CryptoCom(exchanges.Exchange):
         if self._exchange.connector.client.options.get("broker", None) != self._get_id():
             self._exchange.connector.client.options["broker"] = self._get_id()
         return super().get_orders_parameters(params)
-
-    async def _inner_is_valid_account(self) -> (bool, str):
-        # Nothing to do
-        return await super()._inner_is_valid_account()

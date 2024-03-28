@@ -134,7 +134,7 @@ class TentaclesSetupConfiguration:
         loaders.ensure_tentacles_metadata(tentacles_path)
         tentacle_by_class_name = loaders.get_tentacle_classes()
         for tentacle_class in tentacles_classes:
-            tentacle_name = tentacle_class.get_name()
+            tentacle_name = tentacle_class if isinstance(tentacle_class, str) else tentacle_class.get_name()
             tentacle = tentacle_by_class_name[tentacle_name]
             try:
                 self.tentacles_activation[tentacle.tentacle_root_type][tentacle_name] = True

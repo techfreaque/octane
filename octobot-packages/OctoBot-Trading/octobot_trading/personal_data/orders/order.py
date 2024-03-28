@@ -25,8 +25,8 @@ import octobot_trading.enums as enums
 import octobot_trading.errors as errors
 import octobot_trading.personal_data.orders.states as orders_states
 import octobot_trading.personal_data.orders.order_util as order_util
+import octobot_trading.personal_data.orders.decimal_order_adapter as decimal_order_adapter
 import octobot_trading.util as util
-import octobot_trading.storage.orders_storage as orders_storage
 
 
 class Order(util.Initializable):
@@ -59,6 +59,7 @@ class Order(util.Initializable):
         self.side = side
         self.tag = None
         self.associated_entry_ids = None
+        self.broker_applied = False
 
         # original order attributes
         self.creation_time = self.exchange_manager.exchange.get_exchange_current_time()
@@ -137,7 +138,7 @@ class Order(util.Initializable):
         changed: bool = False
         should_update_total_cost = False
 
-        price = current_price if self.use_current_price_as_origin_price() else price
+        price = current_price if (current_price and self.use_current_price_as_origin_price()) else price
 
         if order_id and self.order_id != order_id:
             self.order_id = order_id
@@ -283,6 +284,10 @@ class Order(util.Initializable):
         if self.is_created() and not self.is_closed():
             await self.update_order_status()
 
+    def register_broker_applied_if_enabled(self):
+        if not self.simulated and self.trader and self.trader.exchange_manager:
+            self.broker_applied = self.trader.exchange_manager.is_broker_enabled
+
     def _on_origin_price_change(self, previous_price, price_time):
         """
         Called when origin price just changed.
@@ -324,15 +329,23 @@ class Order(util.Initializable):
         return self.state is None or self.state.is_open()
 
     def is_filled(self):
+        if self.state is None:
+            return self.status is enums.OrderStatus.FILLED
         return self.state.is_filled() or (self.state.is_closed() and self.status is enums.OrderStatus.FILLED)
 
     def is_cancelled(self):
+        if self.state is None:
+            return self.status is enums.OrderStatus.CANCELED
         return self.state.is_canceled() or (self.state.is_closed() and self.status is enums.OrderStatus.CANCELED)
 
     def is_cancelling(self):
+        if self.state is None:
+            return self.status is enums.OrderStatus.PENDING_CANCEL
         return self.state.state is enums.OrderStates.CANCELING or self.status is enums.OrderStatus.PENDING_CANCEL
 
     def is_closed(self):
+        if self.state is None:
+            return self.status is enums.OrderStatus.CLOSED
         return self.state.is_closed() if self.state is not None else self.status is enums.OrderStatus.CLOSED
 
     def is_refreshing(self):
@@ -364,14 +377,17 @@ class Order(util.Initializable):
         except errors.InvalidOrderState as exc:
             logging.get_logger(self.get_logger_name()).exception(exc, True, f"Error when creating order state: {exc}")
 
-    async def on_pending_creation(self, is_from_exchange_data=False):
+    async def on_pending_creation(self, is_from_exchange_data=False, enable_associated_orders_creation=True):
         with self.order_state_creation():
             state_class = orders_states.PendingCreationChainedOrderState if self.is_waiting_for_chained_trigger \
                 else orders_states.PendingCreationOrderState
-            self.state = state_class(self, is_from_exchange_data=is_from_exchange_data)
+            self.state = state_class(
+                self, is_from_exchange_data=is_from_exchange_data,
+                enable_associated_orders_creation=enable_associated_orders_creation
+            )
             await self.state.initialize()
 
-    async def on_open(self, force_open=False, is_from_exchange_data=False):
+    async def on_open(self, force_open=False, is_from_exchange_data=False, enable_associated_orders_creation=True):
         with self.order_state_creation():
             if isinstance(self.state, orders_states.PendingCreationOrderState):
                 await self.state.trigger_terminate()
@@ -381,28 +397,52 @@ class Order(util.Initializable):
                                                                      f"uninitialized OpenOrderState.")
                 # state has already been created and initialized
                 return
-            self.state = orders_states.OpenOrderState(self, is_from_exchange_data=is_from_exchange_data)
+            self.state = orders_states.OpenOrderState(
+                self, is_from_exchange_data=is_from_exchange_data,
+                enable_associated_orders_creation=enable_associated_orders_creation
+            )
             await self.state.initialize(forced=force_open)
 
-    async def on_fill(self, force_fill=False, is_from_exchange_data=False):
+    async def on_fill(self, force_fill=False, is_from_exchange_data=False, enable_associated_orders_creation=None):
+        enable_associated_orders_creation = self.state.enable_associated_orders_creation \
+            if (self.state and enable_associated_orders_creation is None) \
+            else (enable_associated_orders_creation or True)
         logging.get_logger(self.get_logger_name()).debug(f"on_fill triggered for {self}")
         if (self.is_open() and not self.is_refreshing()) or self.is_pending_creation():
             with self.order_state_creation():
-                self.state = orders_states.FillOrderState(self, is_from_exchange_data=is_from_exchange_data)
+                self.state = orders_states.FillOrderState(
+                    self, is_from_exchange_data=is_from_exchange_data,
+                    enable_associated_orders_creation=enable_associated_orders_creation
+                )
                 await self.state.initialize(forced=force_fill)
         else:
             logging.get_logger(self.get_logger_name()).debug(f"Trying to fill a refreshing or previously filled "
                                                              f"or canceled order: "
                                                              f"ignored fill call for {self}")
 
-    async def on_close(self, force_close=False, is_from_exchange_data=False):
+    async def on_close(self, force_close=False, is_from_exchange_data=False, enable_associated_orders_creation=None):
+        enable_associated_orders_creation = self.state.enable_associated_orders_creation \
+            if (self.state and enable_associated_orders_creation is None) \
+            else (enable_associated_orders_creation or True)
         with self.order_state_creation():
-            self.state = orders_states.CloseOrderState(self, is_from_exchange_data=is_from_exchange_data)
+            self.state = orders_states.CloseOrderState(
+                self, is_from_exchange_data=is_from_exchange_data,
+                enable_associated_orders_creation=enable_associated_orders_creation
+            )
             await self.state.initialize(forced=force_close)
 
-    async def on_cancel(self, is_from_exchange_data=False, force_cancel=False, ignored_order=None):
+    async def on_cancel(
+            self, is_from_exchange_data=False, force_cancel=False, enable_associated_orders_creation=None,
+            ignored_order=None
+    ):
+        enable_associated_orders_creation = self.state.enable_associated_orders_creation \
+            if (self.state and enable_associated_orders_creation is None) \
+            else (enable_associated_orders_creation or True)
         with self.order_state_creation():
-            self.state = orders_states.CancelOrderState(self, is_from_exchange_data=is_from_exchange_data)
+            self.state = orders_states.CancelOrderState(
+                self, is_from_exchange_data=is_from_exchange_data,
+                enable_associated_orders_creation=enable_associated_orders_creation
+            )
             await self.state.initialize(forced=force_cancel, ignored_order=ignored_order)
 
     def on_fill_actions(self):
@@ -411,11 +451,17 @@ class Order(util.Initializable):
         """
         self.status = enums.OrderStatus.FILLED
 
-    async def on_filled(self):
+    async def on_filled(self, enable_associated_orders_creation):
         """
         Filling complete callback
         """
-        await self._trigger_chained_orders()
+        if enable_associated_orders_creation:
+            await self._trigger_chained_orders()
+        elif self.chained_orders:
+            logging.get_logger(self.get_logger_name()).info(
+                f"Skipped chained orders creation for {len(self.chained_orders)} chained orders: "
+                f"enable_associated_orders_creation is {enable_associated_orders_creation}"
+            )
 
     def associate_to_entry(self, entry_order_id):
         if self.associated_entry_ids is None:
@@ -431,20 +477,27 @@ class Order(util.Initializable):
             logger = logging.get_logger(self.get_logger_name())
             fees_str = f"Paid {self.quantity_currency} fees: {relevant_fees_amount}, " \
                        f"initial order size: {self.origin_quantity}"
-            if relevant_fees_amount > self.origin_quantity:
+            if relevant_fees_amount >= self.origin_quantity:
                 logger.error(f"Impossible to update chained order amount according to triggering order fees: "
                              f"fees are larger than then chained order size. {fees_str}")
                 return False
-            self.origin_quantity -= relevant_fees_amount
+            self.origin_quantity = decimal_order_adapter.decimal_adapt_quantity(
+                self.exchange_manager.exchange.get_market_status(self.symbol, with_fixer=False),
+                self.origin_quantity - relevant_fees_amount
+            )
+            fees_str = f"{fees_str}, updated size: {self.origin_quantity}"
             logger.debug(f"Updating chained order quantity with triggering order fees. {fees_str}")
         return True
+
+    async def update_price_if_outdated(self):
+        """
+        Implement if necessary
+        """
 
     async def _trigger_chained_orders(self):
         logger = logging.get_logger(self.get_logger_name())
         for index, order in enumerate(self.chained_orders):
-            can_be_created = True
-            if order.update_with_triggering_order_fees:
-                can_be_created = order.update_quantity_with_order_fees(self)
+            can_be_created = await order_util.adapt_chained_order_before_creation(self, order)
             if can_be_created and order.should_be_created():
                 logger.debug(f"Creating chained order {index + 1}/{len(self.chained_orders)}")
                 await order_util.create_as_chained_order(order)
@@ -489,12 +542,14 @@ class Order(util.Initializable):
         except KeyError:
             return False
 
-    def get_computed_fee(self, forced_value=None):
+    def get_computed_fee(self, forced_value=None, use_origin_quantity_and_price=False):
         is_from_exchange = False
+        price = self.origin_price if use_origin_quantity_and_price else self.filled_price
+        quantity = self.origin_quantity if use_origin_quantity_and_price else self.filled_quantity
         if self.fees_currency_side is enums.FeesCurrencySide.UNDEFINED:
-            computed_fee = self.exchange_manager.exchange.get_trade_fee(self.symbol, self.order_type,
-                                                                        self.filled_quantity, self.filled_price,
-                                                                        self.taker_or_maker)
+            computed_fee = self.exchange_manager.exchange.get_trade_fee(
+                self.symbol, self.order_type, quantity, price, self.taker_or_maker
+            )
             value = computed_fee[enums.FeePropertyColumns.COST.value]
             currency = computed_fee[enums.FeePropertyColumns.CURRENCY.value]
             is_from_exchange = computed_fee[enums.FeePropertyColumns.IS_FROM_EXCHANGE.value]
@@ -502,10 +557,10 @@ class Order(util.Initializable):
             symbol_fees = self.exchange_manager.exchange.get_fees(self.symbol)
             fees = decimal.Decimal(f"{symbol_fees[self.taker_or_maker]}")
             if self.fees_currency_side is enums.FeesCurrencySide.CURRENCY:
-                value = self.filled_quantity / self.filled_price * fees
+                value = quantity / price * fees
                 currency = self.currency
             else:
-                value = self.filled_quantity * self.filled_price * fees
+                value = quantity * price * fees
                 currency = self.market
         return {
             enums.FeePropertyColumns.IS_FROM_EXCHANGE.value: is_from_exchange,
@@ -632,8 +687,12 @@ class Order(util.Initializable):
 
     def update_from_storage_order_details(self, order_details):
         # rebind order attributes that are not stored on exchange
-        order_dict = order_details.get(orders_storage.OrdersStorage.ORIGIN_VALUE_KEY, {})
+        order_dict = order_details.get(constants.STORAGE_ORIGIN_VALUE, {})
         self.tag = order_dict.get(enums.ExchangeConstantsOrderColumns.TAG.value, self.tag)
+        self.broker_applied = order_dict.get(
+            enums.ExchangeConstantsOrderColumns.BROKER_APPLIED.value,
+            self.broker_applied
+        )
         self.order_id = order_dict.get(enums.ExchangeConstantsOrderColumns.ID.value, self.order_id)
         self.exchange_order_id = order_dict.get(enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value,
                                                 self.exchange_order_id)
@@ -669,6 +728,15 @@ class Order(util.Initializable):
         else:
             # quantity in USDT for BTC/USDT => cost = price(BTC in USDT)
             self.total_cost = quantity
+
+    def update_order_filled_values(self, ideal_price: decimal.Decimal):
+        if not self.filled_price:
+            # keep order.filled_price if already set (!= 0)
+            self.filled_price = order_util.get_valid_filled_price(self, ideal_price)
+        if not self.filled_quantity or self.exchange_manager.trader.simulate:
+            # keep self.filled_quantity if already set (!= 0) in real trading
+            self.filled_quantity = self.origin_quantity
+        self._update_total_cost()
 
     def consider_as_canceled(self):
         self.status = enums.OrderStatus.CANCELED
@@ -728,6 +796,7 @@ class Order(util.Initializable):
             enums.ExchangeConstantsOrderColumns.REDUCE_ONLY.value: self.reduce_only,
             enums.ExchangeConstantsOrderColumns.TAG.value: self.tag,
             enums.ExchangeConstantsOrderColumns.SELF_MANAGED.value: self.is_self_managed(),
+            enums.ExchangeConstantsOrderColumns.BROKER_APPLIED.value: self.broker_applied,
         }
 
     def clear(self):

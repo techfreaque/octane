@@ -31,6 +31,7 @@ class AbstractService(singleton.Singleton):
         self.logger = None
         self.config = None
         self.edited_config = None
+        self.creation_error_message = None
         self._created = True
         self._healthy = False
         self._has_been_created = False

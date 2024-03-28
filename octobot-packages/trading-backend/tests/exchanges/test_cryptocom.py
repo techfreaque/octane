@@ -31,6 +31,6 @@ async def test_get_orders_parameters(cryptocom_exchange):
     await create_order_tests.create_order_mocked_test_args(
         exchange,
         exchange_private_post_order_method_name="v1PrivatePostPrivateCreateOrder",
-        exchange_request_referral_key="client_oid",
-        should_contains=True
+        exchange_request_referral_key="broker_id",
+        should_contains=False
     )

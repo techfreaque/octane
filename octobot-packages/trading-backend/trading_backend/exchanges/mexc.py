@@ -30,7 +30,3 @@ class MEXC(exchanges.Exchange):
         if self._exchange.connector.client.options.get("broker", "") != self._get_id():
             self._exchange.connector.client.options["broker"] = self._get_id()
         return super().get_orders_parameters(params)
-
-    async def _inner_is_valid_account(self) -> (bool, str):
-        # Nothing to do
-        return await super()._inner_is_valid_account()

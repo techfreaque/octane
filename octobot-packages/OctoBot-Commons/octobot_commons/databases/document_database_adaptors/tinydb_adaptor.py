@@ -14,6 +14,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import json
 import os
 
 try:
@@ -38,6 +39,9 @@ class TinyDBAdaptor(abstract_document_database_adaptor.AbstractDocumentDatabaseA
     """
 
     DEFAULT_WRITE_CACHE_SIZE = 5000
+    HARD_RESET_ERRORS = [
+        json.JSONDecodeError
+    ]  # errors that should trigger a hard reset
 
     def __init__(self, file_path: str, cache_size: int = None, **kwargs):
         """

@@ -25,8 +25,10 @@ import octobot_commons.symbols as commons_symbols
 
 
 class Coinbase(exchanges.RestExchange):
-    MAX_PAGINATION_LIMIT: int = 299
+    MAX_PAGINATION_LIMIT: int = 300
     REQUIRES_AUTHENTICATION = True
+
+    FIX_MARKET_STATUS = True
 
     @classmethod
     def get_name(cls):
@@ -40,9 +42,6 @@ class Coinbase(exchanges.RestExchange):
         return await super().get_symbol_prices(
             symbol=symbol, time_frame=time_frame, **self._get_ohlcv_params(time_frame, limit, **kwargs)
         )
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
@@ -82,18 +81,10 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
         except (KeyError, TypeError):
             pass
 
-    def fix_ticker(self, raw, **kwargs):
-        fixed = super().fix_ticker(raw, **kwargs)
-        fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = self.connector.client.milliseconds()
-        return fixed
-
     def fix_trades(self, raw, **kwargs):
         raw = super().fix_trades(raw, **kwargs)
         for trade in raw:
             trade[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CLOSED.value
-            trade[trading_enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value] = trade[
-                trading_enums.ExchangeConstantsOrderColumns.ORDER.value
-            ]
             try:
                 if trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is None and \
                         trade[trading_enums.ExchangeConstantsOrderColumns.COST.value] and \

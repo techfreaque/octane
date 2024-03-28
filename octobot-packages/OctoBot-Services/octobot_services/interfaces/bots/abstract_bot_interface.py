@@ -211,10 +211,10 @@ class AbstractBotInterface(interfaces.AbstractInterface):
         return result_str
 
     @staticmethod
-    def get_command_sell_all_currencies():
+    async def get_command_sell_all_currencies():
         try:
-            interfaces.cancel_all_open_orders()
-            nb_created_orders = len(interfaces.sell_all_currencies())
+            await interfaces.async_cancel_all_open_orders()
+            nb_created_orders = len(await interfaces.async_sell_all_currencies())
             if nb_created_orders:
                 return f"Currencies sold in {nb_created_orders} order{'s' if nb_created_orders > 1 else ''}."
             else:
@@ -223,10 +223,10 @@ class AbstractBotInterface(interfaces.AbstractInterface):
             return f"An error occurred: {e.__class__.__name__}"
 
     @staticmethod
-    def get_command_sell_all(currency):
+    async def get_command_sell_all(currency):
         try:
-            interfaces.cancel_all_open_orders(currency)
-            nb_created_orders = len(interfaces.sell_all(currency))
+            await interfaces.async_cancel_all_open_orders(currency)
+            nb_created_orders = len(await interfaces.async_sell_all(currency))
             if nb_created_orders:
                 return f"{currency} sold in {nb_created_orders} order{'s' if nb_created_orders > 1 else ''}."
             else:
@@ -338,8 +338,8 @@ class AbstractBotInterface(interfaces.AbstractInterface):
             return "Hello, I'm OctoBot, type /help to know my skills."
 
     @staticmethod
-    def set_command_portfolios_refresh():
-        return interfaces.trigger_portfolios_refresh()
+    async def set_command_portfolios_refresh():
+        return await interfaces.async_trigger_portfolios_refresh()
 
     @staticmethod
     def set_command_risk(new_risk):
@@ -356,8 +356,8 @@ class AbstractBotInterface(interfaces.AbstractInterface):
     def set_command_stop():
         interfaces.get_bot_api().stop_bot()
 
-    def set_command_pause(self):
-        interfaces.cancel_all_open_orders()
+    async def set_command_pause(self):
+        await interfaces.async_cancel_all_open_orders()
         interfaces.set_enable_trading(False)
         self.paused = True
 

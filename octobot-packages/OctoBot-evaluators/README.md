@@ -1,4 +1,4 @@
-# OctoBot-Evaluators [1.9.0](https://github.com/Drakkar-Software/OctoBot-Evaluators/blob/master/CHANGELOG.md)
+# OctoBot-Evaluators [1.9.4](https://github.com/Drakkar-Software/OctoBot-Evaluators/blob/master/CHANGELOG.md)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/a0c08eab5d4c440aa6e3fc3061ad0520)](https://app.codacy.com/gh/Drakkar-Software/OctoBot-Evaluators?utm_source=github.com&utm_medium=referral&utm_content=Drakkar-Software/OctoBot-Evaluators&utm_campaign=Badge_Grade_Dashboard)
 [![PyPI](https://img.shields.io/pypi/v/OctoBot-Evaluators.svg)](https://pypi.python.org/pypi/OctoBot-Evaluators/)
 [![Coverage Status](https://coveralls.io/repos/github/Drakkar-Software/OctoBot-Evaluators/badge.svg)](https://coveralls.io/github/Drakkar-Software/OctoBot-Evaluators)
@@ -23,5 +23,5 @@ It is also possible to specify which module(s) to install by naming it(them). In
 python start.py tentacles --install forum_evaluator john_smith_macd_evaluator advanced_twitter_evaluator
 ```
 
-**You can find how to create your OctoBot evaluators and strategies [here](https://developer.octobot.info/guides/customize-your-octobot).**
+**You can find how to create your OctoBot evaluators and strategies [on the OctoBot guides](https://www.octobot.cloud/guides/octobot-tentacles-development/customize-your-octobot?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=octobot_evaluators_readme).**
 

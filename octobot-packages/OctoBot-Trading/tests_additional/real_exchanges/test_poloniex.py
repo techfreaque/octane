@@ -48,6 +48,7 @@ class TestPoloniexRealExchangeTester(RealExchangeTester):
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             assert market_status
+            assert market_status[Ecmsc.TYPE.value] == self.MARKET_STATUS_TYPE
             assert market_status[Ecmsc.SYMBOL.value] in (self.SYMBOL, self.SYMBOL_2, self.SYMBOL_3)
             assert market_status[Ecmsc.PRECISION.value]
             assert 1e-08 <= market_status[Ecmsc.PRECISION.value][
@@ -94,6 +95,10 @@ class TestPoloniexRealExchangeTester(RealExchangeTester):
             with pytest.raises(AssertionError):  # not supported
                 for candle in symbol_prices:
                     assert self.CANDLE_SINCE_SEC <= candle[PriceIndexes.IND_PRICE_TIME.value] <= max_candle_time
+
+    async def test_get_historical_ohlcv(self):
+        # not supported
+        assert await self.get_historical_ohlcv() == []
 
     async def test_get_kline_price(self):
         kline_price = await self.get_kline_price()
@@ -143,10 +148,10 @@ class TestPoloniexRealExchangeTester(RealExchangeTester):
         if check_content:
             assert ticker[Ectc.HIGH.value]
             assert ticker[Ectc.LOW.value]
-            assert ticker[Ectc.BID.value] is None
-            assert ticker[Ectc.BID_VOLUME.value] is None
-            assert ticker[Ectc.ASK.value] is None
-            assert ticker[Ectc.ASK_VOLUME.value] is None
+            assert ticker[Ectc.BID.value]
+            assert ticker[Ectc.BID_VOLUME.value]
+            assert ticker[Ectc.ASK.value]
+            assert ticker[Ectc.ASK_VOLUME.value]
             assert ticker[Ectc.OPEN.value]
             assert ticker[Ectc.CLOSE.value]
             assert ticker[Ectc.LAST.value]

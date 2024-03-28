@@ -19,7 +19,9 @@ import enum
 
 class QuantityType(enum.Enum):
     DELTA = ""
+    DELTA_EXPLICIT = "d"
     DELTA_QUOTE = "q"
+    DELTA_BASE = "b"
     PERCENT = "%"
     AVAILABLE = "a"
     POSITION = "p"
@@ -28,6 +30,8 @@ class QuantityType(enum.Enum):
     POSITION_PERCENT = "p%"
     QUOTE_VALUE = "$"
     ENTRY_PERCENT = "e%"
+    CURRENT_SYMBOL_ASSETS_PERCENT = "s%"
+    TRADED_SYMBOLS_ASSETS_PERCENT = "t%"
     FLAT = "@"
     UNKNOWN = "?"
 

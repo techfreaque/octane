@@ -15,10 +15,13 @@
 #  License along with this library.
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors
+import octobot_trading.enums as trading_enums
 
 
 class Kraken(exchanges.RestExchange):
     DESCRIPTION = ""
+
+    FIX_MARKET_STATUS = True
 
     RECENT_TRADE_FIXED_LIMIT = 1000
 
@@ -31,8 +34,8 @@ class Kraken(exchanges.RestExchange):
     def get_name(cls):
         return 'kraken'
 
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+    def get_adapter_class(self):
+        return KrakenCCXTAdapter
 
     async def get_recent_trades(self, symbol, limit=RECENT_TRADE_FIXED_LIMIT, **kwargs):
         if limit is not None and limit != self.RECENT_TRADE_FIXED_LIMIT:
@@ -53,3 +56,12 @@ class Kraken(exchanges.RestExchange):
         if limit:
             return candles[-limit:]
         return candles
+
+
+class KrakenCCXTAdapter(exchanges.CCXTAdapter):
+
+    def fix_ticker(self, raw, **kwargs):
+        fixed = super().fix_ticker(raw, **kwargs)
+        fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = \
+            fixed.get(trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value) or self.connector.client.seconds()
+        return fixed

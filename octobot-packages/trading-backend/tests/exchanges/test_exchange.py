@@ -43,6 +43,12 @@ async def test_is_valid_account(default_exchange):
             assert await exchange.is_valid_account() == (True, None)
         fetch_balance_mock.assert_called_once()
     with mock.patch.object(exchange._exchange.connector.client, "fetch_balance",
+                           mock.AsyncMock(side_effect=KeyError)) as fetch_balance_mock:
+        # non ccxt error: proceed to right checks and raise
+        with pytest.raises(trading_backend.errors.APIKeyPermissionsError):
+            assert await exchange.is_valid_account() == (True, None)
+        fetch_balance_mock.assert_called_once()
+    with mock.patch.object(exchange._exchange.connector.client, "fetch_balance",
                            mock.AsyncMock(side_effect=ccxt.InvalidNonce)) as fetch_balance_mock:
         with pytest.raises(trading_backend.errors.TimeSyncError):
             assert await exchange.is_valid_account() == (True, None)

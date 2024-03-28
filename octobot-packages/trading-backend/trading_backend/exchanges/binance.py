@@ -16,7 +16,8 @@
 import aiohttp.streams
 
 import trading_backend.exchanges as exchanges
-
+import trading_backend.errors as errors
+import trading_backend.enums
 
 class Binance(exchanges.Exchange):
     LEGACY_SPOT_ID = "T9698EB7"
@@ -70,10 +71,23 @@ class Binance(exchanges.Exchange):
 
     async def _get_account_referral_details(self) -> dict:
         return await self._exchange.connector.client.sapi_get_apireferral_ifnewuser(
-            params=self._exchange._get_params({
+            params={
                 "apiAgentCode": self._get_id()
-            })
+            }
         )
+
+    async def _get_api_key_rights(self) -> list[trading_backend.enums.APIKeyRights]:
+        restrictions = await self._exchange.connector.client.sapi_get_account_apirestrictions()
+        rights = []
+        if restrictions.get('enableReading'):
+            rights.append(trading_backend.enums.APIKeyRights.READING)
+        if restrictions.get('enableSpotAndMarginTrading'):
+            rights.append(trading_backend.enums.APIKeyRights.SPOT_TRADING)
+            rights.append(trading_backend.enums.APIKeyRights.MARGIN_TRADING)
+            rights.append(trading_backend.enums.APIKeyRights.FUTURES_TRADING)
+        if restrictions.get('enableWithdrawals'):
+            rights.append(trading_backend.enums.APIKeyRights.WITHDRAWALS)
+        return rights
 
     async def _inner_is_valid_account(self) -> (bool, str):
         details = None

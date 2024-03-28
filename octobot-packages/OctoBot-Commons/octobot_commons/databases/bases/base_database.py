@@ -86,6 +86,13 @@ class BaseDatabase:
         """
         return await self._database.hard_reset()
 
+    def is_hard_reset_error(self, err: Exception) -> bool:
+        """
+        returns True if the given error should trigger
+        a hard reset of the database
+        """
+        return self._database.is_hard_reset_error(err)
+
     async def close(self):
         """
         Closes the database, flushes it first

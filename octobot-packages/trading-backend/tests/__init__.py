@@ -33,13 +33,8 @@ def huobi_exchange():
 
 
 @pytest.fixture
-def huobipro_exchange():
-    return ExchangeWrapper(ccxt.async_support.huobipro())
-
-
-@pytest.fixture
-def ftx_exchange():
-    return ExchangeWrapper(ccxt.async_support.ftx())
+def htx_exchange():
+    return ExchangeWrapper(ccxt.async_support.htx())
 
 
 @pytest.fixture
@@ -93,11 +88,21 @@ def mexc_exchange():
 
 
 @pytest.fixture
+def bingx_exchange():
+    return ExchangeWrapper(ccxt.async_support.bingx())
+
+
+@pytest.fixture
+def coinex_exchange():
+    return ExchangeWrapper(ccxt.async_support.coinex())
+
+
+@pytest.fixture
 def default_exchange():
     """
     :return: An exchange for which there is no exchange implementation in trading_backend.exchanges
     """
-    return ExchangeWrapper(ccxt.async_support.okex())
+    return ExchangeWrapper(ccxt.async_support.okx())
 
 
 class ExchangeConnector:
@@ -119,6 +124,3 @@ class ExchangeWrapper:
     def __init__(self, ccxt_exchange, is_margin=False, is_future=False):
         self.connector = ExchangeConnector(ccxt_exchange)
         self.exchange_manager = ExchangeManager(is_margin=is_margin, is_future=is_future)
-
-    def _get_params(self, params):
-        return params

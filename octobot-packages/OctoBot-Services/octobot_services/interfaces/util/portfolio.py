@@ -117,11 +117,15 @@ def get_global_portfolio_currencies_values() -> dict:
                 
 
 def trigger_portfolios_refresh():
+    return interfaces.run_in_bot_main_loop(async_trigger_portfolios_refresh())
+
+
+async def async_trigger_portfolios_refresh():
     at_least_one = False
     for exchange_manager in interfaces.get_exchange_managers():
         if trading_api.is_trader_existing_and_enabled(exchange_manager):
             at_least_one = True
-            interfaces.run_in_bot_main_loop(trading_api.refresh_real_trader_portfolio(exchange_manager))
+            await trading_api.refresh_real_trader_portfolio(exchange_manager)
 
     if not at_least_one:
         raise RuntimeError("no real trader to update.")

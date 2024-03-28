@@ -44,6 +44,12 @@ class RestExchange(abstract_exchange.AbstractExchange):
                               ecoc.SIDE.value, ecoc.PRICE.value, ecoc.AMOUNT.value, ecoc.STATUS.value]
     ORDER_REQUIRED_FIELDS = ORDER_NON_EMPTY_FIELDS + [ecoc.REMAINING.value]
     PRINT_DEBUG_LOGS = False
+    FIX_MARKET_STATUS = False  # set True when get_fixed_market_status should be called when calling get_market_status
+    # set True when get_fixed_market_status should be remove price limits (when limits are invalid)
+    REMOVE_MARKET_STATUS_PRICE_LIMITS = False
+    # set True when get_fixed_market_status should adapt amounts for contract size
+    # (amounts are in not kept as contract size with OctoBot)
+    ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE = False
     REQUIRE_ORDER_FEES_FROM_TRADES = False  # set True when get_order is not giving fees on closed orders and fees
     # should be fetched using recent trades.
     REQUIRE_CLOSED_ORDERS_FROM_RECENT_TRADES = False  # set True when get_closed_orders is not supported
@@ -235,6 +241,11 @@ class RestExchange(abstract_exchange.AbstractExchange):
             raise errors.MissingFunds(e)
         except ccxt.NotSupported:
             raise errors.NotSupported
+        except ccxt.AuthenticationError as err:
+            # invalid api key or missing trading rights
+            raise errors.AuthenticationError(
+                f"Error when handling order {err}. Please make sure that trading permissions are on for this API key."
+            )
         except ccxt.DDoSProtection as e:
             # raised upon rate limit issues, last response data might have details on what is happening
             if self.should_log_on_ddos_exception(e):
@@ -287,7 +298,7 @@ class RestExchange(abstract_exchange.AbstractExchange):
             # can be raised when exchange precision/limits rules change
             self.logger.debug(f"Failed to create order ({e}) : order_type: {order_type}, symbol: {symbol}. "
                               f"This might be due to an update on {self.name} market rules. Fetching updated rules.")
-            await self.connector.load_symbol_markets(reload=True)
+            await self.connector.load_symbol_markets(reload=True, market_filter=self.exchange_manager.market_filter)
             # retry order creation with updated markets (ccxt will use the updated market values)
             return await self._create_specific_order(order_type, symbol, quantity, price=price, 
                                                      stop_price=stop_price, side=side,
@@ -402,10 +413,27 @@ class RestExchange(abstract_exchange.AbstractExchange):
     def get_uniform_timestamp(self, timestamp):
         return self.connector.get_uniform_timestamp(timestamp)
 
+    def _should_fix_market_status(self):
+        return self.FIX_MARKET_STATUS
+
+    def _should_remove_market_status_limits(self):
+        return self.REMOVE_MARKET_STATUS_PRICE_LIMITS
+
+    def _should_adapt_market_status_for_contract_size(self):
+        return self.ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE
+
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
         """
         Override using get_fixed_market_status in exchange tentacle if the default market status is not as expected
         """
+        if self._should_fix_market_status():
+            return self.get_fixed_market_status(
+                symbol,
+                price_example=price_example,
+                with_fixer=with_fixer,
+                remove_price_limits=self._should_remove_market_status_limits(),
+                adapt_for_contract_size=self._should_adapt_market_status_for_contract_size()
+            )
         return self.connector.get_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
 
     def get_fixed_market_status(self, symbol, price_example=None, with_fixer=True, remove_price_limits=False,
@@ -417,7 +445,7 @@ class RestExchange(abstract_exchange.AbstractExchange):
         (use number of digits instead of price example) by default.
         Override _fix_market_status to change other elements
         """
-        market_status = self._fix_market_status(
+        market_status = self.connector.adapter.adapt_market_status(
             copy.deepcopy(
                 self.connector.get_market_status(symbol, with_fixer=False)
             ),
@@ -427,30 +455,6 @@ class RestExchange(abstract_exchange.AbstractExchange):
             self._adapt_market_status_for_contract_size(market_status, self.get_contract_size(symbol))
         if with_fixer:
             return exchanges_util.ExchangeMarketStatusFixer(market_status, price_example).market_status
-        return market_status
-
-    def _fix_market_status(self, market_status, remove_price_limits=False):  # todo move to adapter
-        """
-        Overrite if necessary
-        """
-        market_status[enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
-            enums.ExchangeConstantsMarketStatusColumns.PRECISION_AMOUNT.value] = number_util.get_digits_count(
-            market_status[enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
-                enums.ExchangeConstantsMarketStatusColumns.PRECISION_AMOUNT.value]
-        )
-        market_status[enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
-            enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value] = number_util.get_digits_count(
-            market_status[enums.ExchangeConstantsMarketStatusColumns.PRECISION.value][
-                enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value]
-        )
-        if remove_price_limits:
-            market_status[enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
-                enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
-                enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MIN.value] = None
-            market_status[enums.ExchangeConstantsMarketStatusColumns.LIMITS.value][
-                enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE.value][
-                enums.ExchangeConstantsMarketStatusColumns.LIMITS_PRICE_MAX.value] = None
-
         return market_status
 
     def _apply_contract_size(self, value, contract_size):
@@ -473,8 +477,14 @@ class RestExchange(abstract_exchange.AbstractExchange):
             enums.ExchangeConstantsMarketStatusColumns.PRECISION_AMOUNT.value] = \
             number_util.get_digits_count(float_size)
 
+    async def get_account_id(self, **kwargs: dict) -> str:
+        raise NotImplementedError(f"get_account_id is not implemented on {self.exchange_manager.exchange_name}")
+
     async def get_balance(self, **kwargs: dict):
-        return await self.connector.get_balance(**kwargs)
+        try:
+            return await self.connector.get_balance(**kwargs)
+        except ccxt.AuthenticationError as err:
+            raise errors.AuthenticationError(err) from err
 
     async def get_symbol_prices(self, symbol: str, time_frame: commons_enums.TimeFrames, limit: int = None,
                                 **kwargs: dict) -> typing.Optional[list]:
@@ -498,7 +508,7 @@ class RestExchange(abstract_exchange.AbstractExchange):
     async def get_price_ticker(self, symbol: str, **kwargs: dict) -> typing.Optional[dict]:
         return await self.connector.get_price_ticker(symbol=symbol, **kwargs)
 
-    async def get_all_currencies_price_ticker(self, **kwargs: dict) -> typing.Optional[list]:
+    async def get_all_currencies_price_ticker(self, **kwargs: dict) -> typing.Optional[dict[str, dict]]:
         return await self.connector.get_all_currencies_price_ticker(**kwargs)
 
     async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
@@ -578,7 +588,11 @@ class RestExchange(abstract_exchange.AbstractExchange):
     async def _ensure_order_completeness(
         self, raw_order, symbol, since=None, limit=None, trades_by_exchange_order_id=None, **kwargs
     ):
-        if not self.REQUIRE_ORDER_FEES_FROM_TRADES or not exchanges_util.is_missing_trading_fees(raw_order):
+        if (
+            raw_order is None
+            or not self.REQUIRE_ORDER_FEES_FROM_TRADES
+            or not exchanges_util.is_missing_trading_fees(raw_order)
+        ):
             return raw_order
         trades_by_exchange_order_id = trades_by_exchange_order_id or await self._get_trades_by_exchange_order_id(
             symbol=symbol, since=since, limit=limit, **kwargs
@@ -604,7 +618,7 @@ class RestExchange(abstract_exchange.AbstractExchange):
     ) -> enums.OrderStatus:
         return await self.connector.cancel_order(exchange_order_id, symbol, order_type, **kwargs)
 
-    def get_trade_fee(self, symbol, order_type, quantity, price, taker_or_maker):
+    def get_trade_fee(self, symbol: str, order_type: enums.TraderOrderType, quantity, price, taker_or_maker):
         return self.connector.get_trade_fee(symbol, order_type, quantity, price, taker_or_maker)
 
     def get_fees(self, symbol):
@@ -753,10 +767,12 @@ class RestExchange(abstract_exchange.AbstractExchange):
         if symbols is None:
             raise NotImplementedError(f"The symbols param is required to get multiple positions at once")
         # force get_position when symbols is set as ccxt get_positions is only returning open positions
-        return [
-            await self.get_position(symbol, **kwargs)
-            for symbol in symbols
-        ]
+        return list(
+            await asyncio.gather(*(
+                self.get_position(symbol, **kwargs)
+                for symbol in symbols
+            ))
+        )
 
     async def get_mocked_empty_position(self, symbol: str, **kwargs: dict) -> dict:
         """

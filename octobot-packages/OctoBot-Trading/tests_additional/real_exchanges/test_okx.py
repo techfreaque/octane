@@ -54,6 +54,7 @@ class TestOkxRealExchangeTester(RealExchangeTester):
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             assert market_status
+            assert market_status[Ecmsc.TYPE.value] == self.MARKET_STATUS_TYPE
             assert market_status[Ecmsc.SYMBOL.value] in (self.SYMBOL, self.SYMBOL_2, self.SYMBOL_3)
             assert market_status[Ecmsc.PRECISION.value]
             assert 1e-08 <= market_status[Ecmsc.PRECISION.value][
@@ -68,7 +69,8 @@ class TestOkxRealExchangeTester(RealExchangeTester):
                                             normal_cost_min=1e-09,
                                             low_cost_min=1e-08,
                                             expect_invalid_price_limit_values=False,
-                                            enable_price_and_cost_comparison=False)
+                                            enable_price_and_cost_comparison=False,
+                                            has_price_limits=False)
 
     async def test_get_symbol_prices(self):
         # without limit
@@ -82,6 +84,14 @@ class TestOkxRealExchangeTester(RealExchangeTester):
         # try with candles limit (used in candled updater)
         symbol_prices = await self.get_symbol_prices(limit=200)
         assert len(symbol_prices) == 200
+        # check candles order (oldest first)
+        self.ensure_elements_order(symbol_prices, PriceIndexes.IND_PRICE_TIME.value)
+        # check last candle is the current candle
+        assert symbol_prices[-1][PriceIndexes.IND_PRICE_TIME.value] >= self.get_time() - self.get_allowed_time_delta()
+
+        # max candles is 300 (unliked stated on docs which says 100)
+        symbol_prices = await self.get_symbol_prices(limit=1000)
+        assert len(symbol_prices) == 300
         # check candles order (oldest first)
         self.ensure_elements_order(symbol_prices, PriceIndexes.IND_PRICE_TIME.value)
         # check last candle is the current candle
@@ -103,6 +113,9 @@ class TestOkxRealExchangeTester(RealExchangeTester):
             for candle in symbol_prices:
                 assert self.CANDLE_SINCE_SEC <= candle[PriceIndexes.IND_PRICE_TIME.value] <= max_candle_time
 
+    async def test_get_historical_ohlcv(self):
+        await super().test_get_historical_ohlcv()
+
     async def test_get_kline_price(self):
         kline_price = await self.get_kline_price()
         assert len(kline_price) == 1
@@ -114,9 +127,9 @@ class TestOkxRealExchangeTester(RealExchangeTester):
     async def test_get_order_book(self):
         order_book = await self.get_order_book()
         assert len(order_book[Ecobic.ASKS.value]) == 5
-        assert len(order_book[Ecobic.ASKS.value][0]) == 2
+        assert len(order_book[Ecobic.ASKS.value][0]) == 3
         assert len(order_book[Ecobic.BIDS.value]) == 5
-        assert len(order_book[Ecobic.BIDS.value][0]) == 2
+        assert len(order_book[Ecobic.BIDS.value][0]) == 3
 
     async def test_get_recent_trades(self):
         recent_trades = await self.get_recent_trades()
@@ -130,6 +143,20 @@ class TestOkxRealExchangeTester(RealExchangeTester):
 
     async def test_get_all_currencies_price_ticker(self):
         tickers = await self.get_all_currencies_price_ticker()
+        for symbol, ticker in tickers.items():
+            self._check_ticker(ticker, symbol)
+
+    async def test_get_all_currencies_price_ticker_with_market_filter(self):
+        tickers = await self.get_all_currencies_price_ticker(market_filter=self.get_market_filter())
+        assert len(tickers) > 2    # all tickers
+        assert self.SYMBOL in tickers
+        assert self.SYMBOL_2 in tickers
+        assert self.SYMBOL_3 in tickers  # symbol not correctly parsed as not in available markets (but luckily okx also uses the same syntax)
+        tickers = await self.get_all_currencies_price_ticker(
+            symbols=[self.SYMBOL, self.SYMBOL_2],
+            market_filter=self.get_market_filter()
+        )
+        assert list(tickers) == [self.SYMBOL, self.SYMBOL_2]    # ticker for self.SYMBOL, self.SYMBOL_2
         for symbol, ticker in tickers.items():
             self._check_ticker(ticker, symbol)
 

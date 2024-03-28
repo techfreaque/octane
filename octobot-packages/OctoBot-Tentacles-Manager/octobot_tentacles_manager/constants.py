@@ -21,8 +21,8 @@ import octobot_commons.enums as enums
 CURRENT_DIR_PATH = os.getcwd()
 
 # Default tests tentacles URL
-OCTOBOT_ONLINE = os.getenv("TENTACLES_OCTOBOT_ONLINE_URL", "https://static.octobot.online")
-DEFAULT_TENTACLES_URL = f"{OCTOBOT_ONLINE}/tentacles/officials/packages/full/base/0.4.0b16/any_platform.zip"
+OCTOBOT_ONLINE = os.getenv("TENTACLES_OCTOBOT_ONLINE_URL", "https://tentacles.octobot.online")
+DEFAULT_TENTACLES_URL = f"{OCTOBOT_ONLINE}/officials/packages/full/base/0.4.0b16/any_platform.zip"
 DEFAULT_BOT_INSTALL_DIR = CURRENT_DIR_PATH
 
 # Tentacles files

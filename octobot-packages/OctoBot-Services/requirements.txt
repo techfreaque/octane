@@ -1,8 +1,8 @@
 # Services
 # Reddit
-asyncpraw==7.7.0
+asyncpraw==7.7.1
 # Telegram
-python-telegram-bot==20.2
+python-telegram-bot==20.5   # update alongside supabase for httpx requirement
 telethon==1.24.0
 # Twitter (associated tentacles are disabled as starting from feb 9 2023, API is now paid only).
 # see https://twitter.com/TwitterDev/status/1621026986784337922
@@ -10,32 +10,35 @@ telethon==1.24.0
 # Google
 simplifiedpytrends>=1.1.2
 # Ngrok
-pyngrok==6.0.0
+pyngrok==7.0.5
 # chat gpt
-openai==0.27.6
+openai==1.7.0
 # Web
 ## http server
-flask==2.3.2
-Werkzeug==2.3.3
+# flask 3.0.0 requires Werkzeug >= 3.0.0, which is not yet compatible with flask-login
+flask==3.0.0
 # Flask templates
 jinja2>=3.1.2
 ## flask minification
-flask-compress==1.13
+flask-compress==1.14
 ## flask cache
-flask-caching==2.0.2
+flask-caching==2.1.0
 ## flask user authentication management
-flask-login==0.6.2
+flask-login==0.6.3
+# werkzeug 3.0.0 generates "cannot import name 'url_decode' from 'werkzeug.urls'" error when
+# used with flask-login==0.6.2. Waiting for a flask-login update to be able to bump werkzeug
+werkzeug == 3.0.1
 ## flask CORS management
-flask-cors==3.0.10
+flask-cors==4.0.0
 ## user form validators
-WTForms==3.0.1
-Flask-WTF==1.1.1
+WTForms==3.1.2
+Flask-WTF==1.2.1
 ## websockets
 ### used by the webhook service and flask-socketio for the web interface
-gevent==22.10.2
+gevent==23.9.1
 ### used by flask-socketio with gevent (listed here because multiple libs are usable, force this one)
 gevent-websocket==0.10.1
-flask-socketio==5.3.3
+flask-socketio==5.3.6
 
 # Analysis tools
 newspaper3k==0.2.8

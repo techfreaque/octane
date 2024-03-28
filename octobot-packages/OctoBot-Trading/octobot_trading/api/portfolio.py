@@ -62,7 +62,7 @@ def get_origin_portfolio(exchange_manager, as_decimal=True) -> dict:
 
 def set_simulated_portfolio_initial_config(exchange_manager, portfolio_content):
     if exchange_manager.exchange_personal_data.portfolio_manager:
-        exchange_manager.exchange_personal_data.portfolio_manager.set_simulated_portfolio_initial_config(
+        exchange_manager.exchange_personal_data.portfolio_manager.set_forced_portfolio_initial_config(
             portfolio_content
         )
 
@@ -71,6 +71,10 @@ def format_portfolio(portfolio, as_decimal) -> dict:
     if as_decimal:
         return portfolio
     return personal_data.portfolio_to_float(portfolio)
+
+
+def parse_decimal_portfolio(portfolio, as_decimal) -> dict:
+    return personal_data.parse_decimal_portfolio(portfolio, as_decimal=as_decimal)
 
 
 async def refresh_real_trader_portfolio(exchange_manager) -> bool:
@@ -86,3 +90,15 @@ def get_draw_down(exchange_manager) -> decimal.Decimal:
 async def get_coefficient_of_determination(exchange_manager, use_high_instead_of_end_balance=True):
     return await personal_data.get_coefficient_of_determination(exchange_manager,
                                                                 use_high_instead_of_end_balance)
+
+
+def get_usd_like_symbol_from_symbols(currency: str, symbols) -> str:
+    return personal_data.ValueConverter.get_usd_like_symbol_from_symbols(currency, symbols)
+
+
+def can_convert_symbol_to_usd_like(symbol: str) -> bool:
+    return personal_data.ValueConverter.can_convert_symbol_to_usd_like(symbol)
+
+
+def is_usd_like_coin(coin) -> bool:
+    return personal_data.ValueConverter.is_usd_like_coin(coin)

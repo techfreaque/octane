@@ -51,3 +51,14 @@ class TimeConsumer(consumers.SupervisedConsumer):
 class TimeChannel(channels.Channel):
     PRODUCER_CLASS = TimeProducer
     CONSUMER_CLASS = TimeConsumer
+
+    @classmethod
+    def get_name(cls, identifier=None) -> str:
+        """
+        Override of the default implementation to avoid naming conflicts
+        :returns the channel name
+        """
+        if identifier is None:
+            raise NotImplementedError("Provide identifier param or use backtesting.get_time_chan_name() instead")
+        return f"{channels.Channel.get_name()}#{identifier}"
+

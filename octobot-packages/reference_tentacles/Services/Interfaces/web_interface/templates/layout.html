@@ -4,11 +4,12 @@
 <!doctype html>
 <html lang="en">
     {% set active_page = active_page|default('home') -%}
+    {% set page_title = page_title|default(active_page | replace("_", " ") | capitalize) -%}
     {% set startup_messages_added_classes = startup_messages_added_classes|default('') -%}
     {% set inner_startup_messages_added_classes = inner_startup_messages_added_classes|default('col-12') -%}
 
     <head>
-        <title>{{ active_page | replace("_", " ") | capitalize }} - OctoBot</title>
+        <title>{{ page_title }} - OctoBot</title>
 
         <!-- Required meta tags -->
         <meta charset="utf-8">
@@ -18,7 +19,7 @@
         <meta name="robots" content="noindex">
 
         <!-- Favicon -->
-        <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+        <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.png') }}">
 
         {% block additional_meta %}
         {% endblock additional_meta %}

@@ -41,16 +41,21 @@ from octobot_services.interfaces.util.order import (
     get_all_open_orders,
     cancel_orders,
     cancel_all_open_orders,
+    async_cancel_orders,
+    async_cancel_all_open_orders,
 )
 from octobot_services.interfaces.util.position import (
     get_all_positions,
     close_positions,
+    async_close_positions,
 )
 from octobot_services.interfaces.util.trader import (
     has_trader,
     has_real_and_or_simulated_traders,
     sell_all_currencies,
     sell_all,
+    async_sell_all_currencies,
+    async_sell_all,
     set_enable_trading,
     get_total_paid_fees,
     get_trades_history,
@@ -65,6 +70,7 @@ from octobot_services.interfaces.util.portfolio import (
     get_global_portfolio_currencies_amounts,
     get_global_portfolio_currencies_values,
     trigger_portfolios_refresh,
+    async_trigger_portfolios_refresh,
 )
 from octobot_services.interfaces.util.profitability import (
     get_global_profitability,
@@ -86,10 +92,14 @@ __all__ = [
     "get_all_open_orders",
     "cancel_orders",
     "cancel_all_open_orders",
+    "async_cancel_orders",
+    "async_cancel_all_open_orders",
     "has_trader",
     "has_real_and_or_simulated_traders",
     "sell_all_currencies",
     "sell_all",
+    "async_sell_all_currencies",
+    "async_sell_all",
     "set_enable_trading",
     "get_total_paid_fees",
     "get_trades_history",
@@ -102,8 +112,10 @@ __all__ = [
     "get_global_portfolio_currencies_amounts",
     "get_global_portfolio_currencies_values",
     "trigger_portfolios_refresh",
+    "async_trigger_portfolios_refresh",
     "get_global_profitability",
     "get_reference_market",
     "get_all_positions",
     "close_positions",
+    "async_close_positions",
 ]

@@ -21,6 +21,7 @@ from octobot_trading.enums import ExchangeConstantsMarketStatusColumns as Ecmsc,
     ExchangeConstantsOrderBookInfoColumns as Ecobic, ExchangeConstantsOrderColumns as Ecoc, \
     ExchangeConstantsTickersColumns as Ectc
 import octobot_trading.errors as errors
+import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 from tests_additional.real_exchanges.real_futures_exchange_tester import RealFuturesExchangeTester
 # required to catch async loop context exceptions
 from tests import event_loop
@@ -56,6 +57,7 @@ class TestKucoinFuturesRealExchangeTester(RealFuturesExchangeTester):
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             assert market_status
+            assert market_status[Ecmsc.TYPE.value] == self.MARKET_STATUS_TYPE
             assert market_status[Ecmsc.SYMBOL.value] in (self.SYMBOL, self.SYMBOL_2, self.SYMBOL_3)
             assert market_status[Ecmsc.PRECISION.value]
             # on this exchange, precision is a decimal instead of a number of digits
@@ -71,6 +73,8 @@ class TestKucoinFuturesRealExchangeTester(RealFuturesExchangeTester):
             self.check_market_status_limits(market_status,
                                             expect_invalid_price_limit_values=True,
                                             enable_price_and_cost_comparison=False)
+            # ensure no "minFunds" in futures
+            assert "minFunds" not in market_status[ccxt_constants.CCXT_INFO]
 
     async def test_get_symbol_prices(self):
         # without limit
@@ -112,6 +116,9 @@ class TestKucoinFuturesRealExchangeTester(RealFuturesExchangeTester):
                 for candle in symbol_prices:
                     assert self.CANDLE_SINCE_SEC <= candle[PriceIndexes.IND_PRICE_TIME.value] <= max_candle_time
 
+    async def test_get_historical_ohlcv(self):
+        await super().test_get_historical_ohlcv()
+
     async def test_get_kline_price(self):
         kline_price = await self.get_kline_price()
         assert len(kline_price) == 1
@@ -141,15 +148,14 @@ class TestKucoinFuturesRealExchangeTester(RealFuturesExchangeTester):
         self._check_ticker(ticker, self.SYMBOL, check_content=True)
 
     async def test_get_all_currencies_price_ticker(self):
-        with pytest.raises(errors.NotSupported):
-            tickers = await self.get_all_currencies_price_ticker()
-            for symbol, ticker in tickers.items():
-                self._check_ticker(ticker, symbol)
+        tickers = await self.get_all_currencies_price_ticker()
+        for symbol, ticker in tickers.items():
+            self._check_ticker(ticker, symbol)
 
     async def test_get_funding_rate(self):
         funding_rate, ticker_funding_rate = await self.get_funding_rate()
-        # patch NEXT_FUNDING_TIME in tentacle
-        self._check_funding_rate(funding_rate, has_next_time=False)
+        # patch NEXT_FUNDING_TIME & LAST_FUNDING_TIME in tentacle
+        self._check_funding_rate(funding_rate, has_next_time_in_the_past=True, has_last_time=False)
         # no funding info in ticker
         self._check_funding_rate(ticker_funding_rate, has_rate=False, has_last_time=False,
                                  has_next_rate=False, has_next_time=False)

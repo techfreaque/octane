@@ -27,15 +27,24 @@ class Authenticator(singleton.Singleton):
     Abstract class to be implemented when using authenticated requests
     """
 
-    def __init__(self):
+    def __init__(self, use_as_singleton=True):
         self.logger: bot_logging.BotLogger = bot_logging.get_logger(
             self.__class__.__name__
         )
         self.initialized_event: asyncio.Event = None
         self.supports: None
         self.feed_callbacks = {}
-        # also register this instance for the base Authenticator class in singleton
+        if use_as_singleton:
+            # also register this instance for the base Authenticator class in singleton
+            self.use_as_singleton_instance()
+
+    # pylint: disable=W0212
+    def use_as_singleton_instance(self):
+        """
+        Update the Authenticator Singleton to use self
+        """
         singleton.Singleton._instances[Authenticator] = self
+        singleton.Singleton._instances[self.__class__] = self
 
     @abc.abstractmethod
     async def login(self, username, password, password_token=None):
@@ -123,9 +132,15 @@ class Authenticator(singleton.Singleton):
         """
         await asyncio.wait_for(self.initialized_event.wait(), timeout)
 
-    async def update_trades(self, trades: list, reset: bool):
+    async def update_trades(self, trades: list, exchange_name: str, reset: bool):
         """
         Updates authenticated account trades
+        """
+        raise NotImplementedError
+
+    async def update_orders(self, orders: list, exchange_name: str):
+        """
+        Updates authenticated account orders
         """
         raise NotImplementedError
 
@@ -133,6 +148,7 @@ class Authenticator(singleton.Singleton):
         self,
         current_value: dict,
         initial_value: dict,
+        profitability: float,
         unit: str,
         content: dict,
         history: dict,

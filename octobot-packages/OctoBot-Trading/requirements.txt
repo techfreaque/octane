@@ -1,7 +1,7 @@
-numpy==1.23.5
+numpy==1.26.3
 
 # Exchange connection requirements
-ccxt==3.1.52 # always ensure real exchanges tests (in tests_additional and authenticated exchange tests) are passing before changing the ccxt version
+ccxt==4.2.77 # always ensure real exchanges tests (in tests_additional and authenticated exchange tests) are passing before changing the ccxt version
 
 cryptography # Never specify a version (managed by https://github.com/Drakkar-Software/OctoBot-PyPi-Linux-Deployer)
 
@@ -10,3 +10,6 @@ sortedcontainers==2.4.0
 
 # Scripting requirements
 tinydb==4.5.2
+
+# Caching
+cachetools==5.3.2

@@ -18,7 +18,6 @@ import decimal
 import octobot_backtesting.api as backtesting_api
 import octobot_backtesting.importers as importers
 
-import octobot_commons.number_util as number_util
 import octobot_commons.symbols as symbol_util
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_commons.constants as commons_constants
@@ -26,8 +25,10 @@ import octobot_commons.constants as commons_constants
 import octobot_trading.exchange_channel as exchange_channel
 import octobot_trading.constants as constants
 import octobot_trading.enums as enums
+import octobot_trading.errors as errors
 import octobot_trading.exchanges.abstract_exchange as abstract_exchange
 import octobot_trading.exchanges.connectors.simulator.exchange_simulator_adapter as exchange_simulator_adapter
+import octobot_trading.exchanges.connectors.simulator.ccxt_client_simulation as ccxt_client_simulation
 import octobot_trading.exchange_data as exchange_data
 import octobot_trading.exchanges.util as util
 
@@ -44,6 +45,7 @@ class ExchangeSimulatorConnector(abstract_exchange.AbstractExchange):
         self.current_future_candles = {}
 
         self.is_authenticated = False
+        self._forced_market_statuses: dict = None
 
     async def initialize_impl(self):
         self.exchange_importers = self.backtesting.get_importers(importers.ExchangeDataImporter)
@@ -61,8 +63,23 @@ class ExchangeSimulatorConnector(abstract_exchange.AbstractExchange):
         # set exchange manager attributes
         self.exchange_manager.client_symbols = list(self.symbols)
 
+        # init _forced_market_statuses when allowed
+        if self.exchange_manager.use_cached_markets:
+            self._init_forced_market_statuses()
+
     def get_adapter_class(self, adapter_class):
         return adapter_class or exchange_simulator_adapter.ExchangeSimulatorAdapter
+
+    def _init_forced_market_statuses(self):
+        def market_filter(market):
+            return market[enums.ExchangeConstantsMarketStatusColumns.SYMBOL.value] in self.symbols
+
+        self._forced_market_statuses = ccxt_client_simulation.parse_markets(
+            self.exchange_manager.exchange_class_string, market_filter
+        )
+
+    def should_adapt_market_statuses(self) -> bool:
+        return self.exchange_manager.use_cached_markets
 
     @classmethod
     def load_user_inputs_from_class(cls, tentacles_setup_config, tentacle_config):
@@ -125,11 +142,22 @@ class ExchangeSimulatorConnector(abstract_exchange.AbstractExchange):
         return [backtesting_api.get_data_file_path(importer) for importer in self.exchange_importers]
 
     def get_market_status(self, symbol, price_example=0, with_fixer=True):
+        if self._forced_market_statuses:
+            try:
+                if with_fixer:
+                    return util.ExchangeMarketStatusFixer(
+                        self._forced_market_statuses[symbol], price_example
+                    ).market_status
+                return self._forced_market_statuses[symbol]
+            except KeyError:
+                raise errors.NotSupported
+        return self._get_default_market_status()
+
+    def _get_default_market_status(self):
         return {
             # number of decimal digits "after the dot"
             enums.ExchangeConstantsMarketStatusColumns.PRECISION.value: {
                 enums.ExchangeConstantsMarketStatusColumns.PRECISION_AMOUNT.value: 8,
-                enums.ExchangeConstantsMarketStatusColumns.PRECISION_COST.value: 8,
                 enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value: 8,
             },
             enums.ExchangeConstantsMarketStatusColumns.LIMITS.value: {
@@ -152,6 +180,10 @@ class ExchangeSimulatorConnector(abstract_exchange.AbstractExchange):
         return timestamp / 1000
 
     def get_fees(self, symbol):
+        if self._forced_market_statuses and symbol in self._forced_market_statuses:
+            # use self._forced_market_statuses when possible
+            return ccxt_client_simulation.get_fees(self._forced_market_statuses[symbol])
+
         result_fees = {
             enums.ExchangeConstantsMarketPropertyColumns.TAKER.value: constants.CONFIG_DEFAULT_SIMULATOR_FEES,
             enums.ExchangeConstantsMarketPropertyColumns.MAKER.value: constants.CONFIG_DEFAULT_SIMULATOR_FEES,
@@ -191,34 +223,38 @@ class ExchangeSimulatorConnector(abstract_exchange.AbstractExchange):
     #     'cost': feePaid, // the fee cost (amount * fee rate)
     #     'is_from_exchange': False, // simulated fees
     # }
-    def get_trade_fee(self, symbol, order_type, quantity, price, taker_or_maker):
+    def get_trade_fee(self, symbol: str, order_type: enums.TraderOrderType, quantity, price, taker_or_maker):
         if not taker_or_maker:
             taker_or_maker = enums.ExchangeConstantsMarketPropertyColumns.TAKER.value
+        base, quote = symbol_util.parse_symbol(symbol).base_and_quote()
+        fee_currency = self._get_fees_currency(base, quote, order_type)
+
         symbol_fees = self.get_fees(symbol)
         rate = symbol_fees[taker_or_maker]
-        currency, market = symbol_util.parse_symbol(symbol).base_and_quote()
-        fee_currency = currency
-
-        precision = self.get_market_status(symbol)[enums.ExchangeConstantsMarketStatusColumns.PRECISION.value] \
-            [enums.ExchangeConstantsMarketStatusColumns.PRECISION_PRICE.value]
-        cost = float(number_util.round_into_str_with_max_digits(float(quantity) * rate, precision))
-
-        if util.get_order_side(order_type) == enums.TradeOrderSide.SELL.value:
-            cost = float(number_util.round_into_str_with_max_digits(cost * float(price), precision))
-            fee_currency = market
+        cost = quantity * decimal.Decimal(str(rate))
+        if fee_currency == quote:
+            cost = cost * price
 
         return {
             enums.FeePropertyColumns.TYPE.value: taker_or_maker,
             enums.FeePropertyColumns.CURRENCY.value: fee_currency,
             enums.FeePropertyColumns.RATE.value: rate,
-            enums.FeePropertyColumns.COST.value: decimal.Decimal(str(cost)),
+            enums.FeePropertyColumns.COST.value: cost,
             enums.FeePropertyColumns.IS_FROM_EXCHANGE.value: False,
         }
+
+    def _get_fees_currency(self, base, quote, order_type: enums.TraderOrderType):
+        if util.get_order_side(order_type) is enums.TradeOrderSide.SELL.value:
+            return quote
+        return base
 
     def get_time_frames(self, importer):
         return time_frame_manager.sort_time_frames(list(set(backtesting_api.get_available_time_frames(importer)) &
                                                         set(self.exchange_manager.exchange_config.available_time_frames)),
                                                    reverse=True)
+
+    def use_accurate_price_time_frame(self) -> bool:
+        return self.backtesting.use_accurate_price_time_frame()
 
     def get_split_pair_from_exchange(self, pair) -> (str, str):
         return symbol_util.parse_symbol(pair).base_and_quote()

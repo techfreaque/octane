@@ -13,27 +13,11 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import trading_backend.exchanges as exchanges
+import trading_backend.exchanges.htx as htx
 
 
-class Huobi(exchanges.Exchange):
-    SPOT_ID = "AAc4ccb049"
-    MARGIN_ID = ""
-    FUTURE_ID = "AAc4ccb049"  # TODO check integration method
-    IS_SPONSORING = True
-
+class Huobi(htx.HTX):
+    # kept for legacy support (users using huobi instead of HTX)
     @classmethod
     def get_name(cls):
         return 'huobi'
-
-    def get_orders_parameters(self, params=None) -> dict:
-        if "broker" not in self._exchange.connector.client.options:
-            self._exchange.connector.client.options["broker"] = {}
-        options_broker = self._exchange.connector.client.options["broker"]
-        if options_broker.get("id", None) != self._get_id():
-            self._exchange.connector.client.options["broker"]["id"] = self._get_id()
-        return super().get_orders_parameters(params)
-
-    async def _inner_is_valid_account(self) -> (bool, str):
-        # TODO When beta broker program is over: add a check with the proper API
-        return await super()._inner_is_valid_account()

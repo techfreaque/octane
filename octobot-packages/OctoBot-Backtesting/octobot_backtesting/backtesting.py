@@ -13,11 +13,11 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+
 import async_channel.channels as channels
 import async_channel.util as channel_util
 
 import octobot_commons.logging as logging
-import octobot_commons.channels_name as channels_name
 import octobot_commons.tentacles_management as tentacles_management
 
 import octobot_backtesting.util as backtesting_util
@@ -26,7 +26,7 @@ import octobot_backtesting.time as backtesting_time
 
 class Backtesting:
     def __init__(self, config, exchange_ids, matrix_id, backtesting_files,
-                 importers_by_data_file=None, backtest_data=None):
+                 importers_by_data_file=None, backtest_data=None, bot_id=None):
         self.config = config
         self.backtesting_files = backtesting_files
         self.importers_by_data_file = importers_by_data_file or {}
@@ -34,6 +34,7 @@ class Backtesting:
 
         self.exchange_ids = exchange_ids
         self.matrix_id = matrix_id
+        self.bot_id = bot_id or ""
 
         self.importers = []
         self.backtest_data = backtest_data
@@ -42,18 +43,36 @@ class Backtesting:
         self.time_channel = None
 
     async def initialize(self):
+        time_chan_name = self.get_time_chan_name()  # not in try to be able to raise on error
         try:
             self.time_manager = backtesting_time.TimeManager(config=self.config)
             self.time_manager.initialize()
 
-            self.time_channel = await channel_util.create_channel_instance(backtesting_time.TimeChannel,
-                                                                           channels.set_chan,
-                                                                           is_synchronized=True)
+            self.time_channel = await channel_util.create_channel_instance(
+                backtesting_time.TimeChannel,
+                channels.set_chan,
+                is_synchronized=True,
+                channel_name=time_chan_name
+            )
 
             self.time_updater = backtesting_time.TimeUpdater(
-                channels.get_chan(channels_name.OctoBotBacktestingChannelsName.TIME_CHANNEL.value), self)
+                channels.get_chan(self.get_time_chan_name()),
+                self
+            )
         except Exception as e:
             self.logger.exception(e, True, f"Error when initializing backtesting : {e}.")
+
+    def use_accurate_price_time_frame(self) -> bool:
+        for importer in self.importers:
+            if not importer.has_all_time_frames_candles_history:
+                # has_all_time_frames_candles_history is necessary for accurate price time frame
+                return False
+        if self.backtest_data:
+            return self.backtest_data.use_accurate_price_time_frame
+        return True
+
+    def get_time_chan_name(self):
+        return backtesting_time.TimeChannel.get_name(self.bot_id)
 
     async def stop(self):
         await self.delete_time_channel()
@@ -63,7 +82,7 @@ class Backtesting:
         for consumer in self.time_channel.consumers:
             await self.time_channel.remove_consumer(consumer)
         self.time_channel.flush()
-        channels.del_chan(self.time_channel.get_name())
+        channels.del_chan(self.get_time_chan_name())
 
     async def start_time_updater(self):
         await self.time_updater.run()

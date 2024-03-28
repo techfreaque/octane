@@ -36,7 +36,7 @@ async def fake_backtesting(backtesting_config):
         config=backtesting_config,
         exchange_ids=[],
         matrix_id="",
-        backtesting_files=[]
+        backtesting_files=[],
     )
 
 
@@ -57,6 +57,7 @@ async def backtesting_exchange_manager(request, backtesting_config, fake_backtes
     exchange_manager_instance.is_spot_only = is_spot
     exchange_manager_instance.is_margin = is_margin
     exchange_manager_instance.is_future = is_future
+    exchange_manager_instance.use_cached_markets = False
     exchange_manager_instance.backtesting = fake_backtesting
     exchange_manager_instance.backtesting.time_manager = backtesting_time.TimeManager(config)
     await exchange_manager_instance.initialize()

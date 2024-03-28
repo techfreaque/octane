@@ -18,14 +18,14 @@ import typing
 
 import ccxt
 
+import octobot_commons.constants as commons_constants
+
 import octobot_trading.enums as trading_enums
-import octobot_trading.constants as constants
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors as errors
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.util as trading_util
-import octobot_trading.personal_data as trading_personal_data
 
 
 class Binance(exchanges.RestExchange):
@@ -83,6 +83,16 @@ class Binance(exchanges.RestExchange):
     def get_adapter_class(self):
         return BinanceCCXTAdapter
 
+    async def get_account_id(self, **kwargs: dict) -> str:
+        raw_balance = await self.connector.client.fetch_balance()
+        try:
+            return raw_balance[ccxt_constants.CCXT_INFO]["uid"]
+        except KeyError:
+            if self.exchange_manager.is_future:
+                raise NotImplementedError("get_account_id is not implemented on binance futures account")
+            # should not happen in spot
+            raise
+
     def _infer_account_types(self, exchange_manager):
         account_types = []
         symbol_counts = trading_util.get_symbol_types_counts(exchange_manager.config, True)
@@ -125,20 +135,18 @@ class Binance(exchanges.RestExchange):
                 "recvWindow": 60000,    # default is 10000, avoid time related issues
             }
         }
-        if self.exchange_manager.is_future:
-            config[ccxt_constants.CCXT_OPTIONS]['fetchMarkets'] = self._futures_account_types
         return config
 
     async def get_balance(self, **kwargs: dict):
         if self.exchange_manager.is_future:
             balance = []
             for account_type in self._futures_account_types:
-                balance.append(await self.connector.get_balance(**kwargs, subType=account_type))
+                balance.append(await super().get_balance(**kwargs, subType=account_type))
             # todo remove this and use both types when exchange-side multi portfolio is enabled
             # there will only be 1 balance as both linear and inverse are not supported simultaneously
             # (only 1 _futures_account_types is allowed for now)
             return balance[0]
-        return await self.connector.get_balance(**kwargs)
+        return await super().get_balance(**kwargs)
 
     def get_order_additional_params(self, order) -> dict:
         params = {}
@@ -215,15 +223,10 @@ class Binance(exchanges.RestExchange):
 class BinanceCCXTAdapter(exchanges.CCXTAdapter):
     STOP_MARKET = 'stop_market'
     STOP_ORDERS = [STOP_MARKET]
+    BINANCE_DEFAULT_FUNDING_TIME = 8 * commons_constants.HOURS_TO_SECONDS
 
     def fix_order(self, raw, symbol=None, **kwargs):
         fixed = super().fix_order(raw, **kwargs)
-        if self.connector.exchange_manager.is_future \
-                and fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is not None:
-            # amount is in contact, multiply by contract value to get the currency amount (displayed to the user)
-            contract_size = self.connector.get_contract_size(symbol)
-            fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
-                fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] * float(contract_size)
         self._adapt_order_type(fixed)
         return fixed
 
@@ -243,9 +246,6 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
         raw = super().fix_trades(raw, **kwargs)
         for trade in raw:
             trade[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = trading_enums.OrderStatus.CLOSED.value
-            trade[trading_enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value] = trade[
-                trading_enums.ExchangeConstantsOrderColumns.ORDER.value
-            ]
         return raw
 
     def parse_position(self, fixed, force_empty=False, **kwargs):
@@ -271,6 +271,27 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
         parsed[trading_enums.ExchangeConstantsLeveragePropertyColumns.LEVERAGE.value] = \
             fixed[trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value]
         return parsed
+
+    def parse_funding_rate(self, fixed, from_ticker=False, **kwargs):
+        """
+        Binance last funding time is not provided
+        To obtain the last_funding_time :
+        => timestamp(next_funding_time) - timestamp(BINANCE_DEFAULT_FUNDING_TIME)
+        """
+        if from_ticker:
+            # no funding info in ticker
+            return {}
+        else:
+            funding_dict = super().parse_funding_rate(fixed, from_ticker=from_ticker, **kwargs)
+            funding_next_timestamp = float(
+                funding_dict.get(trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value, 0)
+            )
+            # patch LAST_FUNDING_TIME in tentacle
+            funding_dict.update({
+                trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
+                    max(funding_next_timestamp - self.BINANCE_DEFAULT_FUNDING_TIME, 0)
+            })
+        return funding_dict
 
 
 def _filter_positions(positions):

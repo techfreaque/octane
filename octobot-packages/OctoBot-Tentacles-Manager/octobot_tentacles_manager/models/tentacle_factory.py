@@ -20,14 +20,15 @@ class TentacleFactory:
     def __init__(self, tentacle_root_path):
         self.tentacle_root_path = tentacle_root_path
 
-    def create_tentacle_from_type(self, name, tentacle_type) -> models.Tentacle:
+    def create_tentacle_from_type(self, name, tentacle_type, tentacle_class_names=None) -> models.Tentacle:
         """
         Create a tentacle artifact from its name and type
         :param name: the tentacle name
         :param tentacle_type: the tentacle type
+        :param tentacle_class_names: list of tentacles classes names
         :return: the created TentacleArtifact instance
         """
-        return models.Tentacle(self.tentacle_root_path, name, tentacle_type)
+        return models.Tentacle(self.tentacle_root_path, name, tentacle_type, tentacle_class_names=tentacle_class_names)
 
     async def create_and_load_tentacle_from_module(self, tentacle_module) -> models.Tentacle:
         """

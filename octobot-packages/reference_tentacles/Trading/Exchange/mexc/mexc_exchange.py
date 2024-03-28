@@ -28,6 +28,9 @@ import octobot_commons.constants as commons_constants
 
 
 class MEXC(exchanges.RestExchange):
+    FIX_MARKET_STATUS = True
+    REMOVE_MARKET_STATUS_PRICE_LIMITS = True
+
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
 
     def __init__(self, config, exchange_manager, connector_class=None):
@@ -50,10 +53,6 @@ class MEXC(exchanges.RestExchange):
                 "recvWindow": 60000,  # default is 5000, avoid time related issues
             }
         }
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer,
-                                            remove_price_limits=True)
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
@@ -85,16 +84,51 @@ class MEXC(exchanges.RestExchange):
     async def _mexc_handled_symbols_filter(self, symbol):
         try:
             yield
-        except ccxt.BadSymbol as err:
+        except (ccxt.BadSymbol, ccxt.BadRequest) as err:
             if self.api_handled_symbols.should_be_updated():
                 await self.api_handled_symbols.update()
             if symbol not in self.api_handled_symbols.symbols:
                 raise octobot_trading.errors.FailedRequest(
                     f"{self.get_name()} error: {symbol} trading pair is not available to the API at the moment, "
-                    f"{symbol} is under maintenance. "
+                    f"{symbol} is under maintenance ({err}). "
                     f"API available trading pairs are {self.api_handled_symbols.symbols}"
                 )
             raise err
+
+    async def get_open_orders(self, symbol: str = None, since: int = None, limit: int = None, **kwargs: dict) -> list:
+        return self._filter_orders(
+            await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs),
+            True
+        )
+
+    async def get_closed_orders(self, symbol: str = None, since: int = None, limit: int = None, **kwargs: dict) -> list:
+        return self._filter_orders(
+            await super().get_closed_orders(symbol=symbol, since=since, limit=limit, **kwargs),
+            False
+        )
+
+    async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
+        try:
+            return await super().get_order(
+                exchange_order_id, symbol=symbol, **kwargs
+            )
+        except octobot_trading.errors.FailedRequest as err:
+            if "Order does not exist" in str(err):
+                return None
+            raise
+
+    def _filter_orders(self, orders: list, open_only: bool) -> list:
+        return [
+            order
+            for order in orders
+            if (
+                open_only and order[trading_enums.ExchangeConstantsOrderColumns.STATUS.value]
+                == trading_enums.OrderStatus.OPEN.value
+            ) or (
+                not open_only and order[trading_enums.ExchangeConstantsOrderColumns.STATUS.value]
+                != trading_enums.OrderStatus.OPEN.value
+            )
+        ]
 
 
 class APIHandledSymbols:

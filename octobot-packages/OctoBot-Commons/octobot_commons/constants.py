@@ -39,6 +39,7 @@ USER_FOLDER = "user"
 CONFIG_FOLDER = "config"
 CONFIG_FILE = "config.json"
 TEMP_RESTORE_CONFIG_FILE = "temp_config.json"
+SAFE_DUMP_SUFFIX = ".back"
 DEFAULT_CONFIG_FILE = "default_config.json"
 DEFAULT_CONFIG_FILE_PATH = f"{CONFIG_FOLDER}/{DEFAULT_CONFIG_FILE}"
 SCHEMA = "schema"
@@ -66,6 +67,7 @@ CONFIG_AVATAR = "avatar"
 CONFIG_ORIGIN_URL = "origin_url"
 CONFIG_READ_ONLY = "read_only"
 CONFIG_IMPORTED = "imported"
+CONFIG_EXTRA_BACKTESTING_TIME_FRAMES = "extra_backtesting_time_frames"
 CONFIG_COMPLEXITY = "complexity"
 CONFIG_RISK = "risk"
 CONFIG_TYPE = "type"
@@ -90,6 +92,7 @@ CONFIG_EXCHANGE_SECRET = "api-secret"
 CONFIG_EXCHANGE_PASSWORD = "api-password"
 CONFIG_EXCHANGE_TYPE = "exchange-type"
 CONFIG_CONTRACT_TYPE = "contract-type"
+CONFIG_REQUIRED_EXTRA_TIMEFRAMES = "required_extra_timeframes"
 CONFIG_EXCHANGE_SANDBOXED = "sandboxed"
 CONFIG_EXCHANGE_FUTURE = "future"
 CONFIG_EXCHANGE_MARGIN = "margin"
@@ -112,6 +115,7 @@ CONFIG_TRADER_ALLOW_ARTIFICIAL_ORDERS = "allow-artificial-orders"
 CONFIG_TRADER_RISK_MIN = 0.05
 CONFIG_TRADER_RISK_MAX = 1
 CONFIG_TRADER_REFERENCE_MARKET = "reference-market"
+DEFAULT_STORAGE_TRADING_MODE = "default"
 
 # Simulator
 CONFIG_SIMULATOR = "trader-simulator"
@@ -152,6 +156,7 @@ CONFIG_ACTIVATION_TOPICS = "activation method"
 CONFIG_TRIGGER_TIMEFRAMES = "Trigger_timeframes"
 CONFIG_EMIT_TRADING_SIGNALS = "emit_trading_signals"
 CONFIG_TRADING_SIGNALS_STRATEGY = "trading_strategy"
+ALLOW_DEFAULT_CONFIG = "allow_default_config"
 
 # terms of service
 CONFIG_ACCEPTED_TERMS = "accepted_terms"
@@ -212,3 +217,29 @@ DB_SEPARATOR = "_"
 TINYDB_EXT = ".json"
 MAX_BACKTESTING_RUNS = 500000
 MAX_OPTIMIZER_RUNS = 50000
+
+# Logging
+EXCEPTION_DESC = "exception_desc"
+IS_EXCEPTION_DESC = "is_exception_desc"
+
+# from https://www.coingecko.com/en/categories/stablecoins
+USD_LIKE_COINS = [
+    "USDT",
+    "USDC",
+    "TUSD",
+    "BUSD",
+    "DAI",
+    "USD",
+    "FRAX",
+    "USDD",
+    "USDP",
+    "GUSD",
+    "LUSD",
+    "FDUSD",
+    "ALUSD",
+    "USDTC",
+    "MIM",
+    "DOLA",
+    "BOB",
+    "MIMATIC",
+]

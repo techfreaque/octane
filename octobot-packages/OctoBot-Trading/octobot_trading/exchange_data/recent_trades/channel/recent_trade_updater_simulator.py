@@ -13,12 +13,9 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import async_channel.channels as channels
-
 import octobot_backtesting.api as api
 import octobot_backtesting.enums as backtesting_enums
 
-import octobot_commons.channels_name as channels_name
 import octobot_commons.enums as common_enums
 import octobot_commons.errors as errors
 
@@ -71,7 +68,7 @@ class RecentTradeUpdaterSimulator(recent_trade_updater.RecentTradeUpdater):
                 # Recent trades for this candle are between the next candle candle high price and the next candle
                 # low price in order to get these prices, use exchange simulator's future candles filled by the
                 # previous ohlcv updater cycle that also triggered this call
-                future_candle = self.channel.exchange.get_current_future_candles()[symbol][time_frame]
+                future_candle = self.channel.exchange_manager.exchange.get_current_future_candles()[symbol][time_frame]
                 last_candle_timestamp = future_candle[common_enums.PriceIndexes.IND_PRICE_TIME.value]
                 if last_candle_timestamp > self.last_timestamp_pushed_by_symbol[symbol]:
                     future_candle_low_price = future_candle[common_enums.PriceIndexes.IND_PRICE_LOW.value]
@@ -100,8 +97,7 @@ class RecentTradeUpdaterSimulator(recent_trade_updater.RecentTradeUpdater):
 
     async def pause(self):
         if self.time_consumer is not None:
-            await channels.get_chan(channels_name.OctoBotBacktestingChannelsName.TIME_CHANNEL.value). \
-                remove_consumer(self.time_consumer)
+            await util.get_time_channel(self).remove_consumer(self.time_consumer)
         self.is_running = False
 
     async def stop(self):
@@ -112,8 +108,7 @@ class RecentTradeUpdaterSimulator(recent_trade_updater.RecentTradeUpdater):
             if self.time_consumer is None and not self.channel.is_paused:
                 if backtesting_enums.ExchangeDataTables.RECENT_TRADES in \
                         api.get_available_data_types(self.exchange_data_importer):
-                    self.time_consumer = await channels.get_chan(
-                        channels_name.OctoBotBacktestingChannelsName.TIME_CHANNEL.value).new_consumer(
+                    self.time_consumer = await util.get_time_channel(self).new_consumer(
                         self.handle_timestamp)
                 else:
                     await exchanges_channel.get_chan(constants.OHLCV_CHANNEL, self.channel.exchange_manager.id) \

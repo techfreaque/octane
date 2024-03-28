@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import contextlib
 import os
 import os.path as path
 import shutil
@@ -22,11 +23,35 @@ import octobot_tentacles_manager.constants as constants
 import octobot_tentacles_manager.loaders as loaders
 
 
-def get_config(tentacles_setup_config, klass) -> dict:
+
+def _get_config_from_file_system(tentacles_setup_config, klass):
     config_path = _get_config_file_path(tentacles_setup_config, klass)
     if not config_path:
         return {}
     return configuration.read_config(config_path)
+
+
+_GET_CONFIG_PROXY = _get_config_from_file_system
+
+
+def set_get_config_proxy(new_proxy):
+    # todo handle concurrency
+    global _GET_CONFIG_PROXY
+    _GET_CONFIG_PROXY = new_proxy
+
+
+@contextlib.contextmanager
+def local_get_config_proxy(new_proxy):
+    previous_proxy = _GET_CONFIG_PROXY
+    try:
+        set_get_config_proxy(new_proxy)
+        yield
+    finally:
+        set_get_config_proxy(previous_proxy)
+
+
+def get_config(tentacles_setup_config, klass) -> dict:
+    return _GET_CONFIG_PROXY(tentacles_setup_config, klass)
 
 
 def update_config(tentacles_setup_config, klass, config_update, keep_existing=True) -> None:

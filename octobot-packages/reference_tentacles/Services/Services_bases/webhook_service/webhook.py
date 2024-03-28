@@ -26,6 +26,7 @@ import pyngrok.exception
 import octobot_commons.logging as bot_logging
 import octobot_commons.configuration as configuration
 import octobot_commons.authentication as authentication
+import octobot_commons.constants as commons_constants
 import octobot_services.constants as services_constants
 import octobot_services.services as services
 import octobot.constants as constants
@@ -33,7 +34,7 @@ import octobot.community.errors as community_errors
 
 
 class WebHookService(services.AbstractService):
-    CONNECTION_TIMEOUT = 3
+    CONNECTION_TIMEOUT = 8  # can take up to 5s on slow setups
     LOGGERS = ["pyngrok.ngrok", "werkzeug"]
 
     def get_fields_description(self):
@@ -42,6 +43,7 @@ class WebHookService(services.AbstractService):
         return {
             services_constants.CONFIG_ENABLE_NGROK: "Use Ngrok",
             services_constants.CONFIG_NGROK_TOKEN: "The ngrok token used to expose the webhook to the internet.",
+            services_constants.CONFIG_NGROK_DOMAIN: "[Optional] The ngrok subdomain.",
             services_constants.CONFIG_WEBHOOK_SERVER_IP: "WebHook bind IP: used for webhook when ngrok is not enabled.",
             services_constants.CONFIG_WEBHOOK_SERVER_PORT: "WebHook port: used for webhook when ngrok is not enabled."
         }
@@ -52,6 +54,7 @@ class WebHookService(services.AbstractService):
         return {
             services_constants.CONFIG_ENABLE_NGROK: True,
             services_constants.CONFIG_NGROK_TOKEN: "",
+            services_constants.CONFIG_NGROK_DOMAIN: "",
             services_constants.CONFIG_WEBHOOK_SERVER_IP: services_constants.DEFAULT_WEBHOOK_SERVER_IP,
             services_constants.CONFIG_WEBHOOK_SERVER_PORT: services_constants.DEFAULT_WEBHOOK_SERVER_PORT
         }
@@ -62,6 +65,7 @@ class WebHookService(services.AbstractService):
         self.ngrok_tunnel = None
         self.webhook_public_url = ""
         self.ngrok_enabled = True
+        self.ngrok_domain = None
 
         self.service_feed_webhooks = {}
         self.service_feed_auth_callbacks = {}
@@ -116,7 +120,7 @@ class WebHookService(services.AbstractService):
 
     @classmethod
     def get_help_page(cls) -> str:
-        return f"{constants.OCTOBOT_DOCS_URL}/webhooks/using-a-webhook-with-octobot"
+        return f"{constants.OCTOBOT_DOCS_URL}/octobot-interfaces/tradingview/using-a-webhook"
 
     def get_type(self) -> None:
         return services_constants.CONFIG_WEBHOOK
@@ -128,14 +132,14 @@ class WebHookService(services.AbstractService):
         return feed_name in self.service_feed_webhooks
 
     @staticmethod
-    def connect(port, protocol="http") -> str:
+    def connect(port, protocol="http", domain=None)-> ngrok.NgrokTunnel:
         """
         Create a new ngrok tunnel
         :param port: the tunnel local port
         :param protocol: the protocol to use
         :return: the ngrok url
         """
-        return ngrok.connect(port, protocol)
+        return ngrok.connect(port, protocol, domain=domain)
 
     def subscribe_feed(self, service_feed_name, service_feed_callback, auth_callback) -> None:
         """
@@ -155,14 +159,17 @@ class WebHookService(services.AbstractService):
 
     def _prepare_webhook_server(self):
         try:
-            self.webhook_server = gevent.pywsgi.WSGIServer((self.webhook_host, self.webhook_port),
-                                                           self.webhook_app,
-                                                           log=None)
+            self.logger.debug(f"Starting local webhook server at {self.webhook_host}:{self.webhook_port}")
+            self.webhook_server = gevent.pywsgi.WSGIServer(
+                (self.webhook_host, self.webhook_port),
+                self.webhook_app,
+                log=None
+            )
             self.webhook_server_context = self.webhook_app.app_context()
             self.webhook_server_context.push()
         except OSError as e:
             self.webhook_server = None
-            self.get_logger().exception(e, False, f"Fail to start webhook : {e}")
+            self.logger.exception(e, False, f"Fail to start webhook : {e}")
 
     def _register_webhook_routes(self, blueprint) -> None:
         @blueprint.route('/')
@@ -200,6 +207,11 @@ class WebHookService(services.AbstractService):
             ngrok.set_auth_token(
                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEBHOOK][
                     services_constants.CONFIG_NGROK_TOKEN])
+        self.ngrok_domain = self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_WEBHOOK]\
+            .get(services_constants.CONFIG_NGROK_DOMAIN, None)
+        if self.ngrok_domain in commons_constants.DEFAULT_CONFIG_VALUES:
+            # ignore default values
+            self.ngrok_domain = None
         try:
             self.webhook_host = os.getenv(services_constants.ENV_WEBHOOK_ADDRESS,
                                           self.config[services_constants.CONFIG_CATEGORY_SERVICES]
@@ -221,13 +233,13 @@ class WebHookService(services.AbstractService):
             self._register_webhook_routes(self.webhook_app)
             self.webhook_public_url = f"http://{self.webhook_host}:{self.webhook_port}/webhook"
             if self.ngrok_enabled:
-                self.ngrok_tunnel = self.connect(self.webhook_port, protocol="http")
+                self.ngrok_tunnel = self.connect(self.webhook_port, protocol="http", domain=self.ngrok_domain)
                 self.webhook_public_url = f"{self.ngrok_tunnel.public_url}/webhook"
             if self.webhook_server:
                 self.connected = True
                 self.webhook_server.serve_forever()
         except pyngrok.exception.PyngrokNgrokError as e:
-            self.logger.error(f"Error when starting webhook service: Your ngrock.com token might be invalid. ({e})")
+            self.logger.error(f"Error when starting webhook service: Your ngrok.com token might be invalid. ({e})")
         except Exception as e:
             self.logger.exception(e, True, f"Error when running webhook service: ({e})")
         self.connected = False
@@ -241,7 +253,7 @@ class WebHookService(services.AbstractService):
             start_time = time.time()
             timeout = False
             while self.connected is None and not timeout:
-                time.sleep(0.01)
+                time.sleep(0.1)
                 timeout = time.time() - start_time > self.CONNECTION_TIMEOUT
             if timeout:
                 self.logger.error("Webhook took too long to start, now stopping it.")
@@ -259,7 +271,7 @@ class WebHookService(services.AbstractService):
             await asyncio.wait_for(authenticator.initialized_event.wait(), authenticator.LOGIN_TIMEOUT)
         try:
             # deployed bot url
-            self.webhook_public_url = f"{authenticator.get_deployment_url()}/api/webhook"
+            self.webhook_public_url = f"{await authenticator.get_deployment_url()}/api/webhook"
             self.connected = True
             return True
         except community_errors.BotError as err:
@@ -275,7 +287,7 @@ class WebHookService(services.AbstractService):
         return self.use_web_interface_for_webhook or self.webhook_host is not None and self.webhook_port is not None
 
     def get_successful_startup_message(self):
-        webhook_endpoint = f"address: {self.webhook_public_url}"
+        webhook_endpoint = f"ngrok address"
         if self.use_web_interface_for_webhook:
             webhook_endpoint = "web interface webhook api"
         return f"Webhook configured on {webhook_endpoint}", self._is_healthy()

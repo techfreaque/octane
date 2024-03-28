@@ -1,19 +1,21 @@
 ## Others
-colorlog==4.7.2
-yarl==1.9.2
-idna<2.9,>=2.5
+colorlog==6.8.0
 requests==2.31.0
-packaging==23.1
-python-dotenv==0.21.0
-setuptools<65.6 # Added because the distutils.log.Log class was removed in setuptools >= 65.6. Should be remove when bumping numpy.
+urllib3 # required by requests, used in imports: make sure it's always available
+packaging==23.2
+python-dotenv==1.0.0
+setuptools==69.0.3
 
 # Community
 websockets
-gmqtt==0.6.11
 
-# Supabase
-supabase==1.0.3  # Supabase client
-gotrue           # Supabase authennticated API (required by supabase and enforced to allow direct import)
-supafunc         # Supabase functions calls (required by supabase and enforced to allow direct import)
-postgrest        # Supabase posgres calls (required by supabase and enforced to allow direct import)
-realtime         # Supabase realtime lib (required by supabase and enforced to allow direct import)
+# Supabase  ensure supabase_backend_tests keep passing when updating any of those
+supabase==1.0.4   # Supabase client
+gotrue==1.0.3     # Supabase authennticated API (required by supabase and enforced to allow direct import)
+supafunc==0.2.3   # Supabase functions calls (required by supabase and enforced to allow direct import)
+postgrest==0.10.8 # Supabase posgres calls (required by supabase and enforced to allow direct import)
+realtime==1.0.0   # Supabase realtime lib (required by supabase and enforced to allow direct import)
+
+# Experimental to prevent httpx.PoolTimeout
+httpcore==0.17.3  # to up to at least 1.0.2 (prevent default version when installing httpx which creates httpx.PoolTimeout)
+anyio==4.0.0      #

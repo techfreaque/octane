@@ -410,10 +410,11 @@ class StrategyEvaluator(evaluator.AbstractEvaluator):
 
     @classmethod
     def get_required_time_frames(cls, config: dict,
-                                 tentacles_setup_config: tm_configuration.TentaclesSetupConfiguration):
+                                 tentacles_setup_config: tm_configuration.TentaclesSetupConfiguration,
+                                 strategy_config=None):
         if constants.CONFIG_FORCED_TIME_FRAME in config:
             return time_frame_manager.parse_time_frames(config[constants.CONFIG_FORCED_TIME_FRAME])
-        strategy_config: dict = api.get_tentacle_config(tentacles_setup_config, cls)
+        strategy_config: dict = strategy_config or api.get_tentacle_config(tentacles_setup_config, cls)
         if constants.STRATEGIES_REQUIRED_TIME_FRAME in strategy_config:
             return time_frame_manager.parse_time_frames(strategy_config[constants.STRATEGIES_REQUIRED_TIME_FRAME])
         else:

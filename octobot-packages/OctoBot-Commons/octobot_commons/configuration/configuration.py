@@ -106,7 +106,7 @@ class Configuration:
         :return: None
         """
         profile = self.profile_by_id[profile_id]
-        if profile.read_only:
+        if profile.read_only and not profile.imported:
             raise errors.ProfileRemovalError(f"{profile.name} profile can't be removed")
         try:
             shutil.rmtree(profile.path)
@@ -285,6 +285,8 @@ class Configuration:
                 config_operations.merge_dictionaries_by_appending_keys,
                 [self.config] + updated_configs,
             )
+        # ensure encrypted fields
+        config_file_manager.encrypt_values_if_necessary(self.config)
 
         # save config
         self.save(

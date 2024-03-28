@@ -50,6 +50,7 @@ class TestBitsoRealExchangeTester(RealExchangeTester):
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             assert market_status
+            assert market_status[Ecmsc.TYPE.value] == self.MARKET_STATUS_TYPE
             assert market_status[Ecmsc.SYMBOL.value] in (self.SYMBOL, self.SYMBOL_2, self.SYMBOL_3)
             assert market_status[Ecmsc.PRECISION.value]
             # on this exchange, precision is a decimal instead of a number of digits
@@ -101,6 +102,9 @@ class TestBitsoRealExchangeTester(RealExchangeTester):
             assert max_candle_time <= self.get_time_after_time_frames(self.get_time(), 1)
             for candle in symbol_prices:
                 assert self.CANDLE_SINCE_SEC <= candle[PriceIndexes.IND_PRICE_TIME.value] <= max_candle_time
+
+    async def test_get_historical_ohlcv(self):
+        await super().test_get_historical_ohlcv()
 
     async def test_get_kline_price(self):
         kline_price = await self.get_kline_price()

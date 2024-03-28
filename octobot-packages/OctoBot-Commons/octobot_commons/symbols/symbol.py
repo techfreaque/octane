@@ -187,4 +187,7 @@ def _parse_symbol_full(full_symbol_regex, symbol_str):
 
 @functools.lru_cache(maxsize=None)
 def _parse_spot_symbol(separator, symbol_str):
-    return symbol_str.split(separator)
+    split_result = symbol_str.split(separator)
+    if len(split_result) < 2:
+        return symbol_str, None
+    return split_result[0], split_result[1]

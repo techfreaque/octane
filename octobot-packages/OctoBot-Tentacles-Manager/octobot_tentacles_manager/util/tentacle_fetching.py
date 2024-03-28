@@ -19,6 +19,7 @@ import os
 import os.path as path
 import shutil
 
+import octobot_commons.logging as commons_logging
 import octobot_commons.aiohttp_util as aiohttp_util
 import octobot_tentacles_manager.constants as constants
 import octobot_tentacles_manager.util as util
@@ -34,8 +35,14 @@ async def fetch_and_extract_tentacles(tentacles_temp_dir, tentacles_path_or_url,
             if aiohttp_session is None:
                 raise RuntimeError("Missing aiohttp_session argument")
             compressed_file = f"downloaded_{tentacles_temp_dir}"
-            await _download_tentacles(compressed_file, tentacles_path_or_url, aiohttp_session)
+            last_modified = await _download_tentacles(compressed_file, tentacles_path_or_url, aiohttp_session)
+            await util.log_tentacles_file_details(compressed_file, last_modified)
         await _extract_tentacles(compressed_file, tentacles_temp_dir, merge_dirs)
+    except Exception as err:
+        commons_logging.get_logger("TentaclesFetching").warning(
+            f"Error when fetching tentacles from {tentacles_path_or_url}: {err} ({err.__class__.__name__})"
+        )
+        raise
     finally:
         if should_download and path.isfile(compressed_file):
             os.remove(compressed_file)
@@ -52,11 +59,13 @@ def get_local_arch_download_path():
 
 async def _download_tentacles(target_file, download_URL, aiohttp_session):
     async with aiofiles.open(target_file, 'wb+') as downloaded_file:
-        await aiohttp_util.download_stream_file(output_file=downloaded_file,
-                                                file_url=download_URL,
-                                                aiohttp_session=aiohttp_session,
-                                                data_chunk_size=DOWNLOADED_DATA_CHUNK_SIZE,
-                                                is_aiofiles_output_file=True)
+        return await aiohttp_util.download_stream_file(
+            output_file=downloaded_file,
+            file_url=download_URL,
+            aiohttp_session=aiohttp_session,
+            data_chunk_size=DOWNLOADED_DATA_CHUNK_SIZE,
+            is_aiofiles_output_file=True
+        )
 
 
 async def _extract_tentacles(source_path, target_path, merge_dirs):

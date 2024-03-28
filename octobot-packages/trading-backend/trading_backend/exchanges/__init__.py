@@ -48,14 +48,14 @@ from trading_backend.exchanges.gateio import (
     GateIO
 )
 
+from trading_backend.exchanges import htx
+from trading_backend.exchanges.htx import (
+    HTX
+)
+
 from trading_backend.exchanges import huobi
 from trading_backend.exchanges.huobi import (
     Huobi
-)
-
-from trading_backend.exchanges import huobipro
-from trading_backend.exchanges.huobipro import (
-    HuobiPro
 )
 
 from trading_backend.exchanges import bitget
@@ -83,6 +83,16 @@ from trading_backend.exchanges.mexc import (
     MEXC
 )
 
+from trading_backend.exchanges import bingx
+from trading_backend.exchanges.bingx import (
+    Bingx
+)
+
+from trading_backend.exchanges import coinex
+from trading_backend.exchanges.coinex import (
+    Coinex
+)
+
 __all__ = [
     "Exchange",
     "Binance",
@@ -91,11 +101,13 @@ __all__ = [
     "OKX",
     "Ascendex",
     "GateIO",
+    "HTX",
     "Huobi",
-    "HuobiPro",
     "Bitget",
     "Phemex",
     "Kucoin",
     "KucoinFutures",
     "MEXC",
+    "Bingx",
+    "Coinex",
 ]

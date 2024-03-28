@@ -40,20 +40,26 @@ def has_real_and_or_simulated_traders():
 
 
 def sell_all_currencies():
+    return interfaces.run_in_bot_main_loop(async_sell_all_currencies())
+
+
+async def async_sell_all_currencies():
     orders = []
     for exchange_manager in interfaces.get_exchange_managers():
         if trading_api.is_trader_existing_and_enabled(exchange_manager):
-            orders += interfaces.run_in_bot_main_loop(
-                trading_api.sell_all_everything_for_reference_market(exchange_manager))
+            orders += await trading_api.sell_all_everything_for_reference_market(exchange_manager)
     return orders
 
 
 def sell_all(currency):
+    return interfaces.run_in_bot_main_loop(async_sell_all(currency))
+
+
+async def async_sell_all(currency):
     orders = []
     for exchange_manager in interfaces.get_exchange_managers():
         if trading_api.is_trader_existing_and_enabled(exchange_manager):
-            orders += interfaces.run_in_bot_main_loop(
-                trading_api.sell_currency_for_reference_market(exchange_manager, currency))
+            orders += await trading_api.sell_currency_for_reference_market(exchange_manager, currency)
     return orders
 
 

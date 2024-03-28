@@ -37,6 +37,7 @@ import octobot_trading.modes.channel.abstract_mode_producer as abstract_mode_pro
 import octobot_trading.modes.channel.abstract_mode_consumer as abstract_mode_consumer
 import octobot_trading.modes.mode_config as mode_config
 import octobot_trading.modes.modes_util as modes_util
+import octobot_trading.exchanges.util.exchange_util as exchange_util
 import octobot_trading.signals as signals
 
 
@@ -50,6 +51,13 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
     MODE_CONSUMER_CLASSES = []
     # maximum seconds before sending a trading signal if orders are slow to create on exchange
     TRADING_SIGNAL_TIMEOUT = 10
+    REQUIRE_TRADES_HISTORY = False   # set True when this trading mode needs the trade history to operate
+    ALLOW_CANCEL_BEFORE_BUY_SIGNALS = True  # set False if trade signals from this trading mode should NOT be
+    # reordered to process cancel signals first
+    SUPPORTS_INITIAL_PORTFOLIO_OPTIMIZATION = False  # set True when self._optimize_initial_portfolio is implemented
+    SUPPORTS_HEALTH_CHECK = False   # set True when self.health_check is implemented
+    ENABLE_HEALTH_CHECK = "enable_health_check"
+    HEALTH_CHECK_INTERVAL = common_constants.DAYS_TO_SECONDS
 
     def __init__(self, config, exchange_manager):
         super().__init__()
@@ -87,6 +95,13 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
 
         # True when this trading mode is waken up only after full candles close
         self.is_triggered_after_candle_close = False
+
+        # True when initialization orders are waiting to be created
+        self.are_initialization_orders_pending = False
+
+        # When True, health check will be performed when calling trading_mode_trigger
+        self.is_health_check_enabled = False
+        self._last_health_check_time = 0
 
     # Used to know the current state of the trading mode.
     # Overwrite in subclasses
@@ -178,12 +193,12 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
         """
         return True
 
-    async def initialize(self) -> None:
+    async def initialize(self, trading_config=None, auto_start=True) -> None:
         """
         Triggers producers and consumers creation
         """
-        await self.reload_config(self.exchange_manager.bot_id)
-        self.producers = await self.create_producers()
+        await self.reload_config(self.exchange_manager.bot_id, trading_config=trading_config)
+        self.producers = await self.create_producers(auto_start)
         self.consumers = await self.create_consumers()
 
     async def stop(self) -> None:
@@ -196,17 +211,17 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
             await consumer.stop()
         self.exchange_manager = None
 
-    async def create_producers(self) -> list:
+    async def create_producers(self, auto_start) -> list:
         """
         Creates the instance of producers listed in MODE_PRODUCER_CLASSES
         :return: the list of producers created
         """
         return [
-            await self._create_mode_producer(mode_producer_class)
+            await self._create_mode_producer(mode_producer_class, auto_start)
             for mode_producer_class in self.get_mode_producer_classes()
         ]
 
-    async def _create_mode_producer(self, mode_producer_class):
+    async def _create_mode_producer(self, mode_producer_class, auto_start):
         """
         Creates a new :mode_producer_class: instance and starts it
         :param mode_producer_class: the trading mode producer class to create
@@ -215,8 +230,16 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
         mode_producer = mode_producer_class(
             exchanges_channel.get_chan(constants.MODE_CHANNEL, self.exchange_manager.id),
             self.config, self, self.exchange_manager)
-        await mode_producer.run()
+        if auto_start:
+            await mode_producer.run()
         return mode_producer
+
+    async def start_producers(self):
+        """
+        Should be used if producers got created with auto_start=False
+        """
+        for producer in self.producers:
+            await producer.run()
 
     async def create_consumers(self) -> list:
         """
@@ -261,6 +284,12 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
             await modes_util.clear_plotting_cache(self)
         elif action == common_enums.UserCommands.CLEAR_SIMULATED_ORDERS_CACHE.value:
             await modes_util.clear_simulated_orders_cache(self)
+        elif action == common_enums.UserCommands.OPTIMIZE_INITIAL_PORTFOLIO.value:
+            if self.SUPPORTS_INITIAL_PORTFOLIO_OPTIMIZATION:
+                await self.optimize_initial_portfolio([], {})
+        elif action == common_enums.UserCommands.TRIGGER_HEALTH_CHECK.value:
+            if self.SUPPORTS_HEALTH_CHECK:
+                await self.health_check([], {})
 
     async def _manual_trigger(self, data):
         kwargs = {
@@ -269,6 +298,92 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
         kwargs.update(data.get("kwargs", {}))
         for producer in self.producers:
             await producer.trigger(**kwargs)
+
+    def enabled_health_check_in_config(self) -> bool:
+        try:
+            return self.trading_config.get(self.ENABLE_HEALTH_CHECK, False)
+        except AttributeError:
+            # when self.trading_config is None, should not happen
+            return False
+
+    def _health_check_interval_expired(self) -> bool:
+        return self.exchange_manager.exchange.get_exchange_current_time() - self._last_health_check_time \
+            > self.HEALTH_CHECK_INTERVAL
+
+    def is_health_check_required(self) -> bool:
+        return self.SUPPORTS_HEALTH_CHECK and self.is_health_check_enabled and self._health_check_interval_expired()
+
+    async def health_check(self, chained_orders: list, tickers: dict) -> list:
+        self._last_health_check_time = self.exchange_manager.exchange.get_exchange_current_time()
+        if not self.producers:
+            # nothing to do
+            return []
+        async with self._single_exchange_operation("health check") as continue_operation:
+            if not continue_operation:
+                return []
+            return await self.single_exchange_process_health_check(chained_orders, tickers)
+
+    async def single_exchange_process_health_check(self, chained_orders: list, tickers: dict) -> list:
+        raise NotImplementedError("single_exchange_process_health_check is not implemented")
+
+    async def optimize_initial_portfolio(self, sellable_assets: list, tickers: dict) -> list:
+        if not self.producers:
+            # nothing to do
+            return []
+        # first acquire trading mode lock to be sure we are not in during trading mode iteration
+        async with self.producers[0].trading_mode_trigger():
+            async with self._single_exchange_operation("portfolio optimization") as continue_operation:
+                if not continue_operation:
+                    return []
+                target_asset = exchange_util.get_common_traded_quote(self.exchange_manager)
+                if target_asset is None:
+                    self.logger.error(f"Impossible to optimize initial portfolio with different quotes in traded pairs")
+                    return []
+                self.logger.info(f"Starting portfolio optimization using trading mode with symbol {self.symbol}")
+                created_orders = await self.single_exchange_process_optimize_initial_portfolio(
+                    sellable_assets, target_asset, tickers
+                )
+                if not created_orders:
+                    self.logger.info("Optimizing portfolio: no order to create")
+                await modes_util.notify_portfolio_optimization_complete()
+                return created_orders
+
+    async def single_exchange_process_optimize_initial_portfolio(
+        self, sellable_assets, target_asset: str, tickers: dict
+    ) -> list:
+        raise NotImplementedError("single_exchange_process_optimize_initial_portfolio is not implemented")
+
+    @contextlib.asynccontextmanager
+    async def _single_exchange_operation(self, operation_name):
+        is_the_single_operation = not self.producers[0].producer_exchange_wide_lock(self.exchange_manager).locked()
+        if is_the_single_operation:
+            # already locked by another trading mode instance: this other trading mode will do the operation
+            self.logger.debug(
+                f"[Single exchange operation]: triggering '{operation_name}' for trading mode with symbol "
+                f"{self.symbol} [{self.exchange_manager.exchange_name}]."
+            )
+        else:
+            # already locked by another trading mode instance: this other trading mode will do the operation
+            self.logger.debug(
+                f"[Single exchange operation]: skipping '{operation_name}' for trading mode with symbol {self.symbol} "
+                f"[{self.exchange_manager.exchange_name}]: "
+                f"{operation_name} already in progress. Waiting for initial {operation_name} to complete."
+            )
+        async with self.producers[0].producer_exchange_wide_lock(self.exchange_manager):
+            yield is_the_single_operation
+
+    @classmethod
+    def get_user_commands(cls) -> dict:
+        """
+        Return the dict of user commands for this tentacle
+        :return: the commands dict
+        """
+        commands = {}
+        if cls.SUPPORTS_INITIAL_PORTFOLIO_OPTIMIZATION:
+            commands[common_enums.UserCommands.OPTIMIZE_INITIAL_PORTFOLIO.value] = {}
+        if cls.SUPPORTS_HEALTH_CHECK:
+            commands[common_enums.UserCommands.TRIGGER_HEALTH_CHECK.value] = {}
+        return commands
 
     async def _create_mode_consumer(self, mode_consumer_class):
         """
@@ -285,13 +400,13 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
             time_frame=self.time_frame if self.time_frame else channel_constants.CHANNEL_WILDCARD)
         return mode_consumer
 
-    async def reload_config(self, bot_id: str) -> None:
+    async def reload_config(self, bot_id: str, trading_config=None) -> None:
         """
         Try to load TradingMode tentacle config.
         Calls set_default_config() if the tentacle config is empty
         """
-        self.trading_config = tentacles_manager_api.get_tentacle_config(self.exchange_manager.tentacles_setup_config,
-                                                                        self.__class__)
+        self.trading_config = trading_config or \
+            tentacles_manager_api.get_tentacle_config(self.exchange_manager.tentacles_setup_config, self.__class__)
         # set default config if nothing found
         if not self.trading_config:
             self.set_default_config()

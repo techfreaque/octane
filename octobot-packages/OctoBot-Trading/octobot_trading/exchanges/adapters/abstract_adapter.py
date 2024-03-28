@@ -70,6 +70,11 @@ class AbstractAdapter:
         return self.parse_ticker(fixed, **kwargs)
 
     @_adapter
+    def adapt_ticker_from_kline(self, raw, symbol, **kwargs):
+        fixed = self.create_ticker_from_kline(raw, symbol, **kwargs)
+        return self.parse_ticker(fixed, **kwargs)
+
+    @_adapter
     def adapt_balance(self, raw, **kwargs):
         fixed = self.fix_balance(raw, **kwargs)
         return self.parse_balance(fixed, **kwargs)
@@ -125,9 +130,9 @@ class AbstractAdapter:
         return self.parse_mark_price(fixed, **kwargs)
 
     @_adapter
-    def adapt_market_status(self, raw, **kwargs):
-        fixed = self.fix_market_status(raw, **kwargs)
-        return self.parse_market_status(fixed, **kwargs)
+    def adapt_market_status(self, raw, remove_price_limits=False, **kwargs):
+        fixed = self.fix_market_status(raw, remove_price_limits=remove_price_limits, **kwargs)
+        return self.parse_market_status(fixed, remove_price_limits=remove_price_limits, **kwargs)
 
     def get_uniformized_timestamp(self, timestamp):
         # override if the exchange time is not a second timestamp or millisecond
@@ -171,6 +176,9 @@ class AbstractAdapter:
     def parse_ticker(self, fixed, **kwargs):
         raise NotImplementedError("parse_ticker is not implemented")
 
+    def create_ticker_from_kline(self, kline, symbol, **kwargs):
+        raise NotImplementedError("create_ticker_from_kline is not implemented")
+
     def fix_balance(self, raw, **kwargs):
         # add generic logic if necessary
         return raw
@@ -194,8 +202,8 @@ class AbstractAdapter:
 
     def fix_trades(self, raw, **kwargs):
         for trade in raw:
-            # id is reserved for octobot managed id. store exchange id in EXCHANGE_ID
-            trade[enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value] = \
+            # id is reserved for octobot managed id. store exchange trade id in EXCHANGE_TRADE_ID
+            trade[enums.ExchangeConstantsOrderColumns.EXCHANGE_TRADE_ID.value] = \
                 trade.pop(enums.ExchangeConstantsOrderColumns.ID.value, None)
             # add generic logic if necessary
         return raw
@@ -252,9 +260,9 @@ class AbstractAdapter:
     def parse_mark_price(self, fixed, **kwargs):
         raise NotImplementedError("parse_mark_price is not implemented")
 
-    def fix_market_status(self, raw, **kwargs):
+    def fix_market_status(self, raw, remove_price_limits=False, **kwargs):
         # add generic logic if necessary
         return raw
 
-    def parse_market_status(self, fixed, **kwargs):
+    def parse_market_status(self, fixed, remove_price_limits=False, **kwargs):
         raise NotImplementedError("parse_market_status is not implemented")

@@ -18,7 +18,7 @@ import pytest
 import octobot_trading.errors
 from octobot_commons.enums import TimeFrames, PriceIndexes
 from octobot_trading.enums import ExchangeConstantsMarketStatusColumns as Ecmsc, \
-    ExchangeConstantsOrderColumns as Ecoc, \
+    ExchangeConstantsOrderBookInfoColumns as Ecobic, ExchangeConstantsOrderColumns as Ecoc, \
     ExchangeConstantsTickersColumns as Ectc
 from tests_additional.real_exchanges.real_exchange_tester import RealExchangeTester
 # required to catch async loop context exceptions
@@ -51,6 +51,7 @@ class TestCoinbaseRealExchangeTester(RealExchangeTester):
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             assert market_status
+            assert market_status[Ecmsc.TYPE.value] == self.MARKET_STATUS_TYPE
             assert market_status[Ecmsc.SYMBOL.value] in (self.SYMBOL, self.SYMBOL_2, self.SYMBOL_3)
             assert market_status[Ecmsc.PRECISION.value]
             assert 0 < market_status[Ecmsc.PRECISION.value][
@@ -74,18 +75,22 @@ class TestCoinbaseRealExchangeTester(RealExchangeTester):
     async def test_get_symbol_prices(self):
         # without limit
         symbol_prices = await self.get_symbol_prices()
-        assert len(symbol_prices) == 5
+        assert len(symbol_prices) == 300
         # check candles order (oldest first)
         self.ensure_elements_order(symbol_prices, PriceIndexes.IND_PRICE_TIME.value)
         # check last candle is the current candle
         assert symbol_prices[-1][PriceIndexes.IND_PRICE_TIME.value] >= self.get_time() - self.get_allowed_time_delta()
 
         # try with candles limit (used in candled updater)
-        # max value is 299
-        with pytest.raises(octobot_trading.errors.FailedRequest):
-            await self.get_symbol_prices(**self._get_ohlcv_params(300))
-        symbol_prices = await self.get_symbol_prices(**self._get_ohlcv_params(299))
-        assert len(symbol_prices) == 299
+        # max value is 300, larger value fetch candles from the past
+        symbol_prices = await self.get_symbol_prices(**self._get_ohlcv_params(500))
+        assert len(symbol_prices) == 300
+        # ensure data from the past
+        assert symbol_prices[-1][PriceIndexes.IND_PRICE_TIME.value] < self.get_time() - self.get_allowed_time_delta()
+
+        # ensure data within limit value
+        symbol_prices = await self.get_symbol_prices(**self._get_ohlcv_params(300))
+        assert len(symbol_prices) == 300
         # check candles order (oldest first)
         self.ensure_elements_order(symbol_prices, PriceIndexes.IND_PRICE_TIME.value)
         # check last candle is the current candle
@@ -94,8 +99,21 @@ class TestCoinbaseRealExchangeTester(RealExchangeTester):
     async def test_get_historical_symbol_prices(self):
         # try with since and limit (used in data collector)
         for limit in (50, None):
-            with pytest.raises(octobot_trading.errors.FailedRequest):
-                await self.get_symbol_prices(since=self.CANDLE_SINCE, limit=limit)    # not supported
+            symbol_prices = await self.get_symbol_prices(since=self.CANDLE_SINCE, limit=limit)
+            if limit:
+                assert len(symbol_prices) == limit
+            else:
+                assert len(symbol_prices) > 5
+            # check candles order (oldest first)
+            self.ensure_elements_order(symbol_prices, PriceIndexes.IND_PRICE_TIME.value)
+            # check that fetched candles are historical candles
+            max_candle_time = self.get_time_after_time_frames(self.CANDLE_SINCE_SEC, len(symbol_prices))
+            assert max_candle_time <= self.get_time()
+            for candle in symbol_prices:
+                assert self.CANDLE_SINCE_SEC <= candle[PriceIndexes.IND_PRICE_TIME.value] <= max_candle_time
+
+    async def test_get_historical_ohlcv(self):
+        await super().test_get_historical_ohlcv()
 
     async def test_get_kline_price(self):
         kline_price = await self.get_kline_price()
@@ -106,8 +124,11 @@ class TestCoinbaseRealExchangeTester(RealExchangeTester):
         assert kline_start_time >= self.get_time() - self.get_allowed_time_delta()
 
     async def test_get_order_book(self):
-        with pytest.raises(octobot_trading.errors.NotSupported):
-            await self.get_order_book()
+        order_book = await self.get_order_book()
+        assert len(order_book[Ecobic.ASKS.value]) == 5
+        assert len(order_book[Ecobic.ASKS.value][0]) == 2
+        assert len(order_book[Ecobic.BIDS.value]) == 5
+        assert len(order_book[Ecobic.BIDS.value][0]) == 2
 
     async def test_get_recent_trades(self):
         recent_trades = await self.get_recent_trades()
@@ -151,8 +172,8 @@ class TestCoinbaseRealExchangeTester(RealExchangeTester):
             assert ticker[Ectc.LAST.value]
             assert ticker[Ectc.PREVIOUS_CLOSE.value] is None
             assert ticker[Ectc.BASE_VOLUME.value] is None
-            assert ticker[Ectc.TIMESTAMP.value] is None  # will trigger an 'Ignored incomplete ticker'
+            assert ticker[Ectc.TIMESTAMP.value]
             RealExchangeTester.check_ticker_typing(
                 ticker,
-                check_open=False, check_high=False, check_low=False, check_timestamp=False, check_base_volume=False
+                check_open=False, check_high=False, check_low=False, check_base_volume=False
             )

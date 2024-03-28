@@ -14,9 +14,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import shutil
 import os
-import json
 import octobot_commons.logging as logging
 import octobot_commons.constants as commons_constants
 import octobot_commons.configuration.fields_utils as fields_utils
@@ -79,58 +77,37 @@ def dump(
     :param schema_file: path to the json schema to validate the updated config
     """
     try:
-        # prepare a restoration config file
-        prepare_restore_file(temp_restore_config_file, config_file)
-
-    # when failing to create the restore config
-    except Exception as err:
-        error_details = (
-            f"Failed to create the backup configuration file. Is your {commons_constants.USER_FOLDER} "
-            f"folder accessible ? : {err} ({err.__class__.__name__})"
-        )
-        logging.get_logger(LOGGER_NAME).error(error_details)
-        raise err.__class__(error_details) from err
-    try:
-        new_content = jsonify_config(config)
-
-        # edit the config file
-        with open(config_file, "w") as cg_file:
-            cg_file.write(new_content)
-
+        encrypt_values_if_necessary(config)
         if schema_file is not None:
             # check if the new config file is correct
-            check_config(config_file, schema_file)
-
-        # remove temp file
-        remove_restore_file(temp_restore_config_file)
-
-    # when failing to restore the previous config
+            _check_config(config, schema_file)
     except Exception as global_exception:
         logging.get_logger(LOGGER_NAME).error(
-            f"Save config failed : {global_exception}"
+            f"Failed to validate configuration to save : {global_exception}"
         )
-        restore(temp_restore_config_file, config_file)
         raise global_exception
 
+    json_util.safe_dump(config, config_file, restore_file=temp_restore_config_file)
 
-def check_config(config_file, schema_file) -> None:
+
+def _check_config(content, schema_file) -> None:
     """
     Check a config file
-    :param config_file: the config file path
+    :param content: the config content
     :param schema_file: path to the json schema to validate the updated config
     """
     try:
-        json_util.validate(load(config_file=config_file), schema_file=schema_file)
+        json_util.validate(content, schema_file=schema_file)
     except Exception as global_exception:
         raise global_exception
 
 
-def jsonify_config(config) -> str:
+def encrypt_values_if_necessary(config) -> None:
     """
-    Jsonify a config
-    :param config: the config
-    :return: the jsonified config
+    check exchange keys encryption
     """
+    if commons_constants.CONFIG_EXCHANGES not in config:
+        return
     # check exchange keys encryption
     for exchange, exchange_config in config[commons_constants.CONFIG_EXCHANGES].items():
         try:
@@ -140,8 +117,6 @@ def jsonify_config(config) -> str:
             config[commons_constants.CONFIG_EXCHANGES][exchange] = {
                 key: "" for key in commons_constants.CONFIG_EXCHANGE_ENCRYPTED_VALUES
             }
-
-    return dump_formatted_json(config)
 
 
 def handle_encrypted_value(value_key, config_element, verbose=False) -> bool:
@@ -167,38 +142,3 @@ def handle_encrypted_value(value_key, config_element, verbose=False) -> bool:
                     )
                 return False
     return True
-
-
-def prepare_restore_file(restore_file, current_config_file) -> None:
-    """
-    Prepare a config restoration file
-    :param restore_file: the restoration file
-    :param current_config_file: the file to be restored
-    """
-    shutil.copy(current_config_file, restore_file)
-
-
-def remove_restore_file(restore_file) -> None:
-    """
-    Remove a restore file
-    :param restore_file: the restore file path
-    """
-    os.remove(restore_file)
-
-
-def restore(restore_file, target_file) -> None:
-    """
-    Restore a config file from a saved file
-    :param restore_file: the restore file path
-    :param target_file: the target file path
-    """
-    shutil.copy(restore_file, target_file)
-
-
-def dump_formatted_json(json_data) -> str:
-    """
-    The dumped json data
-    :param json_data: the json data to be dumped
-    :return: the dumped json data
-    """
-    return json.dumps(json_data, indent=4, sort_keys=True)

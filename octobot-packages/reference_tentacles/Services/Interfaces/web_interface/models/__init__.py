@@ -60,6 +60,8 @@ from tentacles.Services.Interfaces.web_interface.models.community import (
     get_community_metrics_to_display,
     can_get_community_metrics,
     get_account_tentacles_packages,
+    get_cloud_strategies,
+    get_cloud_strategy,
     get_preview_tentacles_packages,
     get_current_octobots_stats,
     get_all_user_bots,
@@ -157,6 +159,7 @@ from tentacles.Services.Interfaces.web_interface.models.configuration import (
     reload_tentacle_config,
     update_config_currencies,
     get_config_required_candles_count,
+    get_sandbox_exchanges,
 )
 from tentacles.Services.Interfaces.web_interface.models.dashboard import (
     parse_get_symbol,
@@ -202,6 +205,7 @@ from tentacles.Services.Interfaces.web_interface.models.profiles import (
     export_profile,
     import_profile,
     download_and_import_profile,
+    import_strategy_as_profile,
     get_profile_name,
     get_forced_profile,
     is_real_trading,
@@ -278,6 +282,8 @@ __all__ = [
     "get_community_metrics_to_display",
     "can_get_community_metrics",
     "get_account_tentacles_packages",
+    "get_cloud_strategies",
+    "get_cloud_strategy",
     "get_preview_tentacles_packages",
     "get_current_octobots_stats",
     "get_all_user_bots",
@@ -393,6 +399,7 @@ __all__ = [
     "export_profile",
     "import_profile",
     "download_and_import_profile",
+    "import_strategy_as_profile",
     "get_profile_name",
     "get_forced_profile",
     "is_real_trading",
@@ -447,5 +454,6 @@ __all__ = [
     "reload_tentacle_config",
     "update_config_currencies",
     "get_config_required_candles_count",
+    "get_sandbox_exchanges",
     "WebInterfaceTab",
 ]

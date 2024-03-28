@@ -29,7 +29,3 @@ class GateIO(exchanges.Exchange):
 
     def get_headers(self):
         return {self.HEADER_KEY: self._get_id()}
-
-    async def _inner_is_valid_account(self) -> (bool, str):
-        # Nothing to do
-        return await super()._inner_is_valid_account()

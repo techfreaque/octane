@@ -19,6 +19,7 @@ from octobot_commons.enums import TimeFrames, PriceIndexes
 from octobot_trading.enums import ExchangeConstantsMarketStatusColumns as Ecmsc, \
     ExchangeConstantsOrderBookInfoColumns as Ecobic, ExchangeConstantsOrderColumns as Ecoc, \
     ExchangeConstantsTickersColumns as Ectc
+import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 from tests_additional.real_exchanges.real_exchange_tester import RealExchangeTester
 # required to catch async loop context exceptions
 from tests import event_loop
@@ -54,6 +55,7 @@ class TestKucoinRealExchangeTester(RealExchangeTester):
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             assert market_status
+            assert market_status[Ecmsc.TYPE.value] == self.MARKET_STATUS_TYPE
             assert market_status[Ecmsc.SYMBOL.value] in (self.SYMBOL, self.SYMBOL_2, self.SYMBOL_3)
             assert market_status[Ecmsc.PRECISION.value]
             # on this exchange, precision is a decimal instead of a number of digits
@@ -67,6 +69,10 @@ class TestKucoinRealExchangeTester(RealExchangeTester):
                                     Ecmsc.LIMITS_COST.value))
             # invalid values (should be much lower for XRP/BTC => remove price limit in tentacle
             self.check_market_status_limits(market_status, has_price_limits=False)
+            # kucoin special value to handle to market status min cost (https://docs.kucoin.com/#get-symbols-list)
+            min_funds = market_status[ccxt_constants.CCXT_INFO].get("minFunds")
+            assert min_funds is not None
+            assert float(min_funds) > 0
 
     async def test_get_symbol_prices(self):
         # without limit
@@ -102,6 +108,9 @@ class TestKucoinRealExchangeTester(RealExchangeTester):
             for candle in symbol_prices:
                 assert self.CANDLE_SINCE_SEC <= candle[PriceIndexes.IND_PRICE_TIME.value] <= max_candle_time
 
+    async def test_get_historical_ohlcv(self):
+        await super().test_get_historical_ohlcv()
+
     async def test_get_kline_price(self):
         kline_price = await self.get_kline_price()
         assert len(kline_price) == 1
@@ -132,6 +141,20 @@ class TestKucoinRealExchangeTester(RealExchangeTester):
 
     async def test_get_all_currencies_price_ticker(self):
         tickers = await self.get_all_currencies_price_ticker()
+        for symbol, ticker in tickers.items():
+            self._check_ticker(ticker, symbol)
+
+    async def test_get_all_currencies_price_ticker_with_market_filter(self):
+        tickers = await self.get_all_currencies_price_ticker(market_filter=self.get_market_filter())
+        assert len(tickers) > 2    # all tickers
+        assert self.SYMBOL in tickers
+        assert self.SYMBOL_2 in tickers
+        assert self.SYMBOL_3 in tickers  # symbol not correctly parsed as not in available markets (but luckily kucoin also uses the same syntax)
+        tickers = await self.get_all_currencies_price_ticker(
+            symbols=[self.SYMBOL, self.SYMBOL_2],
+            market_filter=self.get_market_filter()
+        )
+        assert list(tickers) == [self.SYMBOL, self.SYMBOL_2]    # ticker for self.SYMBOL, self.SYMBOL_2
         for symbol, ticker in tickers.items():
             self._check_ticker(ticker, symbol)
 

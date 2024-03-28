@@ -14,9 +14,11 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-
+import contextlib
 import logging
+import typing
 
+import octobot_commons.constants as constants
 import octobot_commons.timestamp_util as timestamp_util
 
 LOG_DATABASE = "log_db"
@@ -35,6 +37,7 @@ error_notifier_callbacks = []
 LOGS_MAX_COUNT = 1000
 
 STORED_LOG_MIN_LEVEL = logging.WARNING
+ENABLE_WEB_INTERFACE_LOGS = True
 ERROR_PUBLICATION_ENABLED = True
 SHOULD_PUBLISH_LOGS_WHEN_RE_ENABLED = False
 
@@ -44,6 +47,7 @@ def _default_callback(*_, **__):
 
 
 _ERROR_CALLBACK = _default_callback
+_LOG_CALLBACK: typing.Union[None, typing.Callable[[str], str]] = None
 
 
 def set_global_logger_level(level, handler_levels=None) -> None:
@@ -64,6 +68,19 @@ def get_global_logger_level() -> object:
     :return: the global logger level
     """
     return logging.getLogger().getEffectiveLevel()
+
+
+@contextlib.contextmanager
+def temporary_log_level(level):
+    """
+    Sets the log level to the given level inside this context
+    """
+    previous_level = get_global_logger_level()
+    try:
+        set_global_logger_level(level)
+        yield
+    finally:
+        set_global_logger_level(previous_level)
 
 
 def get_logger_level_per_handler() -> list:
@@ -156,47 +173,51 @@ class BotLogger:
         self.logger_name = logger_name
         self.logger = logging.getLogger(logger_name)
 
-    def debug(self, message, *args, **kwargs) -> None:
+    def debug(self, message: str, *args, **kwargs) -> None:
         """
         Called for a debug log
         :param message: the log message
         """
+        message = self._process_log_callback(message)
         self.logger.debug(message, *args, **kwargs)
         self._publish_log_if_necessary(message, logging.DEBUG)
 
-    def info(self, message, *args, **kwargs) -> None:
+    def info(self, message: str, *args, **kwargs) -> None:
         """
         Called for an info log
         :param message: the log message
         """
+        message = self._process_log_callback(message)
         self.logger.info(message, *args, **kwargs)
         self._publish_log_if_necessary(message, logging.INFO)
 
-    def warning(self, message, *args, **kwargs) -> None:
+    def warning(self, message: str, *args, **kwargs) -> None:
         """
         Called for a warning log
         :param message: the log message
         """
+        message = self._process_log_callback(message)
         self.logger.warning(message, *args, **kwargs)
         self._publish_log_if_necessary(message, logging.WARNING)
 
-    def error(self, message, *args, skip_post_callback=False, **kwargs) -> None:
+    def error(self, message: str, *args, skip_post_callback=False, **kwargs) -> None:
         """
         Called for an error log
         :param message: the log message
         :param skip_post_callback: when True, the error callback wont be called
         """
+        message = self._process_log_callback(message)
         self.logger.error(message, *args, **kwargs)
         self._publish_log_if_necessary(message, logging.ERROR)
         self._post_callback_if_necessary(None, message, skip_post_callback)
 
     def exception(
         self,
-        exception,
-        publish_error_if_necessary=True,
-        error_message=None,
-        include_exception_name=True,
-        skip_post_callback=False,
+        exception: Exception,
+        publish_error_if_necessary: bool = True,
+        error_message: str = None,
+        include_exception_name: bool = True,
+        skip_post_callback: bool = False,
         **kwargs,
     ) -> None:
         """
@@ -207,31 +228,45 @@ class BotLogger:
         :param include_exception_name: when True adds the __class__.__name__ of the exception at the end of the message
         :param skip_post_callback: when True, the error callback wont be called
         """
-        self.logger.exception(exception, **kwargs)
+        extra = kwargs.get("extra", {})
+        origin_error_message = error_message
+        error_message = (
+            self._process_log_callback(error_message)
+            if error_message
+            else error_message
+        )
+        extra[constants.EXCEPTION_DESC] = error_message
+        self.logger.exception(exception, extra=extra, **kwargs)
         if publish_error_if_necessary:
-            message = error_message
+            message = origin_error_message
             if message is None:
                 message = (
                     str(exception) if str(exception) else exception.__class__.__name__
                 )
             elif include_exception_name:
                 message = f"{message} (error: {exception.__class__.__name__})"
-            self.error(message, skip_post_callback=True)
+            self.error(
+                message,
+                skip_post_callback=True,
+                extra={constants.IS_EXCEPTION_DESC: True},
+            )
         self._post_callback_if_necessary(exception, error_message, skip_post_callback)
 
-    def critical(self, message, *args, **kwargs) -> None:
+    def critical(self, message: str, *args, **kwargs) -> None:
         """
         Called for a critical log
         :param message: the log message
         """
+        message = self._process_log_callback(message)
         self.logger.critical(message, *args, **kwargs)
         self._publish_log_if_necessary(message, logging.CRITICAL)
 
-    def fatal(self, message, *args, **kwargs) -> None:
+    def fatal(self, message: str, *args, **kwargs) -> None:
         """
         Called for a fatal log
         :param message: the log message
         """
+        message = self._process_log_callback(message)
         self.logger.fatal(message, *args, **kwargs)
         self._publish_log_if_necessary(message, logging.FATAL)
 
@@ -242,13 +277,22 @@ class BotLogger:
         """
         self.logger.disabled = disabled
 
+    def _process_log_callback(self, message: str) -> str:
+        if _LOG_CALLBACK is None:
+            return message
+        return _LOG_CALLBACK(message)
+
     def _publish_log_if_necessary(self, message, level) -> None:
         """
         Publish the log message if necessary
         :param message: the log message
         :param level: the log level
         """
-        if STORED_LOG_MIN_LEVEL <= level and get_global_logger_level() <= level:
+        if (
+            ENABLE_WEB_INTERFACE_LOGS
+            and STORED_LOG_MIN_LEVEL <= level
+            and get_global_logger_level() <= level
+        ):
             self._web_interface_publish_log(message, level)
             if not ERROR_PUBLICATION_ENABLED and logging.ERROR <= level:
                 global SHOULD_PUBLISH_LOGS_WHEN_RE_ENABLED
@@ -282,6 +326,15 @@ class BotLogger:
             _ERROR_CALLBACK(exception, error_message)
 
 
+def register_log_callback(callback: typing.Union[None, typing.Callable[[str], str]]):
+    """
+    :param callback: the callback to be called upon any log of any level
+    Register callback as the _LOG_CALLBACK
+    """
+    global _LOG_CALLBACK
+    _LOG_CALLBACK = callback
+
+
 def get_backtesting_errors_count() -> int:
     """
     Get backtesting errors count
@@ -309,3 +362,11 @@ def set_error_publication_enabled(enabled) -> None:
         add_log(logging.ERROR, None, None, keep_log=False, call_notifiers=True)
     else:
         SHOULD_PUBLISH_LOGS_WHEN_RE_ENABLED = False
+
+
+def set_enable_web_interface_logs(enabled):
+    """
+    Disable or enable errors storage in web interface
+    """
+    global ENABLE_WEB_INTERFACE_LOGS
+    ENABLE_WEB_INTERFACE_LOGS = enabled

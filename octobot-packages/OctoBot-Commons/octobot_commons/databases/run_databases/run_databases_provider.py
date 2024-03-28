@@ -41,6 +41,13 @@ class RunDatabasesProvider(singleton.Singleton):
         """
         return bot_id in self.run_databases
 
+    def remove_bot_id(self, bot_id):
+        """
+        remove the run database from the given bot_id
+        :return: the removed database
+        """
+        return self.run_databases.pop(bot_id)
+
     def is_storage_enabled(self, bot_id):
         """
         :return: True if storage is enabled for the given bot_id

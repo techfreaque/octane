@@ -32,8 +32,12 @@ class TimeUpdater(time_channel.TimeProducer):
         self.channels_manager = None
 
     async def start(self):
-        self.channels_manager = channels_manager.ChannelsManager(exchange_ids=self.backtesting.exchange_ids,
-                                                                 matrix_id=self.backtesting.matrix_id)
+        self.channels_manager = channels_manager.ChannelsManager(
+            self.backtesting.exchange_ids,
+            self.backtesting.matrix_id,
+            self.backtesting.get_time_chan_name(),
+
+        )
         await self.channels_manager.initialize()
         cleared_producers = False
         while not self.should_stop:

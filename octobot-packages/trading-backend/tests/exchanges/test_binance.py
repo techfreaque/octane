@@ -19,6 +19,7 @@ import pytest
 import mock
 import ccxt.async_support
 import trading_backend.exchanges as exchanges
+import trading_backend.enums
 import trading_backend
 import tests.util.create_order_tests as create_order_tests
 from tests import binance_exchange
@@ -40,54 +41,122 @@ async def test_get_orders_parameters(binance_exchange):
 
 
 @pytest.mark.asyncio
+async def test_get_api_key_rights(binance_exchange):
+    exchange = exchanges.Binance(binance_exchange)
+    with mock.patch.object(
+        exchange._exchange.connector.client, "sapi_get_account_apirestrictions",
+        mock.AsyncMock(return_value={"enableReading": True, "enableSpotAndMarginTrading": False, "enableWithdrawals": False})
+    ) as sapi_get_account_apirestrictions_mock:
+        assert await exchange._get_api_key_rights() == [
+            trading_backend.enums.APIKeyRights.READING
+        ]
+        sapi_get_account_apirestrictions_mock.assert_awaited_once()
+    with mock.patch.object(
+        exchange._exchange.connector.client, "sapi_get_account_apirestrictions",
+        mock.AsyncMock(return_value={"enableReading": True, "enableSpotAndMarginTrading": True, "enableWithdrawals": True})
+    ) as sapi_get_account_apirestrictions_mock:
+        assert await exchange._get_api_key_rights() == [
+            trading_backend.enums.APIKeyRights.READING,
+            trading_backend.enums.APIKeyRights.SPOT_TRADING,
+            trading_backend.enums.APIKeyRights.MARGIN_TRADING,
+            trading_backend.enums.APIKeyRights.FUTURES_TRADING,
+            trading_backend.enums.APIKeyRights.WITHDRAWALS
+        ]
+        sapi_get_account_apirestrictions_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_is_valid_account(binance_exchange):
     exchange = exchanges.Binance(binance_exchange)
     params = {"apiAgentCode": exchange._get_id()}
     with pytest.raises(trading_backend.ExchangeAuthError):
         await exchange.is_valid_account()
-    with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
-                           mock.AsyncMock(return_value={"rebateWorking": False})) as sapi_get_apireferral_ifnewuser_mock:
-        results = await exchange.is_valid_account()
-        assert results[0] is False
-        assert isinstance(results[1], str)
-        sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
-    with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
-                           mock.AsyncMock(return_value={"ifNewUser": False})) as sapi_get_apireferral_ifnewuser_mock:
-        results = await exchange.is_valid_account()
-        assert results[0] is False
-        assert isinstance(results[1], str)
-        sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
-    with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
-                           mock.AsyncMock(return_value={})) as sapi_get_apireferral_ifnewuser_mock:
-        results = await exchange.is_valid_account()
-        assert results[0] is False
-        assert isinstance(results[1], str)
-        sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
-    with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
-                           mock.AsyncMock(return_value={"rebateWorking": False, "ifNewUser": True})) \
-            as sapi_get_apireferral_ifnewuser_mock:
-        results = await exchange.is_valid_account()
-        assert results[0] is False
-        assert isinstance(results[1], str)
-        sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
-    with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
-                           mock.AsyncMock(return_value=None)) \
-            as sapi_get_apireferral_ifnewuser_mock:
-        results = await exchange.is_valid_account()
-        assert results[0] is False
-        assert isinstance(results[1], str)
-        sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
-    with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
-                           mock.AsyncMock(return_value={"rebateWorking": True, "ifNewUser": True})) \
-            as sapi_get_apireferral_ifnewuser_mock:
-        assert (await exchange.is_valid_account()) == (True, None)
-        sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
-    with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
-                           mock.AsyncMock(side_effect=ccxt.async_support.InvalidNonce())) \
-            as sapi_get_apireferral_ifnewuser_mock:
-        with pytest.raises(trading_backend.TimeSyncError):
-            await exchange.is_valid_account()
-        sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
+
+    with mock.patch.object(
+            exchange, "_get_api_key_rights", mock.AsyncMock(return_value=[trading_backend.enums.APIKeyRights.READING])
+    ) as _get_api_key_rights_mock:
+        with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
+                               mock.AsyncMock(return_value={"rebateWorking": True, "ifNewUser": True})) \
+                as sapi_get_apireferral_ifnewuser_mock:
+            with pytest.raises(trading_backend.errors.APIKeyPermissionsError):
+                assert (await exchange.is_valid_account()) == (True, None)
+                sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
+                _get_api_key_rights_mock.assert_called_once()
+
+    with mock.patch.object(
+            exchange, "_get_api_key_rights", mock.AsyncMock(return_value=[
+                trading_backend.enums.APIKeyRights.SPOT_TRADING, trading_backend.enums.APIKeyRights.WITHDRAWALS
+            ])
+    ) as _get_api_key_rights_mock:
+        with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
+                               mock.AsyncMock(return_value={"rebateWorking": True, "ifNewUser": True})) \
+                as sapi_get_apireferral_ifnewuser_mock:
+            with mock.patch.object(exchange, "_allow_withdrawal_right", mock.Mock(return_value=True)) as \
+                 _allow_withdrawal_right_mock:
+                assert (await exchange.is_valid_account()) == (True, None)
+                sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
+                _get_api_key_rights_mock.assert_called_once()
+                _allow_withdrawal_right_mock.assert_called_once()
+            with mock.patch.object(exchange, "_allow_withdrawal_right", mock.Mock(return_value=False)) as \
+                 _allow_withdrawal_right_mock:
+                with pytest.raises(trading_backend.errors.APIKeyPermissionsError):
+                    assert (await exchange.is_valid_account()) == (True, None)
+                _allow_withdrawal_right_mock.assert_called_once()
+
+    with mock.patch.object(
+            exchange, "_get_api_key_rights", mock.AsyncMock(return_value=[trading_backend.enums.APIKeyRights.SPOT_TRADING])
+    ) as _get_api_key_rights_mock:
+        with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
+                               mock.AsyncMock(return_value={"rebateWorking": False})) as sapi_get_apireferral_ifnewuser_mock:
+            results = await exchange.is_valid_account(always_check_key_rights=False)
+            assert results[0] is False
+            assert isinstance(results[1], str)
+            sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
+            _get_api_key_rights_mock.assert_not_called()
+        with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
+                               mock.AsyncMock(return_value={"ifNewUser": False})) as sapi_get_apireferral_ifnewuser_mock:
+            results = await exchange.is_valid_account(always_check_key_rights=True)
+            assert results[0] is False
+            assert isinstance(results[1], str)
+            sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
+            _get_api_key_rights_mock.assert_called_once()
+            _get_api_key_rights_mock.reset_mock()
+        with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
+                               mock.AsyncMock(return_value={})) as sapi_get_apireferral_ifnewuser_mock:
+            results = await exchange.is_valid_account()
+            assert results[0] is False
+            assert isinstance(results[1], str)
+            sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
+            _get_api_key_rights_mock.assert_not_called()
+        with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
+                               mock.AsyncMock(return_value={"rebateWorking": False, "ifNewUser": True})) \
+                as sapi_get_apireferral_ifnewuser_mock:
+            results = await exchange.is_valid_account()
+            assert results[0] is False
+            assert isinstance(results[1], str)
+            sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
+        with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
+                               mock.AsyncMock(return_value=None)) \
+                as sapi_get_apireferral_ifnewuser_mock:
+            results = await exchange.is_valid_account()
+            assert results[0] is False
+            assert isinstance(results[1], str)
+            sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
+            _get_api_key_rights_mock.assert_not_called()
+        with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
+                               mock.AsyncMock(return_value={"rebateWorking": True, "ifNewUser": True})) \
+                as sapi_get_apireferral_ifnewuser_mock:
+            assert (await exchange.is_valid_account()) == (True, None)
+            sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
+            _get_api_key_rights_mock.assert_called_once()
+            _get_api_key_rights_mock.reset_mock()
+        with mock.patch.object(exchange._exchange.connector.client, "sapi_get_apireferral_ifnewuser",
+                               mock.AsyncMock(side_effect=ccxt.async_support.InvalidNonce())) \
+                as sapi_get_apireferral_ifnewuser_mock:
+            with pytest.raises(trading_backend.TimeSyncError):
+                await exchange.is_valid_account()
+            sapi_get_apireferral_ifnewuser_mock.assert_called_once_with(params=params)
+            _get_api_key_rights_mock.assert_not_called()
 
 
 @pytest.mark.asyncio

@@ -18,8 +18,10 @@ import octobot_trading.personal_data.orders.order_state as order_state
 
 
 class CloseOrderState(order_state.OrderState):
-    def __init__(self, order, is_from_exchange_data, force_close=True):
-        super().__init__(order, is_from_exchange_data)
+    def __init__(self, order, is_from_exchange_data, enable_associated_orders_creation=True, force_close=True):
+        super().__init__(
+            order, is_from_exchange_data, enable_associated_orders_creation=enable_associated_orders_creation
+        )
         self.state = enums.States.CLOSED if is_from_exchange_data or force_close or self.order.simulated \
             else enums.States.CLOSING
 
@@ -38,6 +40,9 @@ class CloseOrderState(order_state.OrderState):
         """
         Verify the order is properly closed
         """
+        if self.order is None or self.order.is_cleared():
+            self.get_logger().debug("Skipping on_refresh_successful as order is cleared")
+            return
         if self.order.status is enums.OrderStatus.CLOSED:
             self.state = enums.States.CLOSED
             await self.update()
@@ -52,7 +57,8 @@ class CloseOrderState(order_state.OrderState):
             # add to trade history and notify
             self.ensure_not_cleared(self.order)
             await self.order.exchange_manager.exchange_personal_data.handle_trade_instance_update(
-                self.order.trader.convert_order_to_trade(self.order))
+                self.order.trader.convert_order_to_trade(self.order)
+            )
 
             # remove order from open_orders
             self.order.exchange_manager.exchange_personal_data.orders_manager.remove_order_instance(self.order)

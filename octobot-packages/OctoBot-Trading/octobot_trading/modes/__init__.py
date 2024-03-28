@@ -47,6 +47,7 @@ from octobot_trading.modes.mode_config import (
     should_emit_trading_signals_user_input,
     is_trading_signal_emitter,
     user_select_order_amount,
+    get_order_amount_value_desc,
     get_user_selected_order_amount,
 )
 
@@ -60,6 +61,10 @@ from octobot_trading.modes.modes_factory import (
 from octobot_trading.modes import modes_util
 from octobot_trading.modes.modes_util import (
     get_required_candles_count,
+    get_assets_requiring_extra_price_data_to_convert,
+    convert_assets_to_target_asset,
+    convert_asset_to_target_asset,
+    notify_portfolio_optimization_complete,
 )
 
 __all__ = [
@@ -80,6 +85,11 @@ __all__ = [
     "should_emit_trading_signals_user_input",
     "is_trading_signal_emitter",
     "user_select_order_amount",
+    "get_order_amount_value_desc",
     "get_user_selected_order_amount",
     "get_required_candles_count",
+    "get_assets_requiring_extra_price_data_to_convert",
+    "convert_assets_to_target_asset",
+    "convert_asset_to_target_asset",
+    "notify_portfolio_optimization_complete",
 ]

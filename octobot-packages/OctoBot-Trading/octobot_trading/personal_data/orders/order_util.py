@@ -25,7 +25,9 @@ import octobot_commons.timestamp_util as timestamp_util
 import octobot_trading.constants as constants
 import octobot_trading.enums as enums
 import octobot_trading.errors as errors
+import octobot_trading.personal_data.orders.decimal_order_adapter as decimal_order_adapter
 import octobot_trading.exchanges.util.exchange_market_status_fixer as exchange_market_status_fixer
+import octobot_trading.personal_data.orders.states.fill_order_state as fill_order_state
 from octobot_trading.enums import ExchangeConstantsMarketStatusColumns as Ecmsc
 
 
@@ -103,9 +105,90 @@ def check_cost(total_order_price, min_cost):
     return True
 
 
+def get_split_orders_count_and_increment(
+    lower_price, higher_price, quantity, orders_count, symbol_market, add_increment_to_min_price
+) \
+        -> (int, decimal.Decimal):
+    """
+    :param lower_price: smallest order price
+    :param higher_price: largest order price
+    :param quantity: total quantity to handle
+    :param orders_count: ideal orders count
+    :param symbol_market: description of the market to trade on
+    :param add_increment_to_min_price: when true, uses lower_price + increment to check min values against symbol market
+    :return: the exchange compatible orders count and price increment
+    """
+    min_quantity, max_quantity, min_cost, max_cost, min_price, max_price = get_min_max_amounts(symbol_market)
+    min_quantity = None if min_quantity is None else decimal.Decimal(f"{min_quantity}")
+    max_quantity = None if max_quantity is None else decimal.Decimal(f"{max_quantity}")
+    min_cost = None if min_cost is None else decimal.Decimal(f"{min_cost}")
+    max_cost = None if max_cost is None else decimal.Decimal(f"{max_cost}")
+    min_price = None if min_price is None else decimal.Decimal(f"{min_price}")
+    max_price = None if max_price is None else decimal.Decimal(f"{max_price}")
+
+    limit_check = _ensure_orders_size(
+        lower_price, higher_price, quantity, orders_count,
+        min_quantity, min_cost, min_price,
+        max_quantity, max_cost, max_price,
+        symbol_market, add_increment_to_min_price
+    )
+
+    while limit_check > 0:
+        if limit_check == 1:
+            if orders_count > 1:
+                orders_count -= 1
+            else:
+                # not enough funds to create orders
+                logging.get_logger(LOGGER_NAME).warning(f"Not enough funds to create order.")
+                return 0, constants.ZERO
+        elif limit_check == 2:
+            if orders_count < 40:
+                orders_count += 1
+            else:
+                # too many orders to create, must be a problem
+                logging.get_logger(LOGGER_NAME).error("Too many orders to create.")
+                return 0, constants.ZERO
+        limit_check = _ensure_orders_size(
+            lower_price, higher_price, quantity, orders_count,
+            min_quantity, min_cost, min_price,
+            max_quantity, max_cost, max_price,
+            symbol_market, add_increment_to_min_price
+        )
+    return orders_count, (higher_price - lower_price) / orders_count
+
+
+def _ensure_orders_size(lower_price, higher_price, quantity, orders_count,
+                        min_quantity, min_cost, min_price,
+                        max_quantity, max_cost, max_price,
+                        symbol_market, add_increment_to_min_price):
+    increment = (higher_price - lower_price) / orders_count
+    first_price = (lower_price + increment) if add_increment_to_min_price else lower_price
+    last_price = lower_price + (increment * orders_count)
+    order_vol = decimal_order_adapter.decimal_adapt_quantity(symbol_market, quantity / orders_count)
+
+    if _are_orders_too_small(min_quantity, min_cost, min_price, first_price, order_vol):
+        return 1
+    elif _are_orders_too_large(max_quantity, max_cost, max_price, last_price, order_vol):
+        return 2
+    return 0
+
+
+def _are_orders_too_small(min_quantity, min_cost, min_price, price, volume):
+    return (min_price and price < min_price) or \
+           (min_quantity and volume < min_quantity) or \
+           (min_cost and price * volume < min_cost)
+
+
+def _are_orders_too_large(max_quantity, max_cost, max_price, price, volume):
+    return (max_price and price > max_price) or \
+           (max_quantity and volume > max_quantity) or \
+           (max_cost and price * volume > max_cost)
+
+
 async def get_up_to_date_price(exchange_manager, symbol: str, timeout: int = None, base_error: str = None):
     exchange_time = exchange_manager.exchange.get_exchange_current_time()
-    base_error = base_error or f"Can't get the necessary price data to create a new {symbol} order on the " \
+    base_error = base_error or f"Can't get the necessary {exchange_manager.exchange_name} " \
+                               f"price data to create a new {symbol} order on the " \
                                f"{timestamp_util.convert_timestamp_to_datetime(exchange_time)} " \
                                f"(timestamp: {exchange_time}):"
     try:
@@ -123,7 +206,13 @@ async def get_pre_order_data(exchange_manager, symbol: str, timeout: int = None,
                              target_price=None):
     price = target_price or await get_up_to_date_price(exchange_manager, symbol, timeout=timeout)
     symbol_market = exchange_manager.exchange.get_market_status(symbol, with_fixer=False)
+    currency_available, market_available, market_quantity = get_portfolio_amounts(
+        exchange_manager, symbol, price, portfolio_type=portfolio_type
+    )
+    return currency_available, market_available, market_quantity, price, symbol_market
 
+
+def get_portfolio_amounts(exchange_manager, symbol, price, portfolio_type=commons_constants.PORTFOLIO_AVAILABLE):
     currency, market = symbol_util.parse_symbol(symbol).base_and_quote()
     portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio
     currency_available = portfolio.get_currency_portfolio(currency).available \
@@ -143,7 +232,7 @@ async def get_pre_order_data(exchange_manager, symbol: str, timeout: int = None,
         market_quantity = constants.ZERO  # TODO
     else:
         market_quantity = market_available / price if price else constants.ZERO
-    return currency_available, market_available, market_quantity, price, symbol_market
+    return currency_available, market_available, market_quantity
 
 
 def get_futures_max_order_size(exchange_manager, symbol, side, current_price, reduce_only,
@@ -218,6 +307,18 @@ def get_max_order_quantity_for_price(position, available_quantity, price, side, 
         (two_way_fees + price)
 
 
+def get_locked_funds(order):
+    forecasted_fees = order.get_computed_fee(use_origin_quantity_and_price=not order.is_filled())
+    if order.side == enums.TradeOrderSide.BUY:
+        # locking quote to buy
+        quote_fees = get_fees_for_currency(forecasted_fees, order.market)
+        return order.origin_quantity * order.origin_price + quote_fees
+    else:
+        # locking base to sell
+        base_fees = get_fees_for_currency(forecasted_fees, order.currency)
+        return order.origin_quantity + base_fees
+
+
 def total_fees_from_order_dict(order_dict, currency):
     return get_fees_for_currency(order_dict[enums.ExchangeConstantsOrderColumns.FEE.value], currency)
 
@@ -249,7 +350,7 @@ def parse_order_status(raw_order):
     try:
         return enums.OrderStatus(raw_order[enums.ExchangeConstantsOrderColumns.STATUS.value])
     except KeyError:
-        return KeyError("Could not parse new order status")
+        return enums.OrderStatus.UNKNOWN
     except ValueError:
         if raw_order[enums.ExchangeConstantsOrderColumns.STATUS.value] == "cancelled":
             # few exchanges use "cancelled" which is not in enums.ExchangeConstantsOrderColumns.STATUS
@@ -278,7 +379,7 @@ def get_pnl_transaction_source_from_order(order):
     return enums.PNLTransactionSource.UNKNOWN
 
 
-def is_stop_order(order_type):
+def is_stop_order(order_type: enums.TraderOrderType):
     return order_type in [
         enums.TraderOrderType.STOP_LOSS, enums.TraderOrderType.STOP_LOSS_LIMIT,
         enums.TraderOrderType.TRAILING_STOP, enums.TraderOrderType.TRAILING_STOP_LIMIT,
@@ -291,7 +392,7 @@ def is_take_profit_order(order_type):
     ]
 
 
-def get_trade_order_type(order_type: enums.TraderOrderType):
+def get_trade_order_type(order_type: enums.TraderOrderType) -> enums.TradeOrderType:
     if order_type in (enums.TraderOrderType.BUY_MARKET, enums.TraderOrderType.SELL_MARKET):
         return enums.TradeOrderType.MARKET
     if order_type in (enums.TraderOrderType.BUY_LIMIT, enums.TraderOrderType.SELL_LIMIT):
@@ -326,12 +427,21 @@ async def create_as_chained_order(order):
         order.status = enums.OrderStatus.OPEN
         # set uninitialized to allow second initialization from create_order
         order.is_initialized = False
-        await order.trader.create_order(
-            order,
-            loaded=False,
-            params=order.exchange_creation_params,
-            **order.trader_creation_kwargs
-        )
+        order.creation_time = order.exchange_manager.exchange.get_exchange_current_time()
+        try:
+            await order.trader.create_order(
+                order,
+                loaded=False,
+                params=order.exchange_creation_params,
+                **order.trader_creation_kwargs
+            )
+        except Exception as err:
+            # log warning to be sure to keep track of the failed order details
+            logging.get_logger(LOGGER_NAME).warning(
+                f"Failed to create chained order {order.to_dict()}: {err} ({err.__class__.__name__})"
+            )
+            # propagate
+            raise
 
 
 def is_associated_pending_order(pending_order, created_order):
@@ -366,7 +476,7 @@ async def _apply_pending_order_on_existing_orders(pending_order):
 
 
 @contextlib.asynccontextmanager
-async def ensure_orders_relevancy(order=None, position=None):
+async def ensure_orders_relevancy(order=None, position=None, enable_associated_orders_creation=True):
     exchange_manager = order.exchange_manager if position is None else position.exchange_manager
     # part used in futures trading only
     if exchange_manager.exchange_personal_data.positions_manager.positions:
@@ -378,20 +488,22 @@ async def ensure_orders_relevancy(order=None, position=None):
            (position.side != pre_update_position_side or position.is_idle()):
             # when position side is changing (from a non-idle position) or is going back to idle,
             # then associated reduce only orders must be closed
-            await _cancel_reduce_only_orders_on_position_reset(exchange_manager, position.symbol)
+            await _cancel_reduce_only_orders_on_position_reset(
+                exchange_manager, position.symbol, enable_associated_orders_creation
+            )
     else:
         # as a context manager, yield is mandatory
         yield
 
 
-async def _cancel_reduce_only_orders_on_position_reset(exchange_manager, symbol):
+async def _cancel_reduce_only_orders_on_position_reset(exchange_manager, symbol, enable_associated_orders_creation):
     for order in list(exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol)):
         # reduce only order are automatically cancelled on exchanges, only cancel simulated orders
         if (exchange_manager.is_trader_simulated or order.is_self_managed()) \
                 and order.is_open() and order.reduce_only:
             try:
                 await order.trader.cancel_order(order)
-                if order.order_group:
+                if order.order_group and enable_associated_orders_creation:
                     await order.order_group.on_cancel(order)
             except (    # pylint: disable=try-except-raise
                 errors.OrderCancelError, errors.UnexpectedExchangeSideOrderStateError
@@ -437,3 +549,71 @@ async def get_order_size_portfolio_percent(exchange_manager, order_amount, side,
 
 def generate_order_id():
     return str(uuid.uuid4())
+
+
+def _get_possible_filled_price(
+    exchange_manager, symbol: str, side: enums.TradeOrderSide, ideal_price: decimal.Decimal
+) -> decimal.Decimal:
+    try:
+        min_price, max_price = exchange_manager.exchange_symbols_data.get_exchange_symbol_data(symbol).\
+            price_events_manager.get_min_and_max_prices()
+        if side is enums.TradeOrderSide.SELL:
+            if ideal_price < min_price:
+                return min_price
+        if side is enums.TradeOrderSide.BUY:
+            if ideal_price > max_price:
+                return max_price
+    except IndexError:
+        # no available price data
+        pass
+    return ideal_price
+
+
+def get_valid_filled_price(order, ideal_price: decimal.Decimal):
+    # ensure filled price based on ideal_price makes sense according to the current candle
+    # instead of blindly using ideal_price as this could
+    # potentially buy higher than the candle high or sell lower than the candle low,
+    # which can't happen on real conditions
+
+    if order.exchange_manager.is_backtesting:
+        # in backtesting: ensure ideal_price is with in current candle price.
+        return _get_possible_filled_price(order.exchange_manager, order.symbol, order.side, ideal_price)
+    # not in backtesting: price desync can't happen
+    return ideal_price
+
+
+async def adapt_chained_order_before_creation(base_order, chained_order):
+    can_be_created = True
+    if chained_order.update_with_triggering_order_fees:
+        can_be_created = chained_order.update_quantity_with_order_fees(base_order)
+    # ensure price is not outdated
+    await chained_order.update_price_if_outdated()
+    return can_be_created
+
+
+async def wait_for_order_fill(order, timeout, wait_for_portfolio_update):
+    if order.is_open():
+        if order.state is None:
+            logging.get_logger(LOGGER_NAME).error(
+                f"None state on created order, impossible to wait for fill, order: {order}"
+            )
+        else:
+            try:
+                await order.state.wait_for_next_state(timeout)
+            except asyncio.TimeoutError:
+                logging.get_logger(LOGGER_NAME).error(
+                    f"Timeout while waiting for {order.order_type.value} open order fill, order {order}"
+                )
+            if wait_for_portfolio_update and isinstance(order.state, fill_order_state.FillOrderState):
+                # portfolio is updated in FillOrderState: wait for this state to complete
+                try:
+                    await order.state.wait_for_next_state(timeout)
+                except asyncio.TimeoutError:
+                    logging.get_logger(LOGGER_NAME).error(
+                        f"Timeout while waiting for {order.order_type.value} filled order state to "
+                        f"complete, order {order}"
+                    )
+    if order.is_open():
+        logging.get_logger(LOGGER_NAME).error(f"Unexpected: order is still open, order {order}")
+    else:
+        logging.get_logger(LOGGER_NAME).info(f"Successfully filled order: {order}.")

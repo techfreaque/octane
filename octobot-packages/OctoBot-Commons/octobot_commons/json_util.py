@@ -15,8 +15,11 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import json
+import os.path
+import shutil
 import jsonschema
 import octobot_commons.logging
+import octobot_commons.constants
 
 
 LOGGER_NAME = "json_util"
@@ -66,3 +69,66 @@ def read_file(
     if on_error_value is None:
         raise ValueError("on_error_value is unset")
     return on_error_value
+
+
+def safe_dump(content: dict, save_path: str, restore_file: str = None) -> None:
+    """
+    Safely dump content into save_path restoring the previous content if writing fails
+    """
+    restore_file = (
+        restore_file or f"{save_path}{octobot_commons.constants.SAFE_DUMP_SUFFIX}"
+    )
+    try:
+        has_initial_content = os.path.exists(save_path)
+        if has_initial_content:
+            if os.path.exists(restore_file):
+                os.remove(restore_file)
+            # prepare a restoration file
+            shutil.copy(save_path, restore_file)
+    except Exception as err:
+        # when failing to create restore file
+        error_details = (
+            f"Failed to create the {restore_file} backup file. Is the associated folder  "
+            f"folder accessible ? : {err} ({err.__class__.__name__})"
+        )
+        octobot_commons.logging.get_logger(LOGGER_NAME).exception(
+            err, True, error_details
+        )
+        raise err.__class__(error_details) from err
+    try:
+        # create config content as str before opening file not to clear it on json dump exception
+        str_content = dump_formatted_json(content)
+        with open(save_path, "w") as write_file:
+            write_file.write(str_content)
+
+    except Exception as global_exception:
+        # when failing to save the new file config
+        octobot_commons.logging.get_logger(LOGGER_NAME).error(
+            f"File save failed : {global_exception}. "
+            f"{'restoring previous value' if has_initial_content else 'no previous value to restore'}"
+        )
+        if has_initial_content:
+            # restore file with previous content
+            shutil.copy(restore_file, save_path)
+        elif os.path.exists(save_path):
+            # no previous content: ensure no potentially created file is left
+            os.remove(save_path)
+        raise global_exception
+    finally:
+        # remove temporary restore file if any
+        try:
+            if os.path.exists(restore_file):
+                os.remove(restore_file)
+        except Exception as err:
+            octobot_commons.logging.get_logger(LOGGER_NAME).exception(
+                err, True, f"Failed to remove {restore_file} restore file: {err}"
+            )
+
+
+def dump_formatted_json(json_data) -> str:
+    """
+    The dumped json data
+    :param json_data: the json data to be dumped
+    :return: the dumped json data
+    """
+    return json.dumps(json_data, indent=4, sort_keys=True)

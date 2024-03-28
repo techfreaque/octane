@@ -23,6 +23,8 @@ class AbstractDocumentDatabaseAdaptor:
     AbstractDatabaseAdaptor is an interface listing document databases public methods
     """
 
+    HARD_RESET_ERRORS = []  # errors that should trigger a hard reset
+
     def __init__(self, db_path: str, **kwargs):
         """
         TinyDBAdaptor constructor
@@ -178,6 +180,17 @@ class AbstractDocumentDatabaseAdaptor:
         Completely reset the database
         """
         raise NotImplementedError("hard_reset is not implemented")
+
+    @classmethod
+    def is_hard_reset_error(cls, error) -> bool:
+        """
+        returns True if the given error should trigger
+        a hard reset of the database
+        """
+        for error_class in cls.HARD_RESET_ERRORS:
+            if isinstance(error, error_class):
+                return True
+        return False
 
     async def flush(self):
         """

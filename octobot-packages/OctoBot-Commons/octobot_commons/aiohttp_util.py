@@ -1,3 +1,4 @@
+# pylint: disable=W0718
 #  Drakkar-Software OctoBot-Commons
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
@@ -21,7 +22,7 @@ async def download_stream_file(
     aiohttp_session,
     data_chunk_size=5 * 2**20,
     is_aiofiles_output_file=False,
-):
+) -> str:
     """
     Download a big file with an aiohttp session
     :param output_file: the output file
@@ -29,13 +30,20 @@ async def download_stream_file(
     :param aiohttp_session: the aiohttp session
     :param data_chunk_size: default value is 5*2**20 (5MB)
     :param is_aiofiles_output_file: When True, output_file.write will be awaited (when it's an aiofiles instance)
+    :return downloaded file last_modified if given as response header
     """
+    last_modified = None
     async with aiohttp_session.get(file_url) as resp:
         if resp.status != 200:
+            try:
+                text = await resp.text()
+            except BaseException as err:
+                text = f"error when reading resp text: {err}"
             raise RuntimeError(
-                f"Failed to download file at url : {file_url} (status: {resp.status})"
+                f"Failed to download file at url : {file_url} (status: {resp.status}, text: {text})"
             )
         while True:
+            last_modified = resp.headers.get("Last-Modified", "unknown")
             chunk = await resp.content.read(data_chunk_size)
             if not chunk:
                 # resp.content.read returns an empty chunk when completed
@@ -44,3 +52,4 @@ async def download_stream_file(
                 await output_file.write(chunk)
             else:
                 output_file.write(chunk)
+    return last_modified

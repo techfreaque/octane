@@ -16,6 +16,7 @@
 import asyncio
 import decimal
 import typing
+import ccxt
 
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
@@ -25,6 +26,8 @@ import octobot_trading.enums as trading_enums
 
 class Phemex(exchanges.RestExchange):
     DESCRIPTION = ""
+    ALLOWED_OHLCV_LIMITS = [5, 10, 50, 100, 500, 1000]
+    FIX_MARKET_STATUS = True
 
     @classmethod
     def get_name(cls):
@@ -32,6 +35,23 @@ class Phemex(exchanges.RestExchange):
 
     def get_adapter_class(self):
         return PhemexCCXTAdapter
+
+    def _get_adapted_limit(self, limit):
+        prev = self.ALLOWED_OHLCV_LIMITS[0]
+        for adapted in self.ALLOWED_OHLCV_LIMITS:
+            if adapted > limit:
+                return prev
+            prev = adapted
+        return prev
+
+    async def get_symbol_prices(self, symbol, time_frame, limit: int = 500, **kwargs: dict):
+        if limit not in self.ALLOWED_OHLCV_LIMITS:
+            limit = self._get_adapted_limit(limit)
+        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
+
+    async def get_kline_price(self, symbol: str, time_frame: commons_enums.TimeFrames,
+                              **kwargs: dict) -> typing.Optional[list]:
+        return (await self.get_symbol_prices(symbol, time_frame, limit=5))[-1:]
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
@@ -58,6 +78,15 @@ class Phemex(exchanges.RestExchange):
         })
         return kwargs
 
+    async def cancel_order(
+            self, exchange_order_id: str, symbol: str, order_type: trading_enums.TraderOrderType, **kwargs: dict
+    ) -> trading_enums.OrderStatus:
+        order_status = await super().cancel_order(exchange_order_id, symbol, order_type, **kwargs)
+        if order_status == trading_enums.OrderStatus.PENDING_CANCEL:
+            # cancelled orders can't be fetched, consider as cancelled
+            order_status = trading_enums.OrderStatus.CANCELED
+        return order_status
+
     async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
         if order := await self.connector.get_order(symbol=symbol, exchange_order_id=exchange_order_id, **kwargs):
             return order
@@ -74,10 +103,7 @@ class Phemex(exchanges.RestExchange):
                 await asyncio.sleep(3)
             else:
                 return order
-        raise KeyError("Order id not found in trades. Impossible to build order from trades history")
-
-    def get_market_status(self, symbol, price_example=None, with_fixer=True):
-        return self.get_fixed_market_status(symbol, price_example=price_example, with_fixer=with_fixer)
+        raise ccxt.OrderNotFound("Order id not found in trades. Impossible to build order from trades history")
 
 
 class PhemexCCXTAdapter(exchanges.CCXTAdapter):

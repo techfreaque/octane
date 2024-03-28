@@ -34,13 +34,17 @@ def get_all_positions():
 
 
 def close_positions(positions_descs):
+    return interfaces.run_in_bot_main_loop(async_close_positions(positions_descs))
+
+
+async def async_close_positions(positions_descs):
     removed_count = 0
     if positions_descs:
         for positions_desc in positions_descs:
             for exchange_manager in interfaces.get_exchange_managers():
                 if trading_api.is_trader_existing_and_enabled(exchange_manager):
-                    removed_count += 1 if interfaces.run_in_bot_main_loop(
-                        trading_api.close_position(
+                    removed_count += 1 if (
+                        await trading_api.close_position(
                             exchange_manager,
                             positions_desc["symbol"],
                             trading_enums.PositionSide(positions_desc["side"]),

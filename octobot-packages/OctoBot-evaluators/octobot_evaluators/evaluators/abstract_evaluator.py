@@ -14,6 +14,8 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import time
+import asyncio
+import contextlib
 
 import octobot_tentacles_manager.api as api
 import octobot_tentacles_manager.configuration as tm_configuration
@@ -101,6 +103,9 @@ class AbstractEvaluator(tentacles_management.AbstractTentacle):
         # True when this evaluator is only triggered on closed candles
         self.is_triggered_after_candle_close = False
 
+        # Cleared when starting an async evaluation (using self.async_evaluation()) and set afterwards
+        self._is_evaluation_completed: asyncio.Event = None
+
     def post_init(self, tentacles_setup_config):
         """
         Automatically called after __init__ when post_init is True (default) in evaluator_factory
@@ -185,6 +190,13 @@ class AbstractEvaluator(tentacles_management.AbstractTentacle):
     def use_cache(cls):
         return False
 
+    @classmethod
+    def get_signals_history_type(cls):
+        """
+        Override when this evaluator uses a specific type of signal history
+        """
+        return None
+
     def enable_reevaluation(self) -> bool:
         """
         Override when artificial re-evaluations from the evaluator channel can be disabled
@@ -226,8 +238,10 @@ class AbstractEvaluator(tentacles_management.AbstractTentacle):
             self.logger.error(f"Can't connect check if backtesting is enabled {e}")
         return False
 
-    async def initialize(self, all_symbols_by_crypto_currencies, time_frames, real_time_time_frames, bot_id):
-        await self.reload_config(bot_id)
+    async def initialize(
+        self, all_symbols_by_crypto_currencies, time_frames, real_time_time_frames, bot_id, specific_config=None
+    ):
+        await self.reload_config(bot_id, specific_config=specific_config)
         currencies, symbols, time_frames = self._get_tentacle_registration_topic(
             all_symbols_by_crypto_currencies, time_frames, real_time_time_frames
         )
@@ -375,9 +389,11 @@ class AbstractEvaluator(tentacles_management.AbstractTentacle):
         else:
             self.logger.debug("Evaluator not started")
 
-    async def reload_config(self, bot_id: str) -> None:
+    async def reload_config(self, bot_id: str, specific_config=None) -> None:
         self.set_default_config()
-        specific_config = api.get_tentacle_config(self.tentacles_setup_config, self.__class__)
+        specific_config = specific_config or api.get_tentacle_config(
+            self.tentacles_setup_config, self.__class__
+        )
 
         if not specific_config and self.ALLOW_SUPER_CLASS_CONFIG:
             # if nothing in config, try with any super-class' config file
@@ -546,3 +562,23 @@ class AbstractEvaluator(tentacles_management.AbstractTentacle):
                                   data):
         # Used to communicate between evaluators
         pass
+
+    @contextlib.asynccontextmanager
+    async def async_evaluation(self):
+        if self._is_evaluation_completed is None:
+            self._is_evaluation_completed = asyncio.Event()
+        try:
+            self._is_evaluation_completed.clear()
+            yield
+        finally:
+            self._is_evaluation_completed.set()
+
+    async def wait_for_async_evaluation_completion(self, timeout):
+        if self._is_evaluation_completed is None or self._is_evaluation_completed.is_set():
+            return
+        await asyncio.wait_for(self._is_evaluation_completed.wait(), timeout=timeout)
+
+    def is_in_async_evaluation(self):
+        if self._is_evaluation_completed is None:
+            return False
+        return not self._is_evaluation_completed.is_set()
