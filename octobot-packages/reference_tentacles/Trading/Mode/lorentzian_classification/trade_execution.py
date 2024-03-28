@@ -287,6 +287,7 @@ async def enter_short_trade(
         if order_settings.uses_managed_order:
             await activate_managed_order.managed_order(
                 mode_producer,
+                order_block=None,
                 trading_side=trading_side,
                 orders_settings=managend_orders_short_settings,
             )
