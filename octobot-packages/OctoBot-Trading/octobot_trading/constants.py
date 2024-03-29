@@ -104,8 +104,6 @@ FULL_CANDLE_HISTORY_EXCHANGES = [
     "mexc",
 ]
 
-ADDITIONAL_EXCHANGES = ["yahoofinance"]
-
 DEFAULT_FUTURE_EXCHANGES = ["binanceusdm", "bybit"]
 TESTED_EXCHANGES = [
     "binance",

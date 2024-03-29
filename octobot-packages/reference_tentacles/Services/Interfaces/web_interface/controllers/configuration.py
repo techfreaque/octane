@@ -206,7 +206,7 @@ def register(blueprint):
 
 
     @octo_ui2_models.octane_route(blueprint, route="/account-settings")
-    def _account_settings():
+    def account_settings():
         display_config = interfaces_util.get_edited_config()
 
         # service lists
