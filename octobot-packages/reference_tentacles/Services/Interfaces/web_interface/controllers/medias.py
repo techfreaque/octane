@@ -29,11 +29,11 @@ def _send_file(base_dir, file_path):
 def register(blueprint):
     @octo_ui2_models.octane_route(blueprint, route="/tentacle_media", can_be_shared_public=True)
     def tentacle_media():
-        _tentacle_media()
+        return _tentacle_media()
         
     @octo_ui2_models.octane_route(blueprint, route="/tentacle_media/<path:path>", can_be_shared_public=True)
     def tentacle_media_with_path(path=None):
-        _tentacle_media(path=path)
+        return _tentacle_media(path=path)
         
     def _tentacle_media(path=None):
         # images
