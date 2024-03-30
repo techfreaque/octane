@@ -55,11 +55,11 @@ def register(blueprint):
 
     @octo_ui2_models.octane_route(blueprint, route="/positions", can_be_shared_public=True)
     def positions():
-        return positions()
+        return _positions()
     
     @octo_ui2_models.octane_route(blueprint, route="/positions", methods=['POST'])
     def edit_positions():
-        return positions()
+        return _positions()
         
     def _positions():
         if flask.request.method == 'GET':
