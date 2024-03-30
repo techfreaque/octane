@@ -6,6 +6,7 @@ git stash
 git pull
 chmod +x linux-docker_install_or_update.sh
 cp -n scripts/.env-example-unix .env
+cp -n scripts/custom_requirements.txt.template custom_requirements.txt
 docker build --tag octane -f scripts/Dockerfile .
 
 source ./.env

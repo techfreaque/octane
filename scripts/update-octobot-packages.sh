@@ -11,3 +11,5 @@ pip install -r octobot-packages/OctoBot-Services/requirements.txt
 pip install -r octobot-packages/OctoBot-Tentacles-Manager/requirements.txt
 pip install -r octobot-packages/OctoBot-Trading/requirements.txt
 pip install -r octobot-packages/Async-Channel/requirements.txt
+cp -n scripts/custom_requirements.txt.template custom_requirements.txt
+pip install -r custom_requirements.txt
