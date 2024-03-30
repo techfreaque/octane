@@ -7,6 +7,10 @@ if (-not (test-path $destinationFile))
   $opts = @{'path' = $sourceFile; 'destination' = $destinationFile; 'confirm' = $false}
   copy-item @opts
 }
+if (!(Test-Path "custom_requirements.txt"))
+{
+    Copy-Item "scripts/custom_requirements.txt.template" -Destination "custom_requirements.txt"
+}
 
 docker build --tag octane -f scripts/Dockerfile-win .
 

@@ -12,3 +12,8 @@ pip install -r octobot-packages/OctoBot-Services/requirements.txt
 pip install -r octobot-packages/OctoBot-Tentacles-Manager/requirements.txt
 pip install -r octobot-packages/OctoBot-Trading/requirements.txt
 pip install -r octobot-packages/trading-backend/requirements.txt
+if (!(Test-Path "custom_requirements.txt"))
+{
+    Copy-Item "scripts/custom_requirements.txt.template" -Destination "custom_requirements.txt"
+}
+pip install -r custom_requirements.txt

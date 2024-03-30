@@ -33,6 +33,8 @@ RUN pip install --prefer-binary -r OctoBot-Services/requirements.txt
 RUN pip install --prefer-binary -r OctoBot-Tentacles-Manager/requirements.txt
 RUN pip install --prefer-binary -r OctoBot-Trading/requirements.txt
 RUN pip install --prefer-binary -r trading-backend/requirements.txt
+WORKDIR /
+RUN pip install --prefer-binary -r custom_requirements.txt
 
 WORKDIR /octobot-packages/Async-Channel
 RUN pip install ./
