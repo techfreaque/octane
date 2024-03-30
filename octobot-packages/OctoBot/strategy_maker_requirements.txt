@@ -4,7 +4,7 @@ pandas_ta
 finta
 newtulipy
 statistics
-tensorflow==2.13.1
+tensorflow==2.15.1
 torch==2.2.2
 yfinance
 py_expression_eval
