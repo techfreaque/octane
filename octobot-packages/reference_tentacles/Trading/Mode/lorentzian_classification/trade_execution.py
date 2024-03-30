@@ -326,6 +326,7 @@ async def enter_long_trade(
             await activate_managed_order.managed_order(
                 mode_producer,
                 trading_side=trading_side,
+                order_block=None,
                 orders_settings=managend_orders_long_settings,
             )
         else:
