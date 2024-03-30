@@ -182,7 +182,7 @@ def register_tentacles_config_routes(plugin):
         success = tentacles_models.call_tentacle_manager(
             tentacles_manager_api.create_tentacles_package,
             package_name=package_name,
-            output_dir=constants.DEFAULT_EXPORT_DIR,
+            output_dir=export_path,
             tentacles_folder=constants.TENTACLES_PATH,
             exported_tentacles_package=package_name,
             in_zip=True,
