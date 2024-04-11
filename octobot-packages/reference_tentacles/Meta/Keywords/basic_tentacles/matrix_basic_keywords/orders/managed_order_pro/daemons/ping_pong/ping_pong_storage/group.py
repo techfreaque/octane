@@ -60,7 +60,10 @@ class PingPongGroupData:
                 group_key=self.group_key,
                 init_only=True,
             )
-            await self.group_data[grid_id].restore_from_raw(raw_grid)
+            self.group_data[grid_id].entry_counter = raw_grid[
+                ping_pong_constants.PingPongSingleDataColumns.ENTRY_COUNTER
+            ]
+            # await self.group_data[grid_id].restore_from_raw(raw_grid)
 
     def set_grid_data(self, grid_id, order, calculated_entry) -> None:
         self.group_data[grid_id] = element.PingPongSingleData(

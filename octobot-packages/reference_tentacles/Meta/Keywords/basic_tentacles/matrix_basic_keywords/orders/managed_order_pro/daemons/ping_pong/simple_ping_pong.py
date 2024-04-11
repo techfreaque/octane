@@ -29,20 +29,15 @@ import tentacles.Meta.Keywords.scripting_library.orders.order_types as order_typ
 
 RETRY_RECREATE_ENTRY_ATTEMPTS_COUNT: int = 5
 
-PING_PONG_TIMEOUT = 200
+PING_PONG_TIMEOUT = 600
 
 
 async def play_ping_pong(
     trading_mode,
-    exchange,
-    exchange_id,
-    cryptocurrency,
     symbol,
     triggered_order,
 ):
     if is_relevant_take_profit_order(
-        trading_mode=trading_mode,
-        symbol=symbol,
         triggered_order=triggered_order,
     ):
         run_in_bot_main_loop(
@@ -89,13 +84,10 @@ async def play_simple_ping_pong(
 
 
 def is_relevant_take_profit_order(
-    trading_mode,
-    symbol,
     triggered_order: dict,
 ) -> bool:
     return (
-        trading_mode.producers[0].any_ping_pong_mode_active
-        and triggered_order.get("status") == trading_enums.OrderStatus.FILLED.value
+        triggered_order.get("status") == trading_enums.OrderStatus.FILLED.value
         and triggered_order.get("type") == trading_enums.TradeOrderType.LIMIT.value
         and triggered_order["tag"]
         and triggered_order["tag"].startswith(ping_pong_constants.TAKE_PROFIT)
@@ -170,9 +162,9 @@ async def recreate_entry_order(
     if sl_price and tp_price:
         bundled_exit_group = None  # TODO
     try:
-        trading_mode.producers[0].ctx.enable_trading = True
+        trading_mode.ctx.enable_trading = True
         created_orders = await order_types.limit(
-            trading_mode.producers[0].ctx,
+            trading_mode.ctx,
             symbol=symbol,
             side=next_entry_data[ping_pong_constants.PingPongOrderColumns.SIDE.value],
             amount=next_entry_data[

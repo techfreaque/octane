@@ -30,6 +30,7 @@ import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.mana
 import tentacles.Meta.Keywords.scripting_library.orders.order_types.create_order as create_order
 import tentacles.Meta.Keywords.scripting_library.orders.position_size as position_size
 import tentacles.Meta.Keywords.scripting_library.orders.offsets as offsets
+import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_public_data as exchange_public_data
 
 
 class ScaledOrderValueDistributionTypes:
@@ -160,9 +161,9 @@ async def scaled_order(
             entry_side=side,
             current_price=current_price,
             entry_price=entry_price,
-            stop_loss_price=stop_loss_prices[order_index]
-            if len(stop_loss_prices)
-            else None,
+            stop_loss_price=(
+                stop_loss_prices[order_index] if len(stop_loss_prices) else None
+            ),
             entry_fee=entry_fee,
             market_fee=market_fee,
         )
@@ -459,9 +460,11 @@ async def calculate_scaled_order(
             ) = await position_sizing.get_manged_order_position_size(
                 maker=maker,
                 position_size_settings=group_orders_settings.position_size,
-                trading_side=trading_enums.PositionSide.SHORT.value
-                if side == trading_enums.TradeOrderSide.SELL.value
-                else trading_enums.PositionSide.LONG.value,
+                trading_side=(
+                    trading_enums.PositionSide.SHORT.value
+                    if side == trading_enums.TradeOrderSide.SELL.value
+                    else trading_enums.PositionSide.LONG.value
+                ),
                 entry_side=side,
                 entry_price=average_entry_price,
                 entry_order_type=order_type_name,
@@ -470,7 +473,11 @@ async def calculate_scaled_order(
                 recreate_exits=False,
                 forced_amount=forced_amount,
             )
-            order_amounts = [total_amount / order_count] * order_count
+            if maker.ctx.exchange_manager.is_future:
+                order_amounts = [total_amount / order_count] * order_count
+            else:
+                value_per_order = total_amount * current_price / order_count
+                order_amounts = [value_per_order / entry_price for entry_price in entry_prices]
         else:
             raise RuntimeError("Scaled order failed to determine the position size")
     elif value_distribution_type in (
@@ -726,9 +733,11 @@ async def calculate_scaled_growth_orders(
         ) = await position_sizing.get_manged_order_position_size(
             maker=maker,
             position_size_settings=group_orders_settings.position_size,
-            trading_side=trading_enums.PositionSide.SHORT.value
-            if side == trading_enums.TradeOrderSide.SELL.value
-            else trading_enums.PositionSide.LONG.value,
+            trading_side=(
+                trading_enums.PositionSide.SHORT.value
+                if side == trading_enums.TradeOrderSide.SELL.value
+                else trading_enums.PositionSide.LONG.value
+            ),
             entry_side=side,
             entry_price=average_entry_price,
             entry_order_type=order_type_name,

@@ -11,6 +11,7 @@ import octobot_trading.modes.script_keywords.basic_keywords.user_inputs as user_
 import octobot_trading.modes.script_keywords.context_management as context_management
 import octobot_trading.modes.scripted_trading_mode.abstract_scripted_trading_mode as abstract_scripted_trading_mode
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_storage.storage as ping_pong_storage_management
 
 
 class AbstractBaseModeProducer(
@@ -61,9 +62,11 @@ class AbstractBaseModeProducer(
                 trigger_source=commons_enums.ActivationTopics.FULL_CANDLES.value,
                 trigger_cache_timestamp=trigger_time,
                 candle=candle,
-                action=matrix_enums.TradingModeCommands.INIT_CALL
-                if init_call
-                else matrix_enums.TradingModeCommands.OHLC_CALLBACK,
+                action=(
+                    matrix_enums.TradingModeCommands.INIT_CALL
+                    if init_call
+                    else matrix_enums.TradingModeCommands.OHLC_CALLBACK
+                ),
                 init_call=init_call,
             )
 
@@ -252,16 +255,14 @@ class AbstractBaseModeProducer(
 
     async def start(self):
         await super().start()
-        # try:
-        #     import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_storage.storage as ping_pong_storage_management
-        # except (ImportError, ModuleNotFoundError):
-        #     ping_pong_storage_management = None
-        # if ping_pong_storage_management:
-        #     try:
-        #         await ping_pong_storage_management.init_ping_pong_storage(
-        #             self.exchange_manager
-        #         )
-        #     except Exception as error:
-        #         logging.get_logger(self.trading_mode.get_name()).exception(
-        #             error, True, f"Failed to restore ping pong storage - error: {error}"
-        #         )
+        try:
+            if self.trading_mode.block_factory.current_nodes["mode_node"][
+                "config_mode_node"
+            ].get("enable_ping_pong"):
+                await ping_pong_storage_management.init_ping_pong_storage(
+                    self.exchange_manager
+                )
+        except Exception as error:
+            logging.get_logger(self.trading_mode.get_name()).exception(
+                error, True, f"Failed to restore ping pong storage - error: {error}"
+            )

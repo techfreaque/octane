@@ -463,7 +463,7 @@ class ManagedOrderPlacement:
         ):
             return
         ping_pong_storage: storage.PingPongStorage = storage.get_ping_pong_storage(
-            maker.exchange_manager
+            maker.ctx.exchange_manager
         )
         ping_pong_storage.set_ping_pong_data(
             group_key=f"{self.group_orders_settings.order_manager_group_id}",

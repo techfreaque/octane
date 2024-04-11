@@ -137,7 +137,7 @@ class PingPongStorage:
             group_key=group_key, order_group_id=order_group_id
         )
         single_data: element.PingPongSingleData = group_data.get_grid_data(grid_id)
-        if single_data.enabled and single_data.original_orders is not None:
+        if single_data.enabled:
             return single_data
         return None
 

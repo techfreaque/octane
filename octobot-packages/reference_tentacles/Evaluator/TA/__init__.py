@@ -10,11 +10,11 @@ if check_tentacle_version('1.2.0', 'ai_evaluator', 'OctoBot-Default-Tentacles'):
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.2.0', 'volatility_evaluator', 'OctoBot-Default-Tentacles'):
+if check_tentacle_version('1.2.0', 'momentum_evaluator', 'OctoBot-Default-Tentacles'):
     try:
-        from .volatility_evaluator import *
+        from .momentum_evaluator import *
     except Exception as e:
-        get_logger('TentacleLoader').error(f'Error when loading volatility_evaluator: '
+        get_logger('TentacleLoader').error(f'Error when loading momentum_evaluator: '
                                            f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
@@ -28,11 +28,11 @@ if check_tentacle_version('1.2.0', 'trend_evaluator', 'OctoBot-Default-Tentacles
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.2.0', 'momentum_evaluator', 'OctoBot-Default-Tentacles'):
+if check_tentacle_version('1.2.0', 'volatility_evaluator', 'OctoBot-Default-Tentacles'):
     try:
-        from .momentum_evaluator import *
+        from .volatility_evaluator import *
     except Exception as e:
-        get_logger('TentacleLoader').error(f'Error when loading momentum_evaluator: '
+        get_logger('TentacleLoader').error(f'Error when loading volatility_evaluator: '
                                            f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')

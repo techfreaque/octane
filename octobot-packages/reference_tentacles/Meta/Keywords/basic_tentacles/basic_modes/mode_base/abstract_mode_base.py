@@ -34,10 +34,11 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
     enable_ping_pong: bool = None
     enable_real_time_strategy: bool = None
     real_time_strategy_data = None
-    
+
     any_neural_net_active: bool = False
     should_stop_training: bool = False
     training_thread = None
+    any_ping_pong_mode_active: bool = False
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -157,47 +158,47 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
                     )
 
     # def init_user_inputs(self, inputs: dict) -> None:
-        # if self.ENABLE_PRO_FEATURES:
-        #     try:
-        #         import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.daemons.ping_pong.simple_ping_pong as simple_ping_pong
-        #     except (ImportError, ModuleNotFoundError):
-        #         simple_ping_pong = None
-        #     if simple_ping_pong:
-        #         self.enable_ping_pong = self.UI.user_input(
-        #             "enable_ping_pong",
-        #             commons_enums.UserInputTypes.BOOLEAN.value,
-        #             False,
-        #             registered_inputs=inputs,
-        #             title="Enable ping pong capabilities",
-        #             other_schema_values={
-        #                 "description": "requires a restart after enabling - "
-        #                 "required to use managed ping pong orders"
-        #             },
-        #             show_in_optimizer=False,
-        #             show_in_summary=False,
-        #             order=1000,
-        #         )
-        #     else:
-        #         self.enable_ping_pong = False
-        #     import tentacles.Meta.Keywords.pro_tentacles.pro_modes.real_time_strategy.execute_real_time_strategy as execute_real_time_strategy
+    # if self.ENABLE_PRO_FEATURES:
+    #     try:
+    #         import tentacles.Meta.Keywords.pro_tentacles.pro_keywords.orders.managed_order_pro.daemons.ping_pong.simple_ping_pong as simple_ping_pong
+    #     except (ImportError, ModuleNotFoundError):
+    #         simple_ping_pong = None
+    #     if simple_ping_pong:
+    #         self.enable_ping_pong = self.UI.user_input(
+    #             "enable_ping_pong",
+    #             commons_enums.UserInputTypes.BOOLEAN.value,
+    #             False,
+    #             registered_inputs=inputs,
+    #             title="Enable ping pong capabilities",
+    #             other_schema_values={
+    #                 "description": "requires a restart after enabling - "
+    #                 "required to use managed ping pong orders"
+    #             },
+    #             show_in_optimizer=False,
+    #             show_in_summary=False,
+    #             order=1000,
+    #         )
+    #     else:
+    #         self.enable_ping_pong = False
+    #     import tentacles.Meta.Keywords.pro_tentacles.pro_modes.real_time_strategy.execute_real_time_strategy as execute_real_time_strategy
 
-        #     if execute_real_time_strategy:
-        #         self.enable_real_time_strategy = self.UI.user_input(
-        #             "enable_real_time_strategy",
-        #             commons_enums.UserInputTypes.BOOLEAN.value,
-        #             False,
-        #             registered_inputs=inputs,
-        #             title="Enable real time strategy",
-        #             other_schema_values={
-        #                 "description": "requires a restart after enabling - define a "
-        #                 "strategy that is based on the real time price"
-        #             },
-        #             show_in_optimizer=False,
-        #             show_in_summary=False,
-        #             order=1000,
-        #         )
-        #     else:
-        #         self.real_time_strategy = False
+    #     if execute_real_time_strategy:
+    #         self.enable_real_time_strategy = self.UI.user_input(
+    #             "enable_real_time_strategy",
+    #             commons_enums.UserInputTypes.BOOLEAN.value,
+    #             False,
+    #             registered_inputs=inputs,
+    #             title="Enable real time strategy",
+    #             other_schema_values={
+    #                 "description": "requires a restart after enabling - define a "
+    #                 "strategy that is based on the real time price"
+    #             },
+    #             show_in_optimizer=False,
+    #             show_in_summary=False,
+    #             order=1000,
+    #         )
+    #     else:
+    #         self.real_time_strategy = False
 
     async def create_consumers(self) -> list:
         """
