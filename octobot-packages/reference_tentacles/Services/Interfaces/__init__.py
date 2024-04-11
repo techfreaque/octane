@@ -1,38 +1,38 @@
 from octobot_tentacles_manager.api.inspector import check_tentacle_version
 from octobot_commons.logging.logging_util import get_logger
 
-if check_tentacle_version('1.2.0', 'forum_evaluator', 'OctoBot-Default-Tentacles'):
+if check_tentacle_version('0.9.23', 'run_analysis_mode', 'Octane-Default-Tentacles'):
     try:
-        from .forum_evaluator import *
+        from .run_analysis_mode import *
     except Exception as e:
-        get_logger('TentacleLoader').error(f'Error when loading forum_evaluator: '
+        get_logger('TentacleLoader').error(f'Error when loading run_analysis_mode: '
                                            f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.2.0', 'news_evaluator', 'OctoBot-Default-Tentacles'):
+if check_tentacle_version('1.2.0', 'telegram_bot_interface', 'OctoBot-Default-Tentacles'):
     try:
-        from .news_evaluator import *
+        from .telegram_bot_interface import *
     except Exception as e:
-        get_logger('TentacleLoader').error(f'Error when loading news_evaluator: '
+        get_logger('TentacleLoader').error(f'Error when loading telegram_bot_interface: '
                                            f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.2.0', 'signal_evaluator', 'OctoBot-Default-Tentacles'):
+if check_tentacle_version('1.2.0', 'web_interface', 'OctoBot-Default-Tentacles'):
     try:
-        from .signal_evaluator import *
+        from .web_interface import *
     except Exception as e:
-        get_logger('TentacleLoader').error(f'Error when loading signal_evaluator: '
+        get_logger('TentacleLoader').error(f'Error when loading web_interface: '
                                            f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.2.0', 'trends_evaluator', 'OctoBot-Default-Tentacles'):
+if check_tentacle_version('0.9.30', 'octo_ui2', 'Octane-Default-Tentacles'):
     try:
-        from .trends_evaluator import *
+        from .octo_ui2 import *
     except Exception as e:
-        get_logger('TentacleLoader').error(f'Error when loading trends_evaluator: '
+        get_logger('TentacleLoader').error(f'Error when loading octo_ui2: '
                                            f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
