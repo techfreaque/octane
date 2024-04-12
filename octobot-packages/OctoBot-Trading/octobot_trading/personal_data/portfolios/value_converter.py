@@ -123,7 +123,7 @@ class ValueConverter:
             self.initializing_symbol_prices.remove(currency)
         return currency_value
 
-    def _try_get_value_of_currency(self, currency, quantity, target_currency, raise_error, init_price_fetchers):
+    def _try_get_value_of_currency(self, currency, quantity, target_currency, raise_error, init_price_fetchers, is_second_try=False):
         """
         try_get_value_of_currency will try to get the value of the given currency quantity in reference market.
         It will try to get it from a trading pair that fit with the exchange availability.
@@ -161,6 +161,14 @@ class ValueConverter:
                     self.portfolio_manager.exchange_manager.symbol_exists(s)
                     for s in (symbol, reversed_symbol)
                 ) and currency not in self.missing_currency_data_in_exchange:
+                    # hack for binance earn pairs that start with LD
+                    if currency.startswith("LD"):
+                        return self._try_get_value_of_currency(
+                            currency=currency[2:], quantity=quantity, 
+                            target_currency=target_currency,
+                            raise_error=raise_error, 
+                            init_price_fetchers=init_price_fetchers, is_second_try=True
+                        )
                     self._inform_no_matching_symbol(currency, target_currency)
                     self.missing_currency_data_in_exchange.add(currency)
                 if not self.portfolio_manager.exchange_manager.is_backtesting:
