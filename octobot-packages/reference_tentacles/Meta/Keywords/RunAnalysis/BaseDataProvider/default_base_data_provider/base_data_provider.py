@@ -202,6 +202,13 @@ class RunAnalysisBaseDataGenerator:
                                 time_frame=time_frame,
                                 try_counter=try_counter,
                             )
+                    # hack for binance earn pairs that start with LD
+                    if symbol.startswith("LD"):
+                        return await self._get_live_candles(
+                            symbol=symbol[2:],
+                            time_frame=time_frame,
+                            try_counter=try_counter - 1,
+                        )
                     raise analysis_errors.CandlesLoadingError from error
                 for index in range(
                     len(raw_candles[commons_enums.PriceIndexes.IND_PRICE_TIME.value])
