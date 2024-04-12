@@ -10,15 +10,6 @@ if check_tentacle_version('1.2.0', 'google_service', 'OctoBot-Default-Tentacles'
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.2.0', 'gpt_service', 'OctoBot-Default-Tentacles'):
-    try:
-        from .gpt_service import *
-    except Exception as e:
-        get_logger('TentacleLoader').error(f'Error when loading gpt_service: '
-                                           f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
-                                           f'error persists, try reinstalling your tentacles via '
-                                           f'"python start.py tentacles --install --all".')
-
 if check_tentacle_version('1.2.0', 'reddit_service', 'OctoBot-Default-Tentacles'):
     try:
         from .reddit_service import *
@@ -78,6 +69,15 @@ if check_tentacle_version('1.2.0', 'web_service', 'OctoBot-Default-Tentacles'):
         from .web_service import *
     except Exception as e:
         get_logger('TentacleLoader').error(f'Error when loading web_service: '
+                                           f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
+                                           f'error persists, try reinstalling your tentacles via '
+                                           f'"python start.py tentacles --install --all".')
+
+if check_tentacle_version('1.2.0', 'gpt_service', 'OctoBot-Default-Tentacles'):
+    try:
+        from .gpt_service import *
+    except Exception as e:
+        get_logger('TentacleLoader').error(f'Error when loading gpt_service: '
                                            f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')

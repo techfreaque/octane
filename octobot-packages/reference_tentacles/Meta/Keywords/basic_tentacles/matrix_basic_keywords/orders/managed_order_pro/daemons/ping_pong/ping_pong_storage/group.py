@@ -18,7 +18,10 @@
 # or you want your own custom solution,
 # please contact me at max@a42.ch
 
+from ast import Tuple
 import typing
+import octobot_trading.enums as trading_enums
+
 from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.daemons.ping_pong import (
     ping_pong_constants,
 )
@@ -42,37 +45,113 @@ class PingPongGroupData:
         self.group_key: str = group_key
         if not init_only:
             for grid_id, order in enumerate(entry_orders):
+                if isinstance(order, dict):
+                    if (
+                        order[trading_enums.ExchangeConstantsOrderColumns.STATUS.value]
+                        == trading_enums.OrderStatus.REJECTED.value
+                    ):
+                        return  # Order was rejected
+                    else:
+                        raise RuntimeError(
+                            "order dicts arent handled in ping pong mode"
+                        )
+                (stop_loss_price, stop_loss_tag, take_profit_price, take_profit_tag) = (
+                    self.get_exit_order_data(order)
+                )
                 self.set_grid_data(
                     grid_id=str(grid_id),
-                    order=order,
-                    calculated_entry=calculated_entries[grid_id],
+                    symbol=order.symbol,
+                    take_profit_price=take_profit_price,
+                    take_profit_tag=take_profit_tag,
+                    side=order.side.value,
+                    amount=float(str(order.filled_quantity)),
+                    entry_price=float(str(calculated_entries[grid_id])),
+                    entry_tag=order.tag,
+                    stop_loss_price=stop_loss_price,
+                    stop_loss_tag=stop_loss_tag,
                 )
+
+    @staticmethod
+    def get_exit_order_data(
+        order,
+    ) -> typing.Tuple[float | None, str | None, float | None, str | None]:
+        take_profit_price: float = None
+        take_profit_tag: str = None
+        stop_loss_price: float = None
+        stop_loss_tag: str = None
+        for exit_order in order.chained_orders:
+            if is_stop_loss(exit_order.order_type.value):
+                stop_loss_price = float(str(exit_order.origin_price))
+                stop_loss_tag = exit_order.tag
+            elif is_take_profit(exit_order.order_type.value):
+                take_profit_price = float(str(exit_order.origin_price))
+                take_profit_tag = exit_order.tag
+        return (stop_loss_price, stop_loss_tag, take_profit_price, take_profit_tag)
 
     async def restore_from_raw(self, raw_group_instance) -> None:
         for grid_id, raw_grid in raw_group_instance.items():
             self.group_data[grid_id] = element.PingPongSingleData(
                 ping_pong_storage=self.ping_pong_info_storage,
                 grid_id=grid_id,
-                calculated_entry=raw_grid[
-                    ping_pong_constants.PingPongSingleDataColumns.CALCULATED_ENTRY
-                ],
                 order_group_id=self.order_group_id,
                 group_key=self.group_key,
-                init_only=True,
+                symbol=raw_grid[ping_pong_constants.PingPongSingleDataColumns.SYMBOL],
+                take_profit_price=raw_grid[
+                    ping_pong_constants.PingPongSingleDataColumns.TAKE_PROFIT_PRICE
+                ],
+                take_profit_tag=raw_grid[
+                    ping_pong_constants.PingPongSingleDataColumns.TAKE_PROFIT_TAG
+                ],
+                side=raw_grid[ping_pong_constants.PingPongSingleDataColumns.SIDE],
+                amount=raw_grid[ping_pong_constants.PingPongSingleDataColumns.AMOUNT],
+                entry_price=raw_grid[
+                    ping_pong_constants.PingPongSingleDataColumns.ENTRY_PRICE
+                ],
+                entry_tag=raw_grid[
+                    ping_pong_constants.PingPongSingleDataColumns.ENTRY_TAG
+                ],
+                stop_loss_price=raw_grid[
+                    ping_pong_constants.PingPongSingleDataColumns.STOP_LOSS_PRICE
+                ],
+                stop_loss_tag=raw_grid[
+                    ping_pong_constants.PingPongSingleDataColumns.STOP_LOSS_TAG
+                ],
+                entry_counter=raw_grid[
+                    ping_pong_constants.PingPongSingleDataColumns.ENTRY_COUNTER
+                ],
+                ping_pong_active=raw_grid[
+                    ping_pong_constants.PingPongSingleDataColumns.PING_PONG_ACTIVE
+                ],
             )
-            self.group_data[grid_id].entry_counter = raw_grid[
-                ping_pong_constants.PingPongSingleDataColumns.ENTRY_COUNTER
-            ]
-            # await self.group_data[grid_id].restore_from_raw(raw_grid)
 
-    def set_grid_data(self, grid_id, order, calculated_entry) -> None:
+    def set_grid_data(
+        self,
+        grid_id,
+        symbol: str,
+        take_profit_price: float,
+        take_profit_tag: str,
+        side: str,
+        amount: float,
+        entry_price: float,
+        entry_tag: str,
+        stop_loss_price: float = None,
+        stop_loss_tag: str = None,
+    ) -> None:
         self.group_data[grid_id] = element.PingPongSingleData(
             ping_pong_storage=self.ping_pong_info_storage,
             grid_id=grid_id,
-            entry_order=order,
-            calculated_entry=calculated_entry,
             order_group_id=self.order_group_id,
             group_key=self.group_key,
+            symbol=symbol,
+            take_profit_price=take_profit_price,
+            take_profit_tag=take_profit_tag,
+            side=side,
+            amount=amount,
+            entry_price=entry_price,
+            entry_tag=entry_tag,
+            stop_loss_price=stop_loss_price,
+            stop_loss_tag=stop_loss_tag,
+            ping_pong_active=True,
         )
 
     def get_grid_data(self, grid_id) -> element.PingPongSingleData:
@@ -105,3 +184,23 @@ class PingPongGroupData:
         for grid_id, this_group_data in self.group_data.items():
             grid_dict[grid_id] = this_group_data.to_dict()
         return grid_dict
+
+
+def is_stop_loss(order_type: str):
+    return order_type in (
+        trading_enums.TraderOrderType.STOP_LOSS,
+        trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
+        trading_enums.TraderOrderType.STOP_LOSS.value,
+        trading_enums.TraderOrderType.STOP_LOSS_LIMIT.value,
+    )
+
+
+def is_take_profit(order_type: str):
+    return order_type in (
+        trading_enums.TraderOrderType.SELL_LIMIT,
+        trading_enums.TraderOrderType.BUY_LIMIT,
+        trading_enums.TraderOrderType.SELL_LIMIT.value,
+        trading_enums.TraderOrderType.BUY_LIMIT.value,
+        trading_enums.TradeOrderType.LIMIT.value,
+        trading_enums.TradeOrderType.LIMIT,
+    )

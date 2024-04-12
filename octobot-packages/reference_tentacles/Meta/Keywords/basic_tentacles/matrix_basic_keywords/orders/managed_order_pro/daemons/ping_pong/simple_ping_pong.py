@@ -40,15 +40,22 @@ async def play_ping_pong(
     if is_relevant_take_profit_order(
         triggered_order=triggered_order,
     ):
-        run_in_bot_main_loop(
-            play_simple_ping_pong(
+        if trading_mode.exchange_manager.is_backtesting:
+            await play_simple_ping_pong(
                 trading_mode=trading_mode,
                 symbol=symbol,
                 triggered_order=triggered_order,
             ),
-            blocking=False,
-            timeout=PING_PONG_TIMEOUT,
-        )
+        else:
+            run_in_bot_main_loop(
+                play_simple_ping_pong(
+                    trading_mode=trading_mode,
+                    symbol=symbol,
+                    triggered_order=triggered_order,
+                ),
+                blocking=False,
+                timeout=PING_PONG_TIMEOUT,
+            )
 
 
 async def play_simple_ping_pong(
@@ -133,31 +140,20 @@ async def recreate_entry_order(
     symbol: str,
     triggered_order: dict,
     retry_counter: int,
-    next_entry_data: dict = None,
+    next_entry_data: element.PingPongSingleData = None,
 ):
-    next_entry_data = (
-        next_entry_data or ping_pong_single_data.get_to_replace_order_details()
-    )
+    if not next_entry_data:
+        ping_pong_single_data.update_to_replace_order_details()
+        next_entry_data = ping_pong_single_data
 
-    sl_price = next_entry_data.get(
-        ping_pong_constants.PingPongOrderColumns.STOP_LOSS_PRICE.value
-    )
-    stop_loss_tag = None
+    stop_loss_tag = next_entry_data.stop_loss_tag
+    sl_price = next_entry_data.stop_loss_price
     stop_loss_offset = None
     if sl_price:
-        stop_loss_offset = f"@{next_entry_data[ping_pong_constants.PingPongOrderColumns.STOP_LOSS_PRICE.value]}"
-        stop_loss_tag = (
-            next_entry_data[
-                ping_pong_constants.PingPongOrderColumns.STOP_LOSS_TAG.value
-            ],
-        )
-    tp_price = next_entry_data[
-        ping_pong_constants.PingPongOrderColumns.TAKE_PROFIT_PRICE.value
-    ]
+        stop_loss_offset = f"@{sl_price}"
+    tp_price = next_entry_data.take_profit_price
     take_profit_offset = f"@{tp_price}"
-    take_profit_tag = next_entry_data[
-        ping_pong_constants.PingPongOrderColumns.TAKE_PROFIT_TAG.value
-    ]
+    take_profit_tag = next_entry_data.take_profit_tag
     bundled_exit_group = None
     if sl_price and tp_price:
         bundled_exit_group = None  # TODO
@@ -166,14 +162,10 @@ async def recreate_entry_order(
         created_orders = await order_types.limit(
             trading_mode.ctx,
             symbol=symbol,
-            side=next_entry_data[ping_pong_constants.PingPongOrderColumns.SIDE.value],
-            amount=next_entry_data[
-                ping_pong_constants.PingPongOrderColumns.AMOUNT.value
-            ],
-            offset=f"@{next_entry_data[ping_pong_constants.PingPongOrderColumns.ENTRY_PRICE.value]}",
-            tag=next_entry_data[
-                ping_pong_constants.PingPongOrderColumns.ENTRY_TAG.value
-            ],
+            side=next_entry_data.side,
+            amount=next_entry_data.amount,
+            offset=f"@{next_entry_data.entry_price}",
+            tag=next_entry_data.entry_tag,
             stop_loss_offset=stop_loss_offset,
             stop_loss_tag=stop_loss_tag,
             take_profit_offset=take_profit_offset,
@@ -245,11 +237,10 @@ async def retry_recreate_entry_order(
             ping_pong_single_data=ping_pong_single_data,
             next_entry_data=next_entry_data,
         )
-    if not not trading_mode.exchange_manager.is_backtesting:
-        raise RuntimeError(
-            "Failed to recreate entry order, when take profit got filled. "
-            f"Recreated entry order: {next_entry_data}"
-        ) from error
+    raise RuntimeError(
+        "Failed to recreate entry order, when take profit got filled. "
+        f"Recreated entry order: {next_entry_data}"
+    ) from error
 
 
 class PingPongRecreatedEntryOrderNotFilledError(Exception):
