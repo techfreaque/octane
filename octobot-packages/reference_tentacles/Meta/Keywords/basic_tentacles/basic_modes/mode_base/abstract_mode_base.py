@@ -242,7 +242,7 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
         #     )
         return consumers
 
-    async def _create_user_input_consumer(self):
+    async def _create_user_input_consumer(self, is_retry=False):
         if not self.exchange_manager.is_backtesting:
             try:
                 import octobot_services.channel as services_channels
@@ -253,13 +253,17 @@ class AbstractBaseMode(abstract_scripted_trading_mode.AbstractScriptedTradingMod
                     self.user_commands_callback,
                     {"bot_id": self.bot_id, "subject": self.get_name()},
                 )
+                if is_retry:
+                    self.logger.info(
+                        f"{services_channels.UserCommandsChannel.get_name()} successfully created"
+                    )
                 return user_commands_consumer
             except KeyError:
                 await asyncio.sleep(2)
                 self.logger.warning(
                     f"{services_channels.UserCommandsChannel.get_name()} unavailable, retry in 2 seconds"
                 )
-                return await self._create_user_input_consumer()
+                return await self._create_user_input_consumer(is_retry=True)
             except ImportError:
                 self.logger.warning("Can't connect to services channels")
         return None

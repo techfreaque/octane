@@ -1,3 +1,4 @@
+import typing
 from octobot_trading.exchanges.connectors.ccxt.ccxt_connector import CCXTConnector
 from tentacles.Trading.Exchange.yahoo_finance.connector.yfinance_client import (
     YFinanceClient,
@@ -38,7 +39,11 @@ class YahooFinanceConnector(CCXTConnector):
     async def is_market_open(self, symbol: str) -> bool:
         return await self.client.is_market_open(symbol)
 
-    async def load_symbol_markets(self, reload=False):
+    async def load_symbol_markets(
+        self,
+        reload=False,
+        market_filter: typing.Union[None, typing.Callable[[dict], bool]] = None,
+    ):
         config_symbols = [
             pair
             for currency_conf in self.config["crypto-currencies"].values()

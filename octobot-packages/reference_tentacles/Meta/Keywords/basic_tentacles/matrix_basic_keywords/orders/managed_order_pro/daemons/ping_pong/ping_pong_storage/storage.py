@@ -85,17 +85,17 @@ class PingPongStorage:
             raise RuntimeError(
                 "Failed to create order group as the order group id already exists"
             )
-        self.ping_pong_storage[group_key_str][order_group_id] = (
-            ping_pong_group.PingPongGroupData(
-                ping_pong_info_storage=self,
-                entry_orders=created_orders,
-                calculated_entries=calculated_entries,
-                order_group_id=order_group_id,
-                group_key=group_key_str,
-            )
+        new_ping_pong = ping_pong_group.PingPongGroupData(
+            ping_pong_info_storage=self,
+            entry_orders=created_orders,
+            calculated_entries=calculated_entries,
+            order_group_id=order_group_id,
+            group_key=group_key_str,
         )
-        if not self.exchange_manager.is_backtesting:
-            self.store_ping_pong_storage()
+        if new_ping_pong.any_entry_placed:
+            self.ping_pong_storage[group_key_str][order_group_id] = new_ping_pong
+            if not self.exchange_manager.is_backtesting:
+                self.store_ping_pong_storage()
 
     # def log_replaced_entry_order(
     #     self,

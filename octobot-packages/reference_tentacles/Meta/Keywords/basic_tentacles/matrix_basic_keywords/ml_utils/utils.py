@@ -83,9 +83,9 @@ class ClassificationSettings:
         self.color_compression: int = color_compression
         self.live_history_size: int = live_history_size
         self.use_remote_fractals: bool = use_remote_fractals
-        self.only_train_on_every_x_bars: typing.Optional[
-            int
-        ] = only_train_on_every_x_bars
+        self.only_train_on_every_x_bars: typing.Optional[int] = (
+            only_train_on_every_x_bars
+        )
         self.down_sampler: typing.Callable[[int, int], bool] = down_sampler
         self.training_data_settings: YTrainSettings = training_data_settings
 
@@ -178,9 +178,9 @@ class DataSourceSettings:
         source: str,
     ):
         self.available_symbols: typing.List[str] = available_symbols
-        self.symbol_settings_by_symbols: typing.Dict[
-            str, SymbolSettings
-        ] = symbol_settings_by_symbols
+        self.symbol_settings_by_symbols: typing.Dict[str, SymbolSettings] = (
+            symbol_settings_by_symbols
+        )
         self.source: str = source
 
 
@@ -368,3 +368,7 @@ class ExitTypes:
 class OrderTypes:
     MANAGED_ORDER = "Managed Order"
     REGULAR_ORDER = "regular Order"
+
+
+class ModelNeedToBeTrainedFirstException(Exception):
+    """This exception is thrown when a model is not trained yet"""
