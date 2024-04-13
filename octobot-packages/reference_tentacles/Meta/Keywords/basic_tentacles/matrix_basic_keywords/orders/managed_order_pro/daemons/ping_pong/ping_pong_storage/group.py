@@ -43,6 +43,7 @@ class PingPongGroupData:
         self.ping_pong_info_storage = ping_pong_info_storage
         self.order_group_id: str = order_group_id
         self.group_key: str = group_key
+        self.any_entry_placed = False
         if not init_only:
             for grid_id, order in enumerate(entry_orders):
                 if isinstance(order, dict):
@@ -58,6 +59,7 @@ class PingPongGroupData:
                 (stop_loss_price, stop_loss_tag, take_profit_price, take_profit_tag) = (
                     self.get_exit_order_data(order)
                 )
+                self.any_entry_placed = True
                 self.set_grid_data(
                     grid_id=str(grid_id),
                     symbol=order.symbol,

@@ -27,7 +27,7 @@ try:
 except (ImportError, ModuleNotFoundError):
     octo_ui2_pro_plugin = None
 
-TIME_TO_START = 40
+TIME_TO_START = 100
 
 
 def register_bot_info_routes(plugin):
@@ -88,6 +88,7 @@ def register_bot_info_routes(plugin):
         strategy_config: dict = models.get_strategy_config(media_url, missing_tentacles)
         symbols = models.get_enabled_trading_pairs()
 
+        activated_trading_mode = models.get_config_activated_trading_mode()
         activated_evaluators = models.get_config_activated_evaluators()
         evaluator_names = [
             activated_evaluator.get_name()
@@ -169,14 +170,21 @@ def register_bot_info_routes(plugin):
                 trading_mode_name = None
 
         except (KeyError, Exception) as error:
-            is_starting = True
-            running_seconds = time.time() - interfaces.get_bot_api().get_start_time()
-            if running_seconds < TIME_TO_START:
-                interfaces_util.run_in_bot_async_executor(asyncio.sleep(2))
-                return _bot_info(exchange=exchange, try_counter=try_counter)
-            basic_utils.get_octo_ui_2_logger().exception(
-                error, False, "Failed to get bot info"
-            )
+            if activated_trading_mode is None:
+                basic_utils.get_octo_ui_2_logger().error(
+                    "No trading/strategy mode is activated. Please activate at least one trading/strategy mode."
+                )
+            else:
+                is_starting = True
+                running_seconds = (
+                    time.time() - interfaces.get_bot_api().get_start_time()
+                )
+                if running_seconds < TIME_TO_START:
+                    interfaces_util.run_in_bot_async_executor(asyncio.sleep(2))
+                    return _bot_info(exchange=exchange, try_counter=try_counter)
+                basic_utils.get_octo_ui_2_logger().exception(
+                    error, False, "Failed to get bot info"
+                )
         return {
             "success": True,
             "message": "Successfully fetched bot base data",
