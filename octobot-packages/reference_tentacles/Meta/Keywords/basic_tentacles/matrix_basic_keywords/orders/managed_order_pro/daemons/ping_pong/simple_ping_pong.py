@@ -159,6 +159,9 @@ async def recreate_entry_order(
         bundled_exit_group = None  # TODO
     try:
         trading_mode.ctx.enable_trading = True
+        trading_mode.logger.debug(
+            f'A ping pong order is about to be recreated: symbol={symbol}, side={next_entry_data.side}, amount={next_entry_data.amount}, offset={f"@{next_entry_data.entry_price}"}, tag={next_entry_data.entry_tag}, stop_loss_offset={stop_loss_offset}, stop_loss_tag={stop_loss_tag}, take_profit_offset={take_profit_offset}, take_profit_tag={take_profit_tag}'
+        )
         created_orders = await order_types.limit(
             trading_mode.ctx,
             symbol=symbol,
