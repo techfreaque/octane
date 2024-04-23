@@ -38,6 +38,7 @@ class PingPongGroupData:
         order_group_id: str,
         entry_orders: list = None,
         calculated_entries: list = None,
+        calculated_amounts: list = None,
         init_only: bool = False,
     ):
         self.ping_pong_info_storage = ping_pong_info_storage
@@ -66,7 +67,7 @@ class PingPongGroupData:
                     take_profit_price=take_profit_price,
                     take_profit_tag=take_profit_tag,
                     side=order.side.value,
-                    amount=float(str(order.filled_quantity)),
+                    amount=float(str(calculated_amounts[grid_id])),
                     entry_price=float(str(calculated_entries[grid_id])),
                     entry_tag=order.tag,
                     stop_loss_price=stop_loss_price,
