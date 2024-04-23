@@ -88,17 +88,29 @@ async def plot_orders(ctx):
     # if ctx.exchange_manager.is_backtesting:
     value_key_prefix = "b" if ctx.exchange_manager.is_backtesting else "l"
     if long_tp_list:
-        await ctx.set_cached_value(value=long_tp_list, value_key=f"{value_key_prefix}ltp")
+        await ctx.set_cached_value(
+            value=long_tp_list, value_key=f"{value_key_prefix}ltp"
+        )
     if long_sl_list:
-        await ctx.set_cached_value(value=long_sl_list, value_key=f"{value_key_prefix}lsl")
+        await ctx.set_cached_value(
+            value=long_sl_list, value_key=f"{value_key_prefix}lsl"
+        )
     if long_limit_list:
-        await ctx.set_cached_value(value=long_limit_list, value_key=f"{value_key_prefix}llmt")
+        await ctx.set_cached_value(
+            value=long_limit_list, value_key=f"{value_key_prefix}llmt"
+        )
     if short_tp_list:
-        await ctx.set_cached_value(value=short_tp_list, value_key=f"{value_key_prefix}stp")
+        await ctx.set_cached_value(
+            value=short_tp_list, value_key=f"{value_key_prefix}stp"
+        )
     if short_sl_list:
-        await ctx.set_cached_value(value=short_sl_list, value_key=f"{value_key_prefix}ssl")
+        await ctx.set_cached_value(
+            value=short_sl_list, value_key=f"{value_key_prefix}ssl"
+        )
     if short_limit_list:
-        await ctx.set_cached_value(value=short_limit_list, value_key=f"{value_key_prefix}slmt")
+        await ctx.set_cached_value(
+            value=short_limit_list, value_key=f"{value_key_prefix}slmt"
+        )
     try:
         await plotting.plot(
             ctx,
@@ -151,7 +163,7 @@ async def plot_orders(ctx):
             cache_value=f"{value_key_prefix}llmt",
             mode="markers",
             chart="main-chart",
-            color="blue",
+            color="cyan",
             shift_to_open_candle_time=False,
         )
     except RuntimeError:
@@ -252,7 +264,7 @@ async def plot_current_position(ctx, parent_input):
                 "current position",
                 cache_value="op",
                 chart="sub-chart",
-                color="blue",
+                color="cyan",
                 shift_to_open_candle_time=False,
                 mode="markers",
                 own_yaxis=True,
@@ -268,7 +280,7 @@ async def plot_current_position(ctx, parent_input):
                 "current position",
                 cache_value="l-op",
                 chart="sub-chart",
-                color="blue",
+                color="cyan",
                 shift_to_open_candle_time=False,
                 mode="markers",
                 own_yaxis=True,
@@ -302,7 +314,7 @@ async def plot_average_entry(ctx, parent_input):
             "current average entry",
             cache_value=key + "ae",
             chart="main-chart",
-            color="blue",
+            color="cyan",
             shift_to_open_candle_time=False,
             mode="markers",
         )
@@ -332,7 +344,7 @@ async def plot_balances(ctx, parent_input):
             "current balance",
             cache_value=key + "cb",
             chart="sub-chart",
-            color="blue",
+            color="cyan",
             shift_to_open_candle_time=False,
             mode="markers",
         )
@@ -345,7 +357,7 @@ async def plot_balances(ctx, parent_input):
             "current available balance",
             cache_value=key + "cab",
             chart="sub-chart",
-            color="blue",
+            color="cyan",
             shift_to_open_candle_time=False,
             mode="markers",
         )
