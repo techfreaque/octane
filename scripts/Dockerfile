@@ -20,8 +20,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 # install dependencies before to use caching
 WORKDIR /octobot-requirements
 RUN pip install -U setuptools wheel pip>=20.0.0
-COPY ./octobot-packages/OctoBot/strategy_maker_requirements.txt ./OctoBot/strategy_maker_requirements.txt
-RUN pip install --prefer-binary -r OctoBot/strategy_maker_requirements.txt
 COPY ./octobot-packages/OctoBot/requirements.txt ./OctoBot/requirements.txt
 RUN pip install --prefer-binary -r OctoBot/requirements.txt
 COPY ./octobot-packages/Async-Channel/requirements.txt ./Async-Channel/requirements.txt
@@ -40,6 +38,8 @@ COPY ./octobot-packages/OctoBot-Trading/requirements.txt ./OctoBot-Trading/requi
 RUN pip install --prefer-binary -r OctoBot-Trading/requirements.txt
 COPY ./octobot-packages/trading-backend/requirements.txt ./trading-backend/requirements.txt
 RUN pip install --prefer-binary -r trading-backend/requirements.txt
+COPY ./octobot-packages/OctoBot/strategy_maker_requirements.txt ./OctoBot/strategy_maker_requirements.txt
+RUN pip install --prefer-binary -r OctoBot/strategy_maker_requirements.txt
 
 WORKDIR /
 COPY . .
