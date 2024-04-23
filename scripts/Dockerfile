@@ -17,22 +17,35 @@ ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
 # Make sure we use the virtualenv:
 ENV PATH="/opt/venv/bin:$PATH"
 
+# install dependencies before to use caching
+WORKDIR /octobot-requirements
+RUN pip install -U setuptools wheel pip>=20.0.0
+COPY ./octobot-packages/OctoBot/strategy_maker_requirements.txt ./OctoBot/strategy_maker_requirements.txt
+RUN pip install --prefer-binary -r OctoBot/strategy_maker_requirements.txt
+COPY ./octobot-packages/OctoBot/requirements.txt ./OctoBot/requirements.txt
+RUN pip install --prefer-binary -r OctoBot/requirements.txt
+COPY ./octobot-packages/Async-Channel/requirements.txt ./Async-Channel/requirements.txt
+RUN pip install --prefer-binary -r Async-Channel/requirements.txt
+COPY ./octobot-packages/OctoBot-Backtesting/requirements.txt ./OctoBot-Backtesting/requirements.txt
+RUN pip install --prefer-binary -r OctoBot-Backtesting/requirements.txt
+COPY ./octobot-packages/OctoBot-Commons/requirements.txt ./OctoBot-Commons/requirements.txt
+RUN pip install --prefer-binary -r OctoBot-Commons/requirements.txt
+COPY ./octobot-packages/OctoBot-evaluators/requirements.txt ./OctoBot-evaluators/requirements.txt
+RUN pip install --prefer-binary -r OctoBot-evaluators/requirements.txt
+COPY ./octobot-packages/OctoBot-Services/requirements.txt ./OctoBot-Services/requirements.txt
+RUN pip install --prefer-binary -r OctoBot-Services/requirements.txt
+COPY ./octobot-packages/OctoBot-Tentacles-Manager/requirements.txt ./OctoBot-Tentacles-Manager/requirements.txt
+RUN pip install --prefer-binary -r OctoBot-Tentacles-Manager/requirements.txt
+COPY ./octobot-packages/OctoBot-Trading/requirements.txt ./OctoBot-Trading/requirements.txt
+RUN pip install --prefer-binary -r OctoBot-Trading/requirements.txt
+COPY ./octobot-packages/trading-backend/requirements.txt ./trading-backend/requirements.txt
+RUN pip install --prefer-binary -r trading-backend/requirements.txt
+
 COPY . .
 WORKDIR /octobot-packages
 RUN mkdir -p /octobot
 RUN cp /.env /octobot/.env
 
-RUN pip install -U setuptools wheel pip>=20.0.0
-RUN pip install --prefer-binary -r OctoBot/strategy_maker_requirements.txt
-RUN pip install --prefer-binary -r OctoBot/requirements.txt
-RUN pip install --prefer-binary -r Async-Channel/requirements.txt
-RUN pip install --prefer-binary -r OctoBot-Backtesting/requirements.txt
-RUN pip install --prefer-binary -r OctoBot-Commons/requirements.txt
-RUN pip install --prefer-binary -r OctoBot-evaluators/requirements.txt
-RUN pip install --prefer-binary -r OctoBot-Services/requirements.txt
-RUN pip install --prefer-binary -r OctoBot-Tentacles-Manager/requirements.txt
-RUN pip install --prefer-binary -r OctoBot-Trading/requirements.txt
-RUN pip install --prefer-binary -r trading-backend/requirements.txt
 WORKDIR /
 RUN pip install --prefer-binary -r /custom_requirements.txt
 
