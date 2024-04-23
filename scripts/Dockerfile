@@ -41,6 +41,7 @@ RUN pip install --prefer-binary -r OctoBot-Trading/requirements.txt
 COPY ./octobot-packages/trading-backend/requirements.txt ./trading-backend/requirements.txt
 RUN pip install --prefer-binary -r trading-backend/requirements.txt
 
+WORKDIR /
 COPY . .
 WORKDIR /octobot-packages
 RUN mkdir -p /octobot
