@@ -190,10 +190,11 @@ class ManagedOrderPlacement:
                         take_profit_group=bundled_tp_group,
                     )
                     self.add_to_ping_pong_storage_if_enabled(
-                        maker,
-                        order_tag_id,
-                        self.created_orders,
-                        self.calculated_entries,
+                        maker=maker,
+                        order_tag_id=order_tag_id,
+                        created_orders=self.created_orders,
+                        calculated_entries=self.calculated_entries,
+                        calculated_amounts=self.order_amounts,
                     )
                     if bundled_tp_group:
                         await grouping.enable_group(bundled_tp_group, True)
@@ -259,10 +260,11 @@ class ManagedOrderPlacement:
                         take_profit_group=bundled_tp_group,
                     )
                     self.add_to_ping_pong_storage_if_enabled(
-                        maker,
-                        order_tag_id,
-                        self.created_orders,
-                        self.calculated_entries,
+                        maker=maker,
+                        order_tag_id=order_tag_id,
+                        created_orders=self.created_orders,
+                        calculated_entries=self.calculated_entries,
+                        calculated_amounts=self.order_amounts,
                     )
                     if bundled_tp_group:
                         await grouping.enable_group(bundled_tp_group, True)
@@ -322,10 +324,11 @@ class ManagedOrderPlacement:
                     self.order_amounts += order_amounts
                     if not order_preview_mode:
                         self.add_to_ping_pong_storage_if_enabled(
-                            maker,
-                            order_tag_id,
-                            created_orders,
-                            calculated_entries,
+                            maker=maker,
+                            order_tag_id=order_tag_id,
+                            created_orders=created_orders,
+                            calculated_entries=calculated_entries,
+                            calculated_amounts=order_amounts,
                         )
 
         # # entry time grid orders
@@ -455,6 +458,7 @@ class ManagedOrderPlacement:
         order_tag_id,
         created_orders,
         calculated_entries,
+        calculated_amounts,
     ):
         if (
             not self.group_orders_settings.ping_pong.ping_pong_mode_enabled
@@ -470,6 +474,7 @@ class ManagedOrderPlacement:
             order_group_id=order_tag_id,
             created_orders=created_orders,
             calculated_entries=calculated_entries,
+            calculated_amounts=calculated_amounts,
         )
 
     async def get_single_order_data(

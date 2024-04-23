@@ -77,6 +77,7 @@ class PingPongStorage:
         order_group_id: str,
         created_orders: list,
         calculated_entries: list,
+        calculated_amounts: list,
     ):
         group_key_str = str(group_key)
         if group_key_str not in self.ping_pong_storage:
@@ -89,6 +90,7 @@ class PingPongStorage:
             ping_pong_info_storage=self,
             entry_orders=created_orders,
             calculated_entries=calculated_entries,
+            calculated_amounts=calculated_amounts,
             order_group_id=order_group_id,
             group_key=group_key_str,
         )
