@@ -30,7 +30,7 @@ import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.mana
 import tentacles.Meta.Keywords.scripting_library.orders.order_types.create_order as create_order
 import tentacles.Meta.Keywords.scripting_library.orders.position_size as position_size
 import tentacles.Meta.Keywords.scripting_library.orders.offsets as offsets
-import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_public_data as exchange_public_data
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
 
 
 class ScaledOrderValueDistributionTypes:
@@ -57,6 +57,7 @@ async def scaled_order(
     scale_from=None,
     scale_to=None,
     order_count=10,
+    grid_id=0,
     value_distribution_type=ScaledOrderValueDistributionTypes.FLAT,
     price_distribution_type=ScaledOrderPriceDistributionTypes.FLAT,
     value_growth_factor=2,
@@ -109,6 +110,7 @@ async def scaled_order(
             order_type_name=order_type_name,
             current_price=current_price,
             scale_from=scale_from,
+            grid_id=grid_id,
             scale_to=scale_to,
             order_count=order_count,
             value_distribution_type=value_distribution_type,
@@ -278,6 +280,7 @@ async def calculate_scaled_order(
     scale_from=None,
     scale_to=None,
     order_count=10,
+    grid_id=0,
     value_distribution_type=ScaledOrderValueDistributionTypes.FLAT,
     price_distribution_type=ScaledOrderPriceDistributionTypes.FLAT,
     value_growth_factor=2,
@@ -469,7 +472,7 @@ async def calculate_scaled_order(
                 entry_price=average_entry_price,
                 entry_order_type=order_type_name,
                 stop_loss_percent=average_stop_loss_percentage,
-                order_tag_prefix=group_orders_settings.order_tag_prefix,
+                order_tag_prefix=f"{group_orders_settings.order_tag_prefix}{matrix_enums.TAG_SEPERATOR}{grid_id}",
                 recreate_exits=False,
                 forced_amount=forced_amount,
             )
@@ -477,7 +480,9 @@ async def calculate_scaled_order(
                 order_amounts = [total_amount / order_count] * order_count
             else:
                 value_per_order = total_amount * current_price / order_count
-                order_amounts = [value_per_order / entry_price for entry_price in entry_prices]
+                order_amounts = [
+                    value_per_order / entry_price for entry_price in entry_prices
+                ]
         else:
             raise RuntimeError("Scaled order failed to determine the position size")
     elif value_distribution_type in (
@@ -494,6 +499,7 @@ async def calculate_scaled_order(
         ) = await calculate_scaled_growth_orders(
             maker,
             side=side,
+            grid_id=grid_id,
             total_value=value,
             total_amount=total_amount,
             group_orders_settings=group_orders_settings,
@@ -656,6 +662,7 @@ async def calculate_scaled_growth_orders(
     total_value: decimal.Decimal = None,
     total_amount: decimal.Decimal = None,
     group_orders_settings=None,
+    grid_id: int = 0,
     order_type_name: str = "limit",
     amount_of_orders: int = 10,
     growth_factor: float = 2,
@@ -742,7 +749,7 @@ async def calculate_scaled_growth_orders(
             entry_price=average_entry_price,
             entry_order_type=order_type_name,
             stop_loss_percent=average_stop_loss_percentage,
-            order_tag_prefix=group_orders_settings.order_tag_prefix,
+            order_tag_prefix=f"{group_orders_settings.order_tag_prefix}{matrix_enums.TAG_SEPERATOR}{grid_id}",
             recreate_exits=False,
         )
 

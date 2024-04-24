@@ -19,6 +19,7 @@
 # please contact me at max@a42.ch
 
 import decimal
+import typing
 import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
 import octobot_trading.enums as trading_enums
 import octobot_commons.enums as commons_enums
@@ -27,6 +28,7 @@ import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.data.public
 from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums import (
     PriceDataSources,
 )
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.calculators.position_sizing as position_sizing
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.calculators.stop_loss as stop_loss
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.calculators.take_profit as take_profit
@@ -191,7 +193,9 @@ class ManagedOrderPlacement:
                     )
                     self.add_to_ping_pong_storage_if_enabled(
                         maker=maker,
-                        order_tag_id=order_tag_id,
+                        grid_instance_id=order_tag_id,
+                        grid_id=0,
+                        group_key=group_orders_settings.order_tag_prefix,
                         created_orders=self.created_orders,
                         calculated_entries=self.calculated_entries,
                         calculated_amounts=self.order_amounts,
@@ -261,7 +265,9 @@ class ManagedOrderPlacement:
                     )
                     self.add_to_ping_pong_storage_if_enabled(
                         maker=maker,
-                        order_tag_id=order_tag_id,
+                        grid_instance_id=order_tag_id,
+                        grid_id=0,
+                        group_key=group_orders_settings.order_tag_prefix,
                         created_orders=self.created_orders,
                         calculated_entries=self.calculated_entries,
                         calculated_amounts=self.order_amounts,
@@ -277,7 +283,9 @@ class ManagedOrderPlacement:
         ):
             self.set_entry_type(entry_type="limit")
             self.place_entries = False
-            for grid in self.group_orders_settings.entry.entry_grids.values():
+            for grid_id, grid in enumerate(
+                self.group_orders_settings.entry.entry_grids.values()
+            ):
                 if (
                     self.group_orders_settings.entry.entry_type
                     == entry_types.ManagedOrderSettingsEntryTypes.SCALED_DYNAMIC_DESCRIPTION
@@ -306,8 +314,9 @@ class ManagedOrderPlacement:
                     side=self.entry_side,
                     scale_from=scale_from,
                     scale_to=scale_to,
+                    grid_id=grid_id,
                     order_count=grid.order_count,
-                    group_orders_settings=self.group_orders_settings,
+                    group_orders_settings=group_orders_settings,
                     forced_amount=forced_amount,
                     value_distribution_type=grid.value_distribution_type,
                     value_growth_factor=grid.value_growth_factor,
@@ -325,7 +334,9 @@ class ManagedOrderPlacement:
                     if not order_preview_mode:
                         self.add_to_ping_pong_storage_if_enabled(
                             maker=maker,
-                            order_tag_id=order_tag_id,
+                            grid_instance_id=order_tag_id,
+                            grid_id=grid_id,
+                            group_key=group_orders_settings.order_tag_prefix,
                             created_orders=created_orders,
                             calculated_entries=calculated_entries,
                             calculated_amounts=order_amounts,
@@ -455,10 +466,12 @@ class ManagedOrderPlacement:
     def add_to_ping_pong_storage_if_enabled(
         self,
         maker,
-        order_tag_id,
-        created_orders,
-        calculated_entries,
-        calculated_amounts,
+        grid_id: int,
+        group_key: str,
+        grid_instance_id: str,
+        created_orders: list,
+        calculated_entries: typing.List[decimal.Decimal],
+        calculated_amounts: typing.List[decimal.Decimal],
     ):
         if (
             not self.group_orders_settings.ping_pong.ping_pong_mode_enabled
@@ -470,8 +483,9 @@ class ManagedOrderPlacement:
             maker.ctx.exchange_manager
         )
         ping_pong_storage.set_ping_pong_data(
-            group_key=f"{self.group_orders_settings.order_manager_group_id}",
-            order_group_id=order_tag_id,
+            group_key=group_key,
+            grid_instance_id=grid_instance_id,
+            grid_id=f"{grid_id}",
             created_orders=created_orders,
             calculated_entries=calculated_entries,
             calculated_amounts=calculated_amounts,
@@ -512,7 +526,7 @@ class ManagedOrderPlacement:
             entry_price=entry_price,
             entry_order_type=self.entry_type,
             stop_loss_percent=stop_loss_percent,
-            order_tag_prefix=group_orders_settings.order_tag_prefix,
+            order_tag_prefix=f"{group_orders_settings.order_tag_prefix}{matrix_enums.TAG_SEPERATOR}{0}",
             forced_amount=forced_amount,
             recreate_exits=False,
         )

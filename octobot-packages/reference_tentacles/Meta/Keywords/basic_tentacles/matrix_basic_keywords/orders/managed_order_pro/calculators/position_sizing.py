@@ -48,7 +48,8 @@ async def get_manged_order_position_size(
     # position size
     limit_fee, market_fee = get_fees(maker.ctx)
     entry_order_tag, tp_order_tag, sl_order_tag, order_tag_id = get_managed_order_tags(
-        maker=maker, position_size_settings=position_size_settings
+        maker=maker,
+        order_tag_prefix=order_tag_prefix,
     )
     position_size = max_position_size = current_open_risk = None
     # position size based on amount passed through managed_order
@@ -348,13 +349,15 @@ async def get_position_size_based_on_available_account(
 ) -> tuple:
     current_acc_balance = await account_balance.available_account_balance(
         ctx,
-        side=trading_enums.TradeOrderSide.SELL.value
-        if trading_side
-        in (
-            trading_enums.PositionSide.SHORT.value,
-            trading_enums.TradeOrderSide.SELL.value,
-        )
-        else trading_enums.TradeOrderSide.BUY.value,
+        side=(
+            trading_enums.TradeOrderSide.SELL.value
+            if trading_side
+            in (
+                trading_enums.PositionSide.SHORT.value,
+                trading_enums.TradeOrderSide.SELL.value,
+            )
+            else trading_enums.TradeOrderSide.BUY.value
+        ),
     )
     if not current_acc_balance:
         ctx.logger.warning(
@@ -373,24 +376,24 @@ async def get_position_size_based_on_available_account(
     return position_size, max_position_size
 
 
-def get_managed_order_tags(maker, position_size_settings):
+def get_managed_order_tags(maker, order_tag_prefix):
     ping_pong_storage: storage.PingPongStorage = storage.get_ping_pong_storage(
         maker.ctx.exchange_manager
     )
     if ping_pong_storage is None:
         order_tag_id = str(uuid.uuid4()).split("-")[0]
     else:
-        order_tag_id = ping_pong_storage.generate_next_order_group_id()
+        order_tag_id = ping_pong_storage.generate_next_grid_instance_id()
     tp_order_tag = (
         f"{ping_pong_constants.TAKE_PROFIT}{matrix_enums.TAG_SEPERATOR}"
-        f"{position_size_settings.managed_order_group_id}{matrix_enums.TAG_SEPERATOR}{order_tag_id}"
+        f"{order_tag_prefix}{matrix_enums.TAG_SEPERATOR}{order_tag_id}"
     )
     sl_order_tag = (
         f"{ping_pong_constants.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}"
-        f"{position_size_settings.managed_order_group_id}{matrix_enums.TAG_SEPERATOR}{order_tag_id}"
+        f"{order_tag_prefix}{matrix_enums.TAG_SEPERATOR}{order_tag_id}"
     )
     entry_order_tag = (
         f"{ping_pong_constants.ENTRY}{matrix_enums.TAG_SEPERATOR}"
-        f"{position_size_settings.managed_order_group_id}{matrix_enums.TAG_SEPERATOR}{order_tag_id}"
+        f"{order_tag_prefix}{matrix_enums.TAG_SEPERATOR}{order_tag_id}"
     )
     return entry_order_tag, tp_order_tag, sl_order_tag, order_tag_id

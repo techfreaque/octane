@@ -19,10 +19,14 @@
 # please contact me at max@a42.ch
 
 import asyncio
+import decimal
+import typing
 import octobot_services.interfaces.util as interfaces_util
 import octobot_tentacles_manager.api as tentacles_manager_api
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_constants as ping_pong_constants
-import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_storage.group as ping_pong_group
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_storage.group as group
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_storage.grid as grid
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_storage.grid_instance as grid_instance
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_storage.element as element
 
 RETRY_GET_ENTRY_ORDER_ATTEMPTS_COUNT: int = 20
@@ -52,7 +56,7 @@ def reset_all_ping_pong_data(exchange_manager):
 
 async def init_ping_pong_storage(exchange_manager) -> None:
     trading_mode = exchange_manager.trading_modes[0]
-    trading_mode.ping_pong_storage: PingPongStorage = PingPongStorage(exchange_manager)
+    trading_mode.ping_pong_storage = PingPongStorage(exchange_manager)
     if not exchange_manager.is_backtesting:
         await trading_mode.ping_pong_storage.restore_ping_pong_storage()
 
@@ -65,7 +69,7 @@ def get_ping_pong_storage(exchange_manager):
 
 
 class PingPongStorage:
-    ping_pong_storage: dict = {}
+    ping_pong_storage: typing.Dict[str, group.PingPongGroupData] = {}
     ping_pong_info_storage: dict = ping_pong_constants.PingPongConstants.START_INFO_DATA
 
     def __init__(self, exchange_manager):
@@ -74,71 +78,47 @@ class PingPongStorage:
     def set_ping_pong_data(
         self,
         group_key: str,
-        order_group_id: str,
+        grid_id: str,
+        grid_instance_id: str,
         created_orders: list,
-        calculated_entries: list,
-        calculated_amounts: list,
+        calculated_entries: typing.List[decimal.Decimal],
+        calculated_amounts: typing.List[decimal.Decimal],
     ):
-        group_key_str = str(group_key)
-        if group_key_str not in self.ping_pong_storage:
-            self.ping_pong_storage[group_key_str] = {}
-        if order_group_id in self.ping_pong_storage[group_key_str]:
-            raise RuntimeError(
-                "Failed to create order group as the order group id already exists"
+        if group_key in self.ping_pong_storage:
+            _group = self.ping_pong_storage[group_key]
+        else:
+            _group = group.PingPongGroupData(
+                ping_pong_storage=self,
+                group_key=group_key,
             )
-        new_ping_pong = ping_pong_group.PingPongGroupData(
-            ping_pong_info_storage=self,
-            entry_orders=created_orders,
+        _group.set_group_data(
+            grid_id=grid_id,
+            grid_instance_id=grid_instance_id,
+            created_orders=created_orders,
             calculated_entries=calculated_entries,
             calculated_amounts=calculated_amounts,
-            order_group_id=order_group_id,
-            group_key=group_key_str,
         )
-        if new_ping_pong.any_entry_placed:
-            self.ping_pong_storage[group_key_str][order_group_id] = new_ping_pong
+        if _group.any_entry_placed:
+            self.ping_pong_storage[group_key] = _group
             if not self.exchange_manager.is_backtesting:
                 self.store_ping_pong_storage()
 
-    # def log_replaced_entry_order(
-    #     self,
-    #     any_past_order_id: str,
-    #     recreated_entry_order,
-    # ):
-    #     group_data, order_info = self.get_ping_pong_data_by_any_order_id(
-    #         any_past_order_id
-    #     )
-    #     group_data.log_replaced_entry_order(
-    #         self,
-    #         grid_id=order_info[PingPongOrderToOrderGroupIdConstants.GRID_ID],
-    #         recreated_entry_order=recreated_entry_order,
-    #     )
-
-    # def get_ping_pong_data_by_any_order_id(
-    #     self, any_past_order_id: str
-    # ) -> typing.Tuple[PingPongGroupData, dict]:
-    #     order_info = self.get_order_to_order_group_id_info(any_past_order_id)
-    #     return (
-    #         self.get_ping_pong_data(
-    #             group_key=order_info[PingPongOrderToOrderGroupIdConstants.GROUP_KEY],
-    #             order_group_id=order_info[
-    #                 PingPongOrderToOrderGroupIdConstants.ORDER_GROUP_ID
-    #             ],
-    #         ),
-    #         order_info,
-    #     )
-
-    def get_ping_pong_data(
-        self, group_key: str, order_group_id: str
-    ) -> ping_pong_group.PingPongGroupData:
-        return self.ping_pong_storage[group_key][order_group_id]
+    def get_ping_pong_data(self, group_key: str) -> group.PingPongGroupData:
+        return self.ping_pong_storage[group_key]
 
     def get_single_data_if_enabled(
-        self, group_key: str, order_group_id: str, grid_id: str
-    ) -> element.PingPongSingleData or None:
-        group_data: ping_pong_group.PingPongGroupData = self.get_ping_pong_data(
-            group_key=group_key, order_group_id=order_group_id
+        self, group_key: str, grid_id: str, grid_instance_id: str, order_id: str
+    ) -> element.PingPongSingleData | None:
+        group_data: group.PingPongGroupData = self.get_ping_pong_data(
+            group_key=group_key,
         )
-        single_data: element.PingPongSingleData = group_data.get_grid_data(grid_id)
+        grid_data: grid.PingPongGridData = group_data.get_grid_data(grid_id)
+        grid_instance_data: grid_instance.PingPongGridInstanceData = (
+            grid_data.get_grid_instance_data(grid_instance_id)
+        )
+        single_data: element.PingPongSingleData = grid_instance_data.get_order_data(
+            order_id
+        )
         if single_data.enabled:
             return single_data
         return None
@@ -147,15 +127,17 @@ class PingPongStorage:
         self,
         triggered_order: dict,
         group_key: str,
-        order_group_id: str,
+        grid_instance_id: str,
         grid_id: str,
+        order_id: str,
         retry_counter: int,
-    ) -> element.PingPongSingleData or None:
+    ) -> element.PingPongSingleData | None:
         try:
             return self.get_single_data_if_enabled(
                 group_key=group_key,
-                order_group_id=order_group_id,
                 grid_id=grid_id,
+                grid_instance_id=grid_instance_id,
+                order_id=order_id,
             )
         except Exception as error:
             if (
@@ -167,30 +149,28 @@ class PingPongStorage:
                 return await self.get_entry_order(
                     triggered_order=triggered_order,
                     group_key=group_key,
-                    order_group_id=order_group_id,
+                    grid_instance_id=grid_instance_id,
                     grid_id=grid_id,
+                    order_id=order_id,
                     retry_counter=retry_counter,
                 )
             raise RuntimeError(
                 f"Ping pong failed. Failed to get entry order. Entry id: g{group_key}-"
-                f"og{order_group_id}-o{grid_id} / take profit: {triggered_order}"
+                f"og{group_key}-gr{grid_id}-gi{grid_instance_id}-o{order_id} / take profit: {triggered_order}"
             ) from error
 
     def to_dict(self):
         storage_dict = {}
         for (
-            order_group_instance_id,
-            order_group_instance,
+            group_key,
+            _group,
         ) in self.ping_pong_storage.items():
-            if order_group_instance_id not in storage_dict:
-                storage_dict[order_group_instance_id] = {}
-            for order_group_id, order_group in order_group_instance.items():
-                storage_dict[order_group_instance_id][order_group_id] = (
-                    order_group.to_dict() if order_group else {}
-                )
+            group_dict = _group.to_dict()
+            if group_dict:
+                storage_dict[group_key] = group_dict
         return storage_dict
 
-    def generate_next_order_group_id(self):
+    def generate_next_grid_instance_id(self):
         self.ping_pong_info_storage[
             ping_pong_constants.PingPongConstants.LAST_ORDER_CHAIN_ID
         ] += 1
@@ -223,20 +203,11 @@ class PingPongStorage:
 
     async def _restore_from_raw(self, raw_ping_pong_storage):
         self.ping_pong_storage = {}
-        for group_key, group in raw_ping_pong_storage.items():
-            if group_key not in self.ping_pong_storage:
-                self.ping_pong_storage[group_key] = {}
-            for order_group_id, raw_group_instance in group.items():
-                restored_group: ping_pong_group.PingPongGroupData = (
-                    ping_pong_group.PingPongGroupData(
-                        ping_pong_info_storage=self,
-                        order_group_id=order_group_id,
-                        group_key=group_key,
-                        init_only=True,
-                    )
-                )
-                await restored_group.restore_from_raw(raw_group_instance)
-                self.ping_pong_storage[group_key][order_group_id] = restored_group
+        for group_key, raw_group in raw_ping_pong_storage.items():
+            self.ping_pong_storage[group_key] = group.PingPongGroupData(
+                ping_pong_storage=self, group_key=group_key
+            )
+            await self.ping_pong_storage[group_key].restore_from_raw(raw_group)
 
     def store_ping_pong_storage(self):
         storage_dict = self.to_dict()

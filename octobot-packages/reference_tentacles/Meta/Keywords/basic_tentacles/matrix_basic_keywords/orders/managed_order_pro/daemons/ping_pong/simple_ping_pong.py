@@ -18,6 +18,7 @@
 # or you want your own custom solution,
 # please contact me at max@a42.ch
 
+import asyncio
 from octobot_services.interfaces.util.util import run_in_bot_main_loop
 import octobot_trading.enums as trading_enums
 from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords import matrix_enums
@@ -27,9 +28,9 @@ from .ping_pong_storage import element as element
 import tentacles.Meta.Keywords.scripting_library.orders.order_types as order_types
 
 
-RETRY_RECREATE_ENTRY_ATTEMPTS_COUNT: int = 5
+RETRY_RECREATE_ENTRY_ATTEMPTS_COUNT: int = 30
 
-PING_PONG_TIMEOUT = 600
+PING_PONG_TIMEOUT = 1000
 
 
 async def play_ping_pong(
@@ -66,19 +67,21 @@ async def play_simple_ping_pong(
     retry_counter = 0
     tag_info = triggered_order["tag"].split(matrix_enums.TAG_SEPERATOR)
     group_key = tag_info[1]
-    order_group_id = tag_info[2]
-    grid_id = tag_info[3]
+    grid_id = tag_info[2]
+    grid_instance_id = tag_info[3]
+    order_id = tag_info[4]
     ping_pong_group_data: element.PingPongSingleData = await get_entry_ping_pong_data(
         trading_mode=trading_mode,
         triggered_order=triggered_order,
         group_key=group_key,
-        order_group_id=order_group_id,
+        grid_instance_id=grid_instance_id,
         grid_id=grid_id,
+        order_id=order_id,
         retry_counter=retry_counter,
     )
     if ping_pong_group_data:
         retry_counter = 0
-        # mode_producer.ctx.enable_trading = True
+        trading_mode.ctx.enable_trading = True
 
         await recreate_entry_order(
             trading_mode=trading_mode,
@@ -87,7 +90,7 @@ async def play_simple_ping_pong(
             triggered_order=triggered_order,
             retry_counter=retry_counter,
         )
-        # mode_producer.ctx.enable_trading = False
+        trading_mode.ctx.enable_trading = False
 
 
 def is_relevant_take_profit_order(
@@ -101,34 +104,23 @@ def is_relevant_take_profit_order(
     )
 
 
-# def get_grid_and_order_id(exit_order_tag: str) -> typing.Tuple[int, int]:
-#     _, order_id = exit_order_tag.split("(id: ")
-#     if ") " in order_id:
-#         order_id, grid_id = order_id.split(") ")
-#         order_id = int(order_id)
-#         grid_id, grid_size = grid_id.split("/")
-#         grid_id = int(grid_id) - 1
-#     else:
-#         order_id = int(order_id.replace(")", ""))
-#         grid_id = 0
-#     return grid_id, order_id
-
-
 async def get_entry_ping_pong_data(
     trading_mode,
     triggered_order: dict,
     group_key: str,
-    order_group_id: str,
+    grid_instance_id: str,
     grid_id: str,
+    order_id: str,
     retry_counter: int,
-) -> element.PingPongSingleData or None:
+) -> element.PingPongSingleData | None:
     ping_pong_storage: storage.PingPongStorage = storage.get_ping_pong_storage(
         trading_mode.exchange_manager
     )
     return await ping_pong_storage.get_entry_order(
         triggered_order=triggered_order,
         group_key=group_key,
-        order_group_id=order_group_id,
+        grid_instance_id=grid_instance_id,
+        order_id=order_id,
         grid_id=grid_id,
         retry_counter=retry_counter,
     )
@@ -232,6 +224,7 @@ async def retry_recreate_entry_order(
         retry_counter < RETRY_RECREATE_ENTRY_ATTEMPTS_COUNT
         and not trading_mode.exchange_manager.is_backtesting
     ):
+        await asyncio.sleep(5)
         return await recreate_entry_order(
             trading_mode=trading_mode,
             symbol=symbol,

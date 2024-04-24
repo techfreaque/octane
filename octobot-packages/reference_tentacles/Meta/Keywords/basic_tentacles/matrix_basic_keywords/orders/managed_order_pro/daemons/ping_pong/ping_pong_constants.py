@@ -18,8 +18,6 @@
 # or you want your own custom solution,
 # please contact me at max@a42.ch
 
-import enum
-
 TAKE_PROFIT = "tp"
 ENTRY = "e"
 STOP_LOSS = "sl"
@@ -47,6 +45,9 @@ class PingPongConstants:
 
 class PingPongSingleDataColumns:
     GRID_ID = "grid_id"
+    ORDER_ID = "order_id"
+    GRID_INSTANCE_ID = "grid_instance_id"
+    GROUP_KEY = "group_key"
     ENTRY_COUNTER = "entry_counter"
     PING_PONG_ACTIVE = "ping_pong_active"
     SYMBOL = "symbol"
@@ -59,14 +60,3 @@ class PingPongSingleDataColumns:
     STOP_LOSS_PRICE = "stop_loss_price"
     STOP_LOSS_TAG = "stop_loss_tag"
     ENTRY_COUNTER = "entry_counter"
-
-
-# class PingPongOrderColumns(enum.Enum):
-#     SIDE = "side"
-#     AMOUNT = "amount"
-#     ENTRY_PRICE = "entry_price"
-#     ENTRY_TAG = "entry_tag"
-#     TAKE_PROFIT_PRICE = "take_profit_price"
-#     STOP_LOSS_PRICE = "stop_loss_price"
-#     TAKE_PROFIT_TAG = "take_profit_tag"
-#     STOP_LOSS_TAG = "stop_loss_tag"
