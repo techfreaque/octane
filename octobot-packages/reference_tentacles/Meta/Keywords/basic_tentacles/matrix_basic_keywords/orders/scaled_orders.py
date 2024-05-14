@@ -479,7 +479,9 @@ async def calculate_scaled_order(
             if maker.ctx.exchange_manager.is_future:
                 order_amounts = [total_amount / order_count] * order_count
             else:
-                value_per_order = total_amount * current_price / order_count
+                value_per_order = (
+                    total_amount * (sum(entry_prices) / order_count) / order_count
+                )
                 order_amounts = [
                     value_per_order / entry_price for entry_price in entry_prices
                 ]

@@ -93,9 +93,9 @@ class AbstractBlock:
     ):
         _editor_options = {**editor_options}
         if grid_columns:
-            _editor_options[
-                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value
-            ] = grid_columns
+            _editor_options[enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value] = (
+                grid_columns
+            )
 
         _other_schema_values = {**other_schema_values}
         if description:
@@ -238,7 +238,7 @@ class AbstractBlock:
         enable_price_data: bool = True,
         enable_volume: bool = True,
         enable_static_value: bool = True,
-        min_indicators: int = 1
+        min_indicators: int = 1,
         # enable_force_def_val: bool = False,
     ) -> typing.Tuple[list, list]:
         # TODO handle def_val and other parameters

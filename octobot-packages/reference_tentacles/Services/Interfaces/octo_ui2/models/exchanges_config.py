@@ -69,6 +69,16 @@ def get_exchanges_config(display_config):
                         **config_exchanges[exchange_name],
                         **validation_data[exchange_name],
                     }
+                    if config_exchanges[exchange_name].get("exchange_type"):
+                        config_exchanges[exchange_name][
+                            commons_constants.CONFIG_EXCHANGE_TYPE
+                        ] = (
+                            config_exchanges[exchange_name][
+                                commons_constants.CONFIG_EXCHANGE_TYPE
+                            ]
+                            or config_exchanges[exchange_name]["exchange_type"]
+                        )
+                        del config_exchanges[exchange_name]["exchange_type"]
                 except:
                     pass
         config_exchanges[exchange_name]["is_tested_simulated"] = (
@@ -78,18 +88,18 @@ def get_exchanges_config(display_config):
             exchange_name in ccxt_tested_exchanges
         )
         try:
-            config_exchanges[exchange_name][
-                "has_websockets"
-            ] = trading_api.supports_websockets(exchange_name, tentacles_setup_config)
+            config_exchanges[exchange_name]["has_websockets"] = (
+                trading_api.supports_websockets(exchange_name, tentacles_setup_config)
+            )
             config_exchanges[exchange_name]["supported_exchange_types"] = [
                 exchange_type.value
                 for exchange_type in trading_api.get_supported_exchange_types(
-                    exchange_name
+                    exchange_name, tentacles_setup_config
                 )
             ]
-            config_exchanges[exchange_name][
-                "default_exchange_type"
-            ] = trading_api.get_default_exchange_type(exchange_name)
+            config_exchanges[exchange_name]["default_exchange_type"] = (
+                trading_api.get_default_exchange_type(exchange_name)
+            )
         except:
             pass
     return config_exchanges
