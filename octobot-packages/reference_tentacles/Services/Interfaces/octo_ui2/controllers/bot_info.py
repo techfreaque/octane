@@ -11,16 +11,14 @@ import octobot_commons.enums as commons_enums
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_services.interfaces as interfaces
 import octobot_services.interfaces.util as interfaces_util
-from tentacles.Services.Interfaces.octo_ui2.models import neural_net_helper
+import tentacles.Services.Interfaces.octo_ui2.models.neural_net_helper as neural_net_helper
+import tentacles.Services.Interfaces.octo_ui2.models.bot_info_models as bot_info_models
 import tentacles.Services.Interfaces.web_interface as web_interface
 
 import tentacles.Services.Interfaces.octo_ui2.utils.basic_utils as basic_utils
-from tentacles.Services.Interfaces.octo_ui2.models.octo_ui2 import SHARE_YOUR_OCOBOT
+import tentacles.Services.Interfaces.octo_ui2.models.octo_ui2 as octo_ui2
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
-from tentacles.Services.Interfaces.octo_ui2.models.octo_ui2 import (
-    import_cross_origin_if_enabled,
-)
 
 try:
     import tentacles.Services.Interfaces.octo_ui2_pro.octo_ui2_pro_plugin as octo_ui2_pro_plugin
@@ -31,44 +29,18 @@ TIME_TO_START = 100
 
 
 def register_bot_info_routes(plugin):
-    route = "/bot-info/<exchange>"
-
-    cross_origin = import_cross_origin_if_enabled()
-    if SHARE_YOUR_OCOBOT:
-        _cross_origin = import_cross_origin_if_enabled(True)
-
-        @plugin.blueprint.route(route)
-        @_cross_origin(origins="*")
-        def bot_info(exchange=None):
-            return _bot_info(exchange)
-
-    elif cross_origin:
-
-        @plugin.blueprint.route(route)
-        @cross_origin(origins="*")
-        @login.login_required_when_activated
-        def bot_info(exchange=None):
-            return _bot_info(exchange)
-
-    else:
-
-        @plugin.blueprint.route(route)
-        @login.login_required_when_activated
-        def bot_info(exchange=None):
-            return _bot_info(exchange)
-
+    @octo_ui2.octane_route(
+        plugin.blueprint, route="/bot-info/<exchange>", can_be_shared_public=True
+    )
     def _bot_info(exchange=None, try_counter=0):
         exchange = (
             exchange if (exchange != "null" and exchange != "undefined") else None
         )
         is_starting = False
         try_counter += 1
-        trading_mode = trading_mode_name = None
+        trading_mode_name = None
         exchange_name = None
-        exchange_names = []
         evaluator_names = []
-        ids_by_exchange_name: dict = {}
-        exchange_ids: list = []
         exchange_id = None
         available_api_actions = None
         installed_blocks_info = None
@@ -77,7 +49,6 @@ def register_bot_info_routes(plugin):
         strategy_names = []
         trigger_time_frames = None
         real_time_strategies_active: bool = False
-        any_exchange_is_futures: bool = False
         missing_tentacles = set()
         ui_pro_installed: str = True if octo_ui2_pro_plugin is not None else False
         profiles = {
@@ -88,7 +59,6 @@ def register_bot_info_routes(plugin):
         strategy_config: dict = models.get_strategy_config(media_url, missing_tentacles)
         symbols = models.get_enabled_trading_pairs()
 
-        activated_trading_mode = models.get_config_activated_trading_mode()
         activated_evaluators = models.get_config_activated_evaluators()
         evaluator_names = [
             activated_evaluator.get_name()
@@ -103,76 +73,37 @@ def register_bot_info_routes(plugin):
                 [_time_frame.value for _time_frame in commons_enums.TimeFrames]
             )
         ]
-        should_stop_training: bool = False
-        any_neural_net_active: bool = False
+        activated_trading_mode = models.get_config_activated_trading_mode()
+        trading_mode_name: str = activated_trading_mode.get_name()
+        should_stop_training: bool = neural_net_helper.SHOULD_STOP_TRAINING
+        any_neural_net_active: bool = neural_net_helper.ANY_NEURAL_NET_ACTIVE
+        (
+            any_exchange_is_futures,
+            exchange_names,
+            exchange_ids,
+            ids_by_exchange_name,
+        ) = bot_info_models.get_multi_exchange_info()
         try:
-            exchange_managers = interfaces.AbstractInterface.get_exchange_managers()
-            for _exchange_manager in exchange_managers:
-                any_exchange_is_futures = (
-                    any_exchange_is_futures or _exchange_manager.is_future
-                )
-                exchange_names.append(_exchange_manager.exchange_name)
-                exchange_ids.append(_exchange_manager.id)
-                ids_by_exchange_name[_exchange_manager.exchange_name] = (
-                    _exchange_manager.id
-                )
-            # current exchange data
             (
-                exchange_manager,
                 exchange_name,
                 exchange_id,
-            ) = models.get_first_exchange_data(exchange)
-            if exchange_manager.trading_modes:
-                trading_mode = exchange_manager.trading_modes[0]
-                trading_mode_name = trading_mode.get_name()
-                if hasattr(trading_mode, "block_factory"):
-                    installed_blocks_info = (
-                        trading_mode.block_factory.installed_blocks_info
-                    )
-                if hasattr(trading_mode, "AVAILABLE_API_ACTIONS"):
-                    available_api_actions = trading_mode.AVAILABLE_API_ACTIONS
-                if hasattr(trading_mode, "real_time_strategy_data"):
-                    real_time_strategy_data = trading_mode.real_time_strategy_data
-                    if real_time_strategy_data:
-                        real_time_strategies_active = real_time_strategy_data.activated
-                    # enabled_time_frames = models.get_strategy_required_time_frames(
-                    #     strategies[0]
-                    # )
-                should_stop_training = neural_net_helper.SHOULD_STOP_TRAINING
-                any_neural_net_active = neural_net_helper.ANY_NEURAL_NET_ACTIVE
-                # enabled_time_frames = (
-                #     models.get_strategy_required_time_frames(activated_strategy)
-                #     if activated_strategy
-                #     else []
-                # )
-                traded_time_frames = [
-                    tf.value for tf in models.get_traded_time_frames(exchange_manager)
-                ]
-
-                if (
-                    len(trading_mode.exchange_manager.trading_modes)
-                    and len(trading_mode.exchange_manager.trading_modes[0].producers)
-                    and hasattr(
-                        trading_mode.exchange_manager.trading_modes[0].producers[0],
-                        "trigger_time_frames",
-                    )
-                ):
-                    trigger_time_frames = (
-                        trading_mode.exchange_manager.trading_modes[0]
-                        .producers[0]
-                        .trigger_time_frames
-                    )
-                # config_candles_count = models.get_config_required_candles_count(
-                #     exchange_manager
-                # )
-
-            else:
-                trading_mode_name = None
-
-        except (KeyError, Exception) as error:
+                traded_time_frames,
+                trigger_time_frames,
+                exchange_manager,
+            ) = bot_info_models.get_current_exchange_info(exchange_name, exchange_names)
+            (
+                installed_blocks_info,
+                available_api_actions,
+                real_time_strategies_active,
+            ) = bot_info_models.get_trading_mode_info(exchange_manager)
+        except bot_info_models.NoSingleExchangeDataException:
             if activated_trading_mode is None:
                 basic_utils.get_octo_ui_2_logger().error(
                     "No trading/strategy mode is activated. Please activate at least one trading/strategy mode."
+                )
+            elif not models.get_active_exchanges():
+                basic_utils.get_octo_ui_2_logger().error(
+                    "No exchange is activated. Please activate at least one exchange."
                 )
             else:
                 is_starting = True
@@ -182,8 +113,8 @@ def register_bot_info_routes(plugin):
                 if running_seconds < TIME_TO_START:
                     interfaces_util.run_in_bot_async_executor(asyncio.sleep(2))
                     return _bot_info(exchange=exchange, try_counter=try_counter)
-                basic_utils.get_octo_ui_2_logger().exception(
-                    error, False, "Failed to get bot info"
+                basic_utils.get_octo_ui_2_logger().error(
+                    "Failed to exchange info - Seems like there is an issue with your exchange or exchange settings",
                 )
         return {
             "success": True,
@@ -212,8 +143,11 @@ def register_bot_info_routes(plugin):
                 "any_neural_net_active": any_neural_net_active,
                 "profiles": profiles,
                 "can_logout": flask_login.current_user.is_authenticated,
-                "is_owner": not SHARE_YOUR_OCOBOT
-                or (SHARE_YOUR_OCOBOT and flask_login.current_user.is_authenticated),
+                "is_owner": not octo_ui2.SHARE_YOUR_OCOBOT
+                or (
+                    octo_ui2.SHARE_YOUR_OCOBOT
+                    and flask_login.current_user.is_authenticated
+                ),
                 "any_exchange_is_futures": any_exchange_is_futures,
                 "evaluator_names": evaluator_names,
                 "time_frames": available_time_frames,
@@ -235,7 +169,7 @@ def register_bot_info_routes(plugin):
         }
 
     route = "/logout"
-    if cross_origin := import_cross_origin_if_enabled():
+    if cross_origin := octo_ui2.import_cross_origin_if_enabled():
 
         @plugin.blueprint.route(route)
         @cross_origin(origins="*")
@@ -257,9 +191,9 @@ def register_bot_info_routes(plugin):
         )
 
     route = "/profile_media/<path:path>"
-    cross_origin = import_cross_origin_if_enabled()
-    if SHARE_YOUR_OCOBOT:
-        _cross_origin = import_cross_origin_if_enabled(True)
+    cross_origin = octo_ui2.import_cross_origin_if_enabled()
+    if octo_ui2.SHARE_YOUR_OCOBOT:
+        _cross_origin = octo_ui2.import_cross_origin_if_enabled(True)
 
         @plugin.blueprint.route(route)
         @_cross_origin(origins="*")
@@ -298,7 +232,7 @@ def register_bot_info_routes(plugin):
         return flask.send_from_directory(os.path.join(base_dir, base_path), file_name)
 
     route = "/logs"
-    if cross_origin := import_cross_origin_if_enabled():
+    if cross_origin := octo_ui2.import_cross_origin_if_enabled():
 
         @plugin.blueprint.route(route)
         @cross_origin(origins="*")

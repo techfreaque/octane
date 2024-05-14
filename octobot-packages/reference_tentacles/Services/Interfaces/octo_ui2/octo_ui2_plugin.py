@@ -70,9 +70,9 @@ class O_UI(plugins.AbstractWebInterfacePlugin):
         config["optimizer_campaigns_to_load"][
             campaign_config[commons_constants.CONFIG_NAME]
         ] = True
-        config[
-            commons_constants.CONFIG_CURRENT_LIVE_ID
-        ] = trading_util.get_current_bot_live_id(interfaces_util.get_edited_config())
+        config[commons_constants.CONFIG_CURRENT_LIVE_ID] = (
+            trading_util.get_current_bot_live_id(interfaces_util.get_edited_config())
+        )
         return config
 
     @classmethod

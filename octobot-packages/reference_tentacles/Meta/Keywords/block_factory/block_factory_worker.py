@@ -109,6 +109,9 @@ class BlockFactory:
 
     def soft_refresh_block_factory(self, trading_mode, inputs: dict) -> None:
         self.trading_mode = trading_mode
+        if not self.check_if_exchange_enabled(trading_mode):
+            return
+
         self._available_time_frames = None
         self._available_pairs = None
         self.current_nodes_instances_by_type = {}
@@ -123,6 +126,15 @@ class BlockFactory:
         # remove so it wont be use in execution mode
         self.trading_mode = None
 
+    @staticmethod
+    def check_if_exchange_enabled(trading_mode) -> bool:
+        try:
+            trading_mode.exchange_manager.config
+            return True
+        except AttributeError:
+            trading_mode.logger.error("Exchange is not enabled or initialized yet")
+            return False
+
     async def run_block_factory(
         self,
         ctx: context_management.Context,
@@ -133,6 +145,8 @@ class BlockFactory:
         self.ctx: context_management.Context = ctx
         self.execution_action: typing.Optional[str] = action
         self.execution_action_data: typing.Optional[dict] = action_data
+        if not self.check_if_exchange_enabled(ctx):
+            return
         self.connect_blocks()
         self.last_run_plot_id: int = 0
 
@@ -204,14 +218,14 @@ class BlockFactory:
             used_block_factory.candles[symbol] = {}
         if time_frame not in used_block_factory.candles[symbol]:
             used_block_factory.candles[symbol][time_frame] = {}
-        used_block_factory.candles[symbol][time_frame][
-            source_name
-        ] = await public_exchange_data.get_candles_from_name(
-            used_block_factory,
-            source_name=source_name,
-            time_frame=time_frame,
-            symbol=symbol,
-            max_history=True,
+        used_block_factory.candles[symbol][time_frame][source_name] = (
+            await public_exchange_data.get_candles_from_name(
+                used_block_factory,
+                source_name=source_name,
+                time_frame=time_frame,
+                symbol=symbol,
+                max_history=True,
+            )
         )
         self.end_measure_time(
             starting_time,
@@ -612,3 +626,7 @@ class BlockFactory:
                             f"Failed to load Strategy Block from {sub_module_name}",
                         )
         return available_block_modules, available_block_modules_info
+
+
+class ExchangeOfflineException(Exception):
+    pass

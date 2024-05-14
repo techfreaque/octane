@@ -1,4 +1,5 @@
 import functools
+from flask_cors import cross_origin
 import octobot_commons.os_util as os_util
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.flask_util.cors as cors_util
@@ -17,8 +18,6 @@ def dev_mode_is_on():
 
 def import_cross_origin_if_enabled(get_anyway: bool = False):
     if CORS_ENABLED or get_anyway:
-        from flask_cors import cross_origin
-
         return cross_origin
 
 
@@ -30,23 +29,24 @@ def octane_route(
     can_be_shared_public: bool = False,
 ):
     def decorator(func):
-        @blueprint.route(route, methods=methods)
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            if cross_origin := import_cross_origin_if_enabled():
-                return cross_origin(
-                    origins=cors_util.get_user_defined_cors_allowed_origins()
-                )(login.login_required_when_activated(func))(*args, **kwargs)
-            elif login_always_required:
-                if dev_mode_is_on():
-                    return login.login_required_when_activated(func)(*args, **kwargs)
-                else:
-                    return login.active_login_required(func)(*args, **kwargs)
-            else:
-                if can_be_shared_public and SHARE_YOUR_OCOBOT:
-                    return func(*args, **kwargs)
-                return login.login_required_when_activated(func)(*args, **kwargs)
+            return func(*args, **kwargs)
 
-        return wrapper
+        route_decorator = blueprint.route(route, methods=methods)
+        if can_be_shared_public and SHARE_YOUR_OCOBOT:
+            # no authentication
+            return route_decorator(wrapper)
+        if CORS_ENABLED:
+            # cors and auth if enabled
+            return route_decorator(cross_origin(origins="*")(wrapper))
+        if login_always_required:
+            if dev_mode_is_on():
+                # force no login required
+                return route_decorator(login.login_required_when_activated(wrapper))
+            else:
+                return route_decorator(login.active_login_required(wrapper))
+        else:
+            return route_decorator(login.login_required_when_activated(wrapper))
 
     return decorator

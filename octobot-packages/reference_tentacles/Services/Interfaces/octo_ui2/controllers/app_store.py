@@ -12,7 +12,7 @@ import tentacles.Services.Interfaces.web_interface.util as util
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.login as login
 
-import tentacles.Services.Interfaces.octo_ui2.models.app_store as app_store_models
+import tentacles.Services.Interfaces.octo_ui2.models.app_store_models as app_store_models
 import tentacles.Services.Interfaces.octo_ui2.utils.basic_utils as basic_utils
 from tentacles.Services.Interfaces.octo_ui2.models.octo_ui2 import (
     SHARE_YOUR_OCOBOT,
