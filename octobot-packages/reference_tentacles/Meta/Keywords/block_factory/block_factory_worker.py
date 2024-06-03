@@ -350,7 +350,7 @@ class BlockFactory:
             title="Strategy Flow Mode Configuration",
             parent_input_name=block_factory_enums.CURRENT_NODES_NAME,
         )
-
+        self.init_hidden_node_setings(inputs, block_factory_enums.MODE_CONFIG_NAME)
         self.UI.user_input(
             block_factory_enums.CURRENT_NODE_CONFIG_NAME,
             commons_enums.UserInputTypes.OBJECT,
@@ -496,6 +496,35 @@ class BlockFactory:
                 commons_enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value: 12,
             },
         )
+
+    def init_hidden_node_setings(self, inputs, parent_input_name):
+        hidden_inputs = {
+            "data": (commons_enums.UserInputTypes.OBJECT, None),
+            "dragging": (commons_enums.UserInputTypes.BOOLEAN, None),
+            "height": (commons_enums.UserInputTypes.FLOAT, None),
+            "id": (commons_enums.UserInputTypes.TEXT, None),
+            "position": (
+                commons_enums.UserInputTypes.OBJECT,
+                None,
+            ),
+            "positionAbsolute": (
+                commons_enums.UserInputTypes.OBJECT,
+                None,
+            ),
+            "selected": (commons_enums.UserInputTypes.BOOLEAN, None),
+            "type": (commons_enums.UserInputTypes.TEXT, None),
+            "width": (commons_enums.UserInputTypes.FLOAT, None),
+        }
+        for input_name, input_detail in hidden_inputs.items():
+            self.UI.user_input(
+                input_name,
+                input_detail[0],
+                input_detail[1],
+                inputs,
+                parent_input_name=parent_input_name,
+                show_in_summary=False,
+                show_in_optimizer=False,
+            )
 
     def create_node(self, node: dict, inputs: dict) -> None:
         block_type_name: str = node["data"]["nodeType"]
