@@ -105,7 +105,7 @@ def start_backtesting_using_current_bot_data(data_sources, exchange_ids, source,
                                              profile_id=None,
                                              enable_logs=False, auto_stop=False, name=None,
                                              collector_start_callback=None, start_callback=None):
-    use_current_bot_data = data_sources == [backtesting_constants.CONFIG_CURRENT_BOT_DATA]
+    use_current_bot_data = backtesting_constants.CONFIG_CURRENT_BOT_DATA in data_sources
     files = None if use_current_bot_data else data_sources
     return _start_backtesting(files, source, reset_tentacle_config=reset_tentacle_config,
                               run_on_common_part_only=False,

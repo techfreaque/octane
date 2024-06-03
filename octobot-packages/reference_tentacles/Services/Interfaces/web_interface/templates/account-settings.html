@@ -7,7 +7,7 @@
 {% set added_class = 'new_element' %}
 
 {% block additional_style %}
-  <link rel="stylesheet" href="{{ url_for('static', filename = 'css/components/configuration.css', u = LAST_UPDATED_STATIC_FILES) }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components/configuration.css', u=LAST_UPDATED_STATIC_FILES) }}" />
   <style>
     .card,
     .card-body,
@@ -110,7 +110,7 @@
     <!-- Services -->
     <div id="AddService-template-default">
       {% for service in services_list %}
-        <div id="AddService-template-default-{{ service }}">{{ m_config_service_card.config_service_card(config_services, service, services_list[service], add_class = added_class, no_select = True, default_values = True) }}</div>
+        <div id="AddService-template-default-{{ service }}">{{ m_config_service_card.config_service_card(config_services, service, services_list[service], add_class=added_class, no_select=True, default_values=True) }}</div>
       {% endfor %}
     </div>
   </div>
@@ -118,7 +118,11 @@
 {% endblock %}
 
 {% block additional_scripts %}
-  <script src="{{ url_for('static', filename = 'js/common/resources_rendering.js', u = LAST_UPDATED_STATIC_FILES) }}"></script>
-  <script src="{{ url_for('static', filename = 'js/common/exchange_accounts.js', u = LAST_UPDATED_STATIC_FILES) }}"></script>
-  <script src="{{ url_for('static', filename = 'js/components/configuration.js', u = LAST_UPDATED_STATIC_FILES) }}"></script>
+  <script src="{{ url_for('static', filename='js/common/resources_rendering.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+  <script src="{{ url_for('static', filename='js/common/exchange_accounts.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+  <script>
+    // fix to remove error from console
+    function startTutorialIfNecessary(type) {}
+  </script>
+  <script src="{{ url_for('static', filename='js/components/configuration.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock %}

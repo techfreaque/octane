@@ -979,6 +979,7 @@ class AbstractBlock:
             ),
             parent_input_name=block_factory_enums.CURRENT_NODES_NAME,
         )
+        self.block_factory.init_hidden_node_setings(inputs, self.block_id)
         self.node_parent_input: str = self._init_node_config(
             inputs=inputs,
             node=node_config,
@@ -1049,6 +1050,8 @@ class AbstractBlock:
             None,
             inputs,
             parent_input_name=self.block_id,
+            show_in_optimizer=False,
+            show_in_summary=False,
         )
         return current_nodes_in_output_name
 
