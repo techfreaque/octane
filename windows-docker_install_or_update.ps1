@@ -2,20 +2,19 @@ git pull
 
 $sourceFile = 'scripts/.env-example-unix'
 $destinationFile = '.env'
-if (-not (test-path $destinationFile))
-{
-  $opts = @{'path' = $sourceFile; 'destination' = $destinationFile; 'confirm' = $false}
+if (-not (test-path $destinationFile)) {
+  $opts = @{'path' = $sourceFile; 'destination' = $destinationFile; 'confirm' = $false }
   copy-item @opts
 }
-if (!(Test-Path "custom_requirements.txt"))
-{
-    Copy-Item "scripts/custom_requirements.txt.template" -Destination "custom_requirements.txt"
+if (!(Test-Path "custom_requirements.txt")) {
+  Copy-Item "scripts/custom_requirements.txt.template" -Destination "custom_requirements.txt"
 }
 
 $DOCKER_PYTHON_VERSION = $env:DOCKER_PYTHON_VERSION
 if (-not $DOCKER_PYTHON_VERSION) {
-    $DOCKER_PYTHON_VERSION = "3.11"
+  $DOCKER_PYTHON_VERSION = "3.11"
 }
+Write-Output using python $DOCKER_PYTHON_VERSION
 
 docker build --tag octane --build-arg "DOCKER_PYTHON_VERSION=$DOCKER_PYTHON_VERSION" -f scripts/Dockerfile-win .
 
