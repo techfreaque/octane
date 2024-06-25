@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot-Tentacles
+#  Drakkar-Software OctoBot-Interfaces
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -13,11 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import tentacles.Trading.Exchange.huobi as huobi_tentacle
+import flask
 
 
-class HuobiPro(huobi_tentacle.Huobi):
-
-    @classmethod
-    def get_name(cls):
-        return 'huobipro'
+def register(blueprint):
+    @blueprint.route("/robots.txt")
+    def robots():
+        return flask.render_template("robots.txt")

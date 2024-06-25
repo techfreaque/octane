@@ -4,7 +4,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.14] - 2024-11-24
+## [1.2.24] - 2024-06-16
+### Updated
+- Exchanges: fix api key format errors
+
+## [1.2.23] - 2024-06-06
+### Updated
+- Exchanges: is_api_permission_error api
+
+## [1.2.22] - 2024-05-10
+### Fixed
+- Coinbase: handle UnexpectedDER error
+
+## [1.2.21] - 2024-05-10
+### Fixed
+- Coinbase: missing trading permission check
+
+## [1.2.20] - 2024-05-01
+### Fixed
+- Coinbase: handle removed /v2/user/auth endpoint
+
+## [1.2.19] - 2024-04-17
+### Fixed
+- Coinbase: handle other invalid API key format
+
+## [1.2.18] - 2024-04-16
+### Fixed
+- Coinbase: handle invalid API key format
+
+## [1.2.17] - 2024-04-15
+### Updated
+- CCXT to 4.2.95
+
+## [1.2.16] - 2024-04-13
+### Fixed
+- BinanceUS api rights checks
+
+## [1.2.15] - 2024-04-02
+### Added
+- BinanceUS & Coinbase
+
+## [1.2.14] - 2024-01-24
 ### Added
 - Bingx _get_api_key_rights
 

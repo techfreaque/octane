@@ -37,7 +37,13 @@ def profile_data_dict():
         'crypto_currencies': [
             {
                 'trading_pairs': ['BTC/USDT'],
-                'name': 'Bitcoin'
+                'name': 'Bitcoin',
+                'enabled': True
+            },
+            {
+                'trading_pairs': ['ETH/USDT'],
+                'name': 'ETH',
+                'enabled': False
             }
         ], 'exchanges': [
             {
@@ -100,6 +106,7 @@ def profile_data_dict():
         }
     }
 
+
 @pytest.fixture
 def min_profile_data_dict():
     return {
@@ -109,6 +116,10 @@ def min_profile_data_dict():
         'crypto_currencies': [
             {
                 'trading_pairs': ['BTC/USDT'],
+            },
+            {
+                'trading_pairs': ['ETH/USDT'],
+                'enabled': False
             }
         ], 'trading': {
             'reference_market': 'BTC',
@@ -204,6 +215,10 @@ def test_from_min_dict(min_profile_data_dict):
     assert profile_data.profile_details.name == "min_profile"
     assert profile_data.crypto_currencies[0].trading_pairs == ['BTC/USDT']
     assert profile_data.crypto_currencies[0].name is None
+    assert profile_data.crypto_currencies[0].enabled is True
+    assert profile_data.crypto_currencies[1].trading_pairs == ['ETH/USDT']
+    assert profile_data.crypto_currencies[1].name is None
+    assert profile_data.crypto_currencies[1].enabled is False
     assert profile_data.exchanges == []
     assert profile_data.trader.enabled is True
     assert profile_data.trader_simulator.enabled is False

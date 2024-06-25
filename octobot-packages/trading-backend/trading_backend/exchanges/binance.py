@@ -13,10 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import ccxt
 import aiohttp.streams
 
 import trading_backend.exchanges as exchanges
-import trading_backend.errors as errors
 import trading_backend.enums
 
 class Binance(exchanges.Exchange):
@@ -77,7 +77,10 @@ class Binance(exchanges.Exchange):
         )
 
     async def _get_api_key_rights(self) -> list[trading_backend.enums.APIKeyRights]:
-        restrictions = await self._exchange.connector.client.sapi_get_account_apirestrictions()
+        try:
+            restrictions = await self._exchange.connector.client.sapi_get_account_apirestrictions()
+        except ValueError as err:
+            raise ccxt.AuthenticationError(f"Invalid key format ({err})")
         rights = []
         if restrictions.get('enableReading'):
             rights.append(trading_backend.enums.APIKeyRights.READING)

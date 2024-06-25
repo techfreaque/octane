@@ -21,6 +21,7 @@
 import decimal
 import numpy
 import octobot_trading.enums as trading_enums
+import octobot_trading.modes.script_keywords.basic_keywords.price as price_keywords
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_errors as matrix_errors
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.order_placement as order_placement
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.calculators.position_sizing as position_sizing
@@ -29,7 +30,6 @@ import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.mana
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.utilities as matrix_utilities
 import tentacles.Meta.Keywords.scripting_library.orders.order_types.create_order as create_order
 import tentacles.Meta.Keywords.scripting_library.orders.position_size as position_size
-import tentacles.Meta.Keywords.scripting_library.orders.offsets as offsets
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
 
 
@@ -338,8 +338,12 @@ async def calculate_scaled_order(
             "Not required parameters must be set to none "
         )
 
-    scale_from_price = await offsets.get_offset(maker.ctx, scale_from, side=side)
-    scale_to_price = await offsets.get_offset(maker.ctx, scale_to, side=side)
+    scale_from_price = await price_keywords.get_price_with_offset(
+        maker.ctx, scale_from, side=side
+    )
+    scale_to_price = await price_keywords.get_price_with_offset(
+        maker.ctx, scale_to, side=side
+    )
     normalized_scale_from_price, normalized_scale_to_price = get_normalized_scale(
         scale_from_price, scale_to_price, side
     )

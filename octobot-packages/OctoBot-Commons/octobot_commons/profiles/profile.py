@@ -163,7 +163,12 @@ class Profile:
         Validate this profile configuration against self.schema_path
         :return:
         """
-        json_util.validate(self.as_dict(), self.schema_path)
+        try:
+            json_util.validate(self.as_dict(), self.schema_path)
+        except FileNotFoundError as err:
+            commons_logging.get_logger("ProfileSaver").warning(
+                f"Impossible to validate profile: {err} ({err.__class__.__name__})"
+            )
 
     def validate_and_save_config(self) -> None:
         """

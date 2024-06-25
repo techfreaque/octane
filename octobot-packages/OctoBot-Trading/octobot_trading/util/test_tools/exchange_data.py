@@ -14,10 +14,18 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import dataclasses
-
+import typing
 
 import octobot_commons.dataclasses
 import octobot_trading.exchanges
+
+
+@dataclasses.dataclass
+class IncompatibleAssetDetails(
+    octobot_commons.dataclasses.FlexibleDataclass, octobot_commons.dataclasses.UpdatableDataclass
+):
+    symbol: str = ""
+    updated_at: float = 0
 
 
 @dataclasses.dataclass
@@ -29,6 +37,16 @@ class ExchangeAuthDetails(octobot_commons.dataclasses.FlexibleDataclass, octobot
     sandboxed: bool = False
     broker_enabled: bool = False
     encrypted: str = ""
+    exchange_account_id: typing.Union[str, None] = None
+    incompatible_assets: typing.Union[list[IncompatibleAssetDetails], None] = dataclasses.field(default_factory=list)
+
+    # pylint: disable=E1134
+    def __post_init__(self):
+        if self.incompatible_assets and isinstance(self.incompatible_assets[0], dict):
+            self.incompatible_assets = (
+                [IncompatibleAssetDetails.from_dict(asset) for asset in self.incompatible_assets]
+                if self.incompatible_assets else []
+            )
 
 
 @dataclasses.dataclass

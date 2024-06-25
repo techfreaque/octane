@@ -388,7 +388,8 @@ class CommunityFeedAttrs(enum.Enum):
 
 
 class CommunityChannelTypes(enum.Enum):
-    SIGNAL = "t"  # to check
+    SIGNAL = "t"
+    TRADINGVIEW = "tv"
     ALERT = "alert"
 
 
@@ -406,6 +407,7 @@ class SignalsAttrs(enum.Enum):
 class InitializationEventExchangeTopics(enum.Enum):
     POSITIONS = "positions"
     BALANCE = "balance"
+    PROFITABILITY = "profitability"
     ORDERS = "orders"
     TRADES = "trades"
     CONTRACTS = "contracts"

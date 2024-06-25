@@ -22,13 +22,12 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.constants as constants
 import octobot_trading.errors as trading_errors
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
-import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
 import octobot_trading.personal_data as trading_personal_data
 
 
 def _disabled_okx_algo_order_creation(f):
-    async def wrapper(*args, **kwargs):
+    async def disabled_okx_algo_order_creation_wrapper(*args, **kwargs):
         # Algo order prevent bundled orders from working as they require to use the regular order api
         # Since the regular order api works for limit and market orders as well, us it all the time
         # Algo api is used for stop losses.
@@ -41,16 +40,16 @@ def _disabled_okx_algo_order_creation(f):
             return await f(*args, **kwargs)
         finally:
             client.privatePostTradeOrderAlgo = connector.get_saved_data(connector.PRIVATE_POST_TRADE_ORDER_ALGO)
-    return wrapper
+    return disabled_okx_algo_order_creation_wrapper
 
 
 def _enabled_okx_algo_order_creation(f):
-    async def wrapper(*args, **kwargs):
+    async def enabled_okx_algo_order_creation_wrapper(*args, **kwargs):
         # Used to force algo orders availability and avoid concurrency issues due to _disabled_algo_order_creation
         connector = args[0]
         connector.client.privatePostTradeOrderAlgo = connector.get_saved_data(connector.PRIVATE_POST_TRADE_ORDER_ALGO)
         return await f(*args, **kwargs)
-    return wrapper
+    return enabled_okx_algo_order_creation_wrapper
 
 
 class OkxConnector(ccxt_connector.CCXTConnector):
@@ -89,6 +88,17 @@ class OkxConnector(ccxt_connector.CCXTConnector):
 
 class Okx(exchanges.RestExchange):
     DESCRIPTION = ""
+
+    # text content of errors due to orders not found errors
+    EXCHANGE_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # OKX ex: okx {"msg":"API key doesn't exist","code":"50119"}
+        ("api", "key", "doesn't exist"),
+    ]
+    # text content of errors due to account compliancy issues
+    EXCHANGE_COMPLIANCY_ERRORS: typing.List[typing.Iterable[str]] = [
+        # OKX ex: Trading of this pair or contract is restricted due to local compliance requirements
+        ("restricted", "compliance"),
+    ]
 
     FIX_MARKET_STATUS = True
     ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE = True

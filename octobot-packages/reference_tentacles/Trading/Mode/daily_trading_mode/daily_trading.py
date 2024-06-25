@@ -187,6 +187,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     STOP_ONLY = "STOP_ONLY"
     REDUCE_ONLY_KEY = "REDUCE_ONLY"
     TAG_KEY = "TAG"
+    EXCHANGE_ORDER_IDS = "EXCHANGE_ORDER_IDS"
     ORDER_EXCHANGE_CREATION_PARAMS = "ORDER_EXCHANGE_CREATION_PARAMS"
     CREATE_ORDER_DATA_PARAM = "data"
     TARGET_PROFIT_MODE_ENTRY_QUANTITY_SIDE = trading_enums.TradeOrderSide.BUY
@@ -432,7 +433,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     def _get_ratio(self, currency):
         try:
-            return self.get_holdings_ratio(currency)
+            return self.exchange_manager.exchange_personal_data.portfolio_manager. \
+                portfolio_value_holder.get_holdings_ratio(currency)
         except trading_errors.MissingPriceDataError:
             # Can happen when ref market is not in the pair, data will be available later (ticker is now registered)
             return self.DEFAULT_HOLDING_RATIO

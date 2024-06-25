@@ -44,10 +44,7 @@ class TestHollaexRealExchangeTester(RealExchangeTester):
 
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
-            assert market_status
-            assert market_status[Ecmsc.TYPE.value] == self.MARKET_STATUS_TYPE
-            assert market_status[Ecmsc.SYMBOL.value] in (self.SYMBOL, self.SYMBOL_2, self.SYMBOL_3)
-            assert market_status[Ecmsc.PRECISION.value]
+            self.ensure_required_market_status_values(market_status)
             assert 1e-08 <= market_status[Ecmsc.PRECISION.value][
                 Ecmsc.PRECISION_AMOUNT.value] < 1.0     # to be fixed in tentacle
             assert 1e-08 <= market_status[Ecmsc.PRECISION.value][
@@ -57,6 +54,7 @@ class TestHollaexRealExchangeTester(RealExchangeTester):
                                     Ecmsc.LIMITS_PRICE.value,
                                     Ecmsc.LIMITS_COST.value))
             self.check_market_status_limits(market_status,
+                                            normal_price_max=30000,
                                             normal_cost_min=1e-07,
                                             low_price_min=0.01,  # XRP/USDT instead of /BTC
                                             low_price_max=1,

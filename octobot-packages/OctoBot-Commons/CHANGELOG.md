@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.47] - 2023-06-12
+### Added
+[CommunityChannelTypes] add TRADINGVIEW
+
+## [1.9.46] - 2023-05-26
+### Updated
+ProfileData: added enable field on traded pairs
+
+## [1.9.45] - 2023-04-21
+### Added
+certify_aiohttp_client_session
+
+## [1.9.44] - 2023-04-18
+### Added
+ssl_fallback_aiohttp_client_session
+
+## [1.9.43] - 2023-03-21
+### Added
+PROFITABILITY to InitializationEventExchangeTopics
+
 ## [1.9.42] - 2023-02-20
 ### Removed
 - usd_like_value from MinimalFund

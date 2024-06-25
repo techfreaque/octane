@@ -31,6 +31,7 @@ from octobot_trading.exchanges.util.exchange_util import (
     get_partners_explanation_message,
     get_enabled_exchanges,
     get_local_exchange_manager,
+    exchange_error_translator,
     is_compatible_account,
     get_historical_ohlcv,
     get_exchange_type,
@@ -44,6 +45,7 @@ from octobot_trading.exchanges.util.exchange_util import (
     get_exchange_class_from_name,
     get_auto_filled_exchange_names,
     get_exchange_details,
+    is_error_on_this_type,
 )
 from octobot_trading.exchanges.util import websockets_util
 from octobot_trading.exchanges.util.websockets_util import (
@@ -63,6 +65,7 @@ __all__ = [
     "get_partners_explanation_message",
     "get_enabled_exchanges",
     "get_local_exchange_manager",
+    "exchange_error_translator",
     "is_compatible_account",
     "get_historical_ohlcv",
     "get_exchange_type",
@@ -76,6 +79,7 @@ __all__ = [
     "get_exchange_class_from_name",
     "get_auto_filled_exchange_names",
     "get_exchange_details",
+    "is_error_on_this_type",
     "force_disable_web_socket",
     "check_web_socket_config",
     "search_websocket_class",

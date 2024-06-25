@@ -18,6 +18,7 @@ import pytest
 import ccxt.async_support
 import trading_backend.exchanges as exchanges
 import tests.util.create_order_tests as create_order_tests
+import tests.util.account_tests as account_tests
 from tests import okx_exchange
 
 
@@ -36,3 +37,9 @@ async def test_get_orders_parameters(okx_exchange):
         result_is_list=True,
         post_order_mock_return_value={'data': [{}]}
     )
+
+
+@pytest.mark.asyncio
+async def test_invalid_api_key_get_api_key_rights(okx_exchange):
+    exchange = exchanges.OKX(okx_exchange)
+    await account_tests.check_invalid_account_keys(exchange)

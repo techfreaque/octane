@@ -54,8 +54,9 @@ class ServiceFactory:
             return await self._perform_checkup(service)
         else:
             if service.get_should_warn():
-                service.creation_error_message = \
-                    "Configuration is missing, wrong or incomplete. This is normal if you did not configure it yet."
+                service.creation_error_message = (
+                    f"Invalid configuration, visit {service.get_help_page()} for more details."
+                )
                 self.logger.info(f"{service.get_name()} can't be initialized: {service.creation_error_message}")
         return False
 

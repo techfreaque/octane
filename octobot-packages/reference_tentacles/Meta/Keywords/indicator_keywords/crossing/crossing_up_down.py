@@ -21,7 +21,7 @@
 from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums import (
     PriceDataSources,
 )
-import tentacles.Meta.Keywords.scripting_library.orders.offsets.offset as offset
+import octobot_trading.modes.script_keywords.basic_keywords.price as price_keywords
 from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.data.public_exchange_data import (
     get_candles_,
 )
@@ -70,7 +70,9 @@ async def crossing_up_(
                                 candle_id - max_cross_down_lookback : candle_id - delay
                             ]
                         ) - float(
-                            await offset.get_offset(maker.ctx, "-" + max_cross_down)
+                            await price_keywords.get_price_with_offset(
+                                maker.ctx, "-" + max_cross_down
+                            )
                         ) < min(
                             crossing_values[
                                 candle_id - max_cross_down_lookback : candle_id - delay
@@ -133,7 +135,9 @@ async def crossing_up_(
                                 candle_id - max_cross_down_lookback : candle_id
                             ]
                         ) - float(
-                            await offset.get_offset(maker.ctx, "-" + max_cross_down)
+                            await price_keywords.get_price_with_offset(
+                                maker.ctx, "-" + max_cross_down
+                            )
                         ) < min(
                             lows[candle_id - max_cross_down_lookback : candle_id]
                         )
@@ -204,7 +208,9 @@ async def crossing_down_(
                                 candle_id - max_cross_up_lookback : candle_id - delay
                             ]
                         ) + float(
-                            await offset.get_offset(maker.ctx, "-" + max_cross_up)
+                            await price_keywords.get_price_with_offset(
+                                maker.ctx, "-" + max_cross_up
+                            )
                         ) > max(
                             crossing_values[
                                 candle_id - max_cross_up_lookback : candle_id - delay
@@ -266,7 +272,9 @@ async def crossing_down_(
                                 candle_id - max_cross_up_lookback : candle_id
                             ]
                         ) + float(
-                            await offset.get_offset(maker.ctx, "-" + max_cross_up)
+                            await price_keywords.get_price_with_offset(
+                                maker.ctx, "-" + max_cross_up
+                            )
                         ) > max(
                             highs[candle_id - max_cross_up_lookback : candle_id]
                         )

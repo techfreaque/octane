@@ -35,6 +35,7 @@ class ProfileDetailsData(octobot_commons.dataclasses.FlexibleDataclass):
 class CryptoCurrencyData(octobot_commons.dataclasses.FlexibleDataclass):
     trading_pairs: list[str]
     name: typing.Union[str, None] = None
+    enabled: bool = True
 
 
 @dataclasses.dataclass
@@ -160,11 +161,11 @@ class ProfileData(octobot_commons.dataclasses.MinimizableDataclass):
                     {
                         "trading_pairs": details.get(constants.CONFIG_CRYPTO_PAIRS, []),
                         "name": currency,
+                        "enabled": details.get(constants.CONFIG_ENABLED_OPTION, True),
                     }
                     for currency, details in content[
                         constants.CONFIG_CRYPTO_CURRENCIES
                     ].items()
-                    if details.get(constants.CONFIG_ENABLED_OPTION, True)
                 ],
                 "trader": {
                     "enabled": content[constants.CONFIG_TRADER][
@@ -220,7 +221,7 @@ class ProfileData(octobot_commons.dataclasses.MinimizableDataclass):
                 constants.CONFIG_CRYPTO_CURRENCIES: {
                     crypto_currency.name: {
                         constants.CONFIG_CRYPTO_PAIRS: crypto_currency.trading_pairs,
-                        constants.CONFIG_ENABLED_OPTION: True,
+                        constants.CONFIG_ENABLED_OPTION: crypto_currency.enabled,
                     }
                     for crypto_currency in self.crypto_currencies
                 },

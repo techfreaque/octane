@@ -69,6 +69,9 @@ class RestExchange(abstract_exchange.AbstractExchange):
     REQUIRES_AUTHENTICATION = False  # set True when even normally public apis require authentication
     HAS_FETCHED_DETAILS = False  # set True when this exchange details (urls etc) have to be fetched before
     # starting the exchange
+    IS_SKIPPING_EMPTY_CANDLES_IN_OHLCV_FETCH = False    # set True when the exchange is known for not returning any
+    # candle when no traded happened during a candle time frame. In this case, a missing candle in backtesting won't
+    # trigger an error
     """
     RestExchange is using its exchange connector to interact with the exchange.
     It should be used regardless of the exchange or the exchange library (ccxt or other)
@@ -87,6 +90,17 @@ class RestExchange(abstract_exchange.AbstractExchange):
 
     # Set when order cost is not (yet) accurately computed for a given exchange
     MAX_INCREASED_POSITION_QUANTITY_MULTIPLIER = constants.ONE
+
+    # text content of errors due to orders not found errors
+    EXCHANGE_ORDER_NOT_FOUND_ERRORS: typing.List[typing.Iterable[str]] = []
+    # when ccxt is raising ccxt.ExchangeError instead of ccxt.AuthenticationError on api key permissions issue
+    # text content of errors due to api key permissions issues
+    EXCHANGE_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = []
+    # text content of errors due to account compliancy issues
+    EXCHANGE_COMPLIANCY_ERRORS: typing.List[typing.Iterable[str]] = []
+    # text content of errors due to exchange local account permissions (ex: accounts from X country can't trade XYZ)
+    # text content of errors due to traded assets for account
+    EXCHANGE_ACCOUNT_TRADED_SYMBOL_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = []
 
     DEFAULT_CONNECTOR_CLASS = ccxt_connector.CCXTConnector
 
@@ -151,7 +165,8 @@ class RestExchange(abstract_exchange.AbstractExchange):
                 stop_price=stop_price, side=side, current_price=current_price,
                 reduce_only=reduce_only, params=params)
             self.logger.debug(f"Created order: {created_order}")
-            return await self._verify_order(created_order, order_type, symbol, price, side)
+            with self.creating_order(created_order):
+                return await self._verify_order(created_order, order_type, symbol, price, side)
         return None
 
     async def edit_order(self, exchange_order_id: str, order_type: enums.TraderOrderType, symbol: str,
@@ -238,20 +253,43 @@ class RestExchange(abstract_exchange.AbstractExchange):
             self.log_order_creation_error(e, order_type, symbol, quantity, price, stop_price)
             if self.__class__.PRINT_DEBUG_LOGS:
                 self.logger.warning(str(e))
-            raise errors.MissingFunds(e)
-        except ccxt.NotSupported:
-            raise errors.NotSupported
+            raise errors.MissingFunds(e) from e
+        except ccxt.NotSupported as err:
+            raise errors.NotSupported from err
         except ccxt.AuthenticationError as err:
             # invalid api key or missing trading rights
             raise errors.AuthenticationError(
                 f"Error when handling order {err}. Please make sure that trading permissions are on for this API key."
-            )
+            ) from err
         except ccxt.DDoSProtection as e:
             # raised upon rate limit issues, last response data might have details on what is happening
+            # ensure this is not a permission error (can happen on binance)
+            if self.is_api_permission_error(e):
+                # invalid api key or missing trading rights
+                raise errors.AuthenticationError(
+                    f"Error when handling order {e}. Please make sure that trading permissions are on for this API key."
+                ) from e
             if self.should_log_on_ddos_exception(e):
                 self.connector.log_ddos_error(e)
             raise errors.FailedRequest(f"Failed to order operation: {e.__class__.__name__} {e}") from e
+        except errors.ExchangeAccountSymbolPermissionError:
+            raise
         except Exception as e:
+            if not self.is_market_open_for_order_type(symbol, order_type):
+                raise errors.UnavailableOrderTypeForMarketError(
+                    f"Error when handling order {e}. "
+                    f"Exchange currently refuses to create orders of type {order_type} on {symbol}."
+                ) from e
+            if self.is_api_permission_error(e):
+                # invalid api key or missing trading rights
+                raise errors.AuthenticationError(
+                    f"Error when handling order {e}. Please make sure that trading permissions are on for this API key."
+                ) from e
+            if self.is_exchange_rules_compliancy_error(e):
+                raise errors.ExchangeCompliancyError(
+                    f"Error when handling order {e}. Exchange is refusing this order request on this account because "
+                    f"of its compliancy requirements."
+                ) from e
             self.log_order_creation_error(e, order_type, symbol, quantity, price, stop_price)
             print(traceback.format_exc(), file=sys.stderr)
             self.logger.exception(e, False, f"Unexpected error during order operation: {e}")
@@ -294,9 +332,14 @@ class RestExchange(abstract_exchange.AbstractExchange):
                                                      stop_price=stop_price, side=side,
                                                      current_price=current_price, 
                                                      reduce_only=reduce_only, params=params)
-        except (ccxt.InvalidOrder, ccxt.BadRequest) as e:
+        except (ccxt.InvalidOrder, ccxt.BadRequest) as err:
+            if self.is_exchange_account_traded_symbol_permission_error(err):
+                # exchange won't let this order create: raise
+                raise errors.ExchangeAccountSymbolPermissionError(
+                    f"Error when creating {symbol} {order_type} order on {self.exchange_manager.exchange_name}: {err}"
+                ) from err
             # can be raised when exchange precision/limits rules change
-            self.logger.debug(f"Failed to create order ({e}) : order_type: {order_type}, symbol: {symbol}. "
+            self.logger.debug(f"Failed to create order ({err}) : order_type: {order_type}, symbol: {symbol}. "
                               f"This might be due to an update on {self.name} market rules. Fetching updated rules.")
             await self.connector.load_symbol_markets(reload=True, market_filter=self.exchange_manager.market_filter)
             # retry order creation with updated markets (ccxt will use the updated market values)
@@ -931,6 +974,29 @@ class RestExchange(abstract_exchange.AbstractExchange):
         :return: True if the symbol is related to a contract having an expiration date
         """
         return self.connector.is_expirable_symbol(symbol)
+
+    def is_skipping_empty_candles_in_ohlcv_fetch(self):
+        return self.IS_SKIPPING_EMPTY_CANDLES_IN_OHLCV_FETCH
+
+    def is_order_not_found_error(self, error: BaseException) -> bool:
+        if self.EXCHANGE_ORDER_NOT_FOUND_ERRORS:
+            return exchanges_util.is_error_on_this_type(error, self.EXCHANGE_ORDER_NOT_FOUND_ERRORS)
+        return False
+
+    def is_api_permission_error(self, error: BaseException) -> bool:
+        if self.EXCHANGE_PERMISSION_ERRORS:
+            return exchanges_util.is_error_on_this_type(error, self.EXCHANGE_PERMISSION_ERRORS)
+        return False
+
+    def is_exchange_rules_compliancy_error(self, error: BaseException) -> bool:
+        if self.EXCHANGE_COMPLIANCY_ERRORS:
+            return exchanges_util.is_error_on_this_type(error, self.EXCHANGE_COMPLIANCY_ERRORS)
+        return False
+
+    def is_exchange_account_traded_symbol_permission_error(self, error: BaseException) -> bool:
+        if self.EXCHANGE_ACCOUNT_TRADED_SYMBOL_PERMISSION_ERRORS:
+            return exchanges_util.is_error_on_this_type(error, self.EXCHANGE_ACCOUNT_TRADED_SYMBOL_PERMISSION_ERRORS)
+        return False
 
     """
     Auto fetched and filled exchanges

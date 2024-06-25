@@ -22,6 +22,7 @@ import ccxt
 import octobot_commons.logging as logging
 import octobot_trading.errors
 import octobot_trading.exchanges as exchanges
+import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_commons.constants as commons_constants
@@ -30,33 +31,48 @@ import octobot_trading.enums as trading_enums
 
 
 def _kucoin_retrier(f):
-    async def wrapper(*args, **kwargs):
+    async def kucoin_retrier_wrapper(*args, **kwargs):
+        last_error = None
         for i in range(0, Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT):
             try:
                 return await f(*args, **kwargs)
-            except octobot_trading.errors.FailedRequest:
+            except (octobot_trading.errors.FailedRequest, ccxt.ExchangeError) as err:
+                last_error = err
                 rest_exchange = args[0]  # self
-                if Kucoin.INSTANT_RETRY_ERROR_CODE in rest_exchange.connector.client.last_http_response:
+                if rest_exchange.connector.client.last_http_response and \
+                        Kucoin.INSTANT_RETRY_ERROR_CODE in rest_exchange.connector.client.last_http_response:
                     # should retry instantly, error on kucoin side
                     # see https://github.com/Drakkar-Software/OctoBot/issues/2000
                     logging.get_logger(Kucoin.get_name()).debug(
                         f"{Kucoin.INSTANT_RETRY_ERROR_CODE} error on {f.__name__}(args={args[1:]} kwargs={kwargs}) "
-                        f"request, retrying now. Attempt {i+1} / {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT}."
+                        f"request, retrying now. Attempt {i+1} / {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT}, "
+                        f"error: {err} ({last_error.__class__.__name__})."
                     )
                 else:
                     raise
+        last_error = last_error or RuntimeError("Unknown Kucoin error")  # to be able to "raise from" in next line
         raise octobot_trading.errors.FailedRequest(
             f"Failed Kucoin request after {Kucoin.FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT} "
             f"retries on {f.__name__}(args={args[1:]} kwargs={kwargs}) due "
-            f"to {Kucoin.INSTANT_RETRY_ERROR_CODE} error code"
-        )
-    return wrapper
+            f"to {Kucoin.INSTANT_RETRY_ERROR_CODE} error code. "
+            f"Last error: {last_error} ({last_error.__class__.__name__})"
+        ) from last_error
+    return kucoin_retrier_wrapper
+
+
+class KucoinConnector(ccxt_connector.CCXTConnector):
+
+    @_kucoin_retrier
+    async def _load_markets(self, client, reload: bool):
+        # override for retrier
+        await client.load_markets(reload=reload)
 
 
 class Kucoin(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
     REMOVE_MARKET_STATUS_PRICE_LIMITS = True
     ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE = True
+    DEFAULT_CONNECTOR_CLASS = KucoinConnector
 
     FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT = 5
     INSTANT_RETRY_ERROR_CODE = "429000"
@@ -101,6 +117,12 @@ class Kucoin(exchanges.RestExchange):
         }
     }
 
+    # text content of errors due to orders not found errors
+    EXCHANGE_ORDER_NOT_FOUND_ERRORS: typing.List[typing.Iterable[str]] = [
+        # 'kucoin The order does not exist.'
+        ("order does not exist",),
+    ]
+
     @classmethod
     def get_name(cls):
         return 'kucoin'
@@ -125,19 +147,28 @@ class Kucoin(exchanges.RestExchange):
 
     async def get_account_id(self, **kwargs: dict) -> str:
         # It is currently impossible to fetch subaccounts account id, use a constant value to identify it.
-        # updated: 29/12/2023
+        # updated: 21/05/2024
         try:
             account_id = None
             subaccount_id = None
             sub_accounts = await self.connector.client.private_get_sub_accounts()
             accounts = sub_accounts.get("data", {}).get("items", {})
             has_subaccounts = bool(accounts)
-            for account in accounts:
-                if account["subUserId"]:
-                    subaccount_id = account["subName"]
+            if has_subaccounts:
+                if len(accounts) == 1:
+                    # only 1 account: use its id or name
+                    account = accounts[0]
+                    # try using subUserId if available
+                    # 'ex subUserId: 65d41ea409407d000160cc17 subName: octobot1'
+                    account_id = account.get("subUserId") or account["subName"]
                 else:
-                    # only subaccounts have a subUserId: if this condition is True, we are on the main account
-                    account_id = account["subName"]
+                    # more than 1 account: consider other accounts
+                    for account in accounts:
+                        if account["subUserId"]:
+                            subaccount_id = account["subName"]
+                        else:
+                            # only subaccounts have a subUserId: if this condition is True, we are on the main account
+                            account_id = account["subName"]
             if subaccount_id:
                 # there is at least a subaccount: ensure the current account is the main account as there is no way
                 # to know the id of the current account (only a list of existing accounts)
@@ -196,7 +227,7 @@ class Kucoin(exchanges.RestExchange):
         if "since" in kwargs:
             # prevent ccxt from fillings the end param (not working when trying to get the 1st candle times)
             kwargs["to"] = int(time.time() * 1000)
-        return await super().get_symbol_prices(symbol=symbol, time_frame=time_frame, limit=limit, **kwargs)
+        return await super().get_symbol_prices(symbol, time_frame, limit=limit, **kwargs)
 
     @_kucoin_retrier
     async def get_recent_trades(self, symbol, limit=50, **kwargs):
@@ -309,6 +340,12 @@ class Kucoin(exchanges.RestExchange):
                                           price=price, stop_price=stop_price,
                                           side=side, current_price=current_price,
                                           reduce_only=reduce_only, params=params)
+
+    @_kucoin_retrier
+    async def cancel_order(
+        self, exchange_order_id: str, symbol: str, order_type: trading_enums.TraderOrderType, **kwargs: dict
+    ) -> trading_enums.OrderStatus:
+        return await super().cancel_order(exchange_order_id, symbol, order_type, **kwargs)
 
     # add retried to _create_order_with_retry to avoid catching error in self._order_operation context manager
     @_kucoin_retrier
@@ -465,8 +502,11 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
             # no funding info in ticker
             return {}
         funding_dict = super().parse_funding_rate(fixed, from_ticker=from_ticker, **kwargs)
-        previous_funding_timestamp = fixed[trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value]
+        previous_funding_timestamp = fixed[trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value]
         fixed.update({
+            # patch LAST_FUNDING_TIME in tentacle
+            trading_enums.ExchangeConstantsFundingColumns.LAST_FUNDING_TIME.value:
+                previous_funding_timestamp,
             # patch NEXT_FUNDING_TIME in tentacle
             trading_enums.ExchangeConstantsFundingColumns.NEXT_FUNDING_TIME.value:
                 previous_funding_timestamp + self.KUCOIN_DEFAULT_FUNDING_TIME,

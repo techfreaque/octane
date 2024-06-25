@@ -13,7 +13,9 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import decimal
 import math
+import typing
 
 
 def round_into_str_with_max_digits(number: float, digits_count: int) -> str:
@@ -38,9 +40,8 @@ def round_into_float_with_max_digits(number: float, digits_count: int) -> float:
     )
 
 
-def get_digits_count(value):
+def get_digits_count(value: typing.Union[float, decimal.Decimal]):
     """
-    :param value: a float number
-    :return: the number of digits in the given float
+    :return: the number of digits in the given number
     """
     return round(abs(math.log(value, 10)))

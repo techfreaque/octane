@@ -67,6 +67,17 @@ class Binance(exchanges.RestExchange):
         }
     }
 
+    # text content of errors due to orders not found errors
+    EXCHANGE_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # Binance ex: DDoSProtection('binance {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}')
+        ("key", "permissions for action"),
+    ]
+    # text content of errors due to traded assets for account
+    EXCHANGE_ACCOUNT_TRADED_SYMBOL_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # Binance ex: InvalidOrder binance {"code":-2010,"msg":"This symbol is not permitted for this account."}
+        ("symbol", "not permitted", "for this account"),
+    ]
+
     BUY_STR = "BUY"
     SELL_STR = "SELL"
     INVERSE_TYPE = "inverse"
@@ -133,6 +144,8 @@ class Binance(exchanges.RestExchange):
             ccxt_constants.CCXT_OPTIONS: {
                 "quoteOrderQty": False,  # disable quote conversion
                 "recvWindow": 60000,    # default is 10000, avoid time related issues
+                "fetchPositions": "account",    # required to fetch empty positions as well
+                "filterClosed": False,  # return empty positions as well
             }
         }
         return config
@@ -228,6 +241,9 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
     def fix_order(self, raw, symbol=None, **kwargs):
         fixed = super().fix_order(raw, **kwargs)
         self._adapt_order_type(fixed)
+        if fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value, None) == "PENDING_NEW":
+            # PENDING_NEW order are old orders on binance and should be considered as open
+            fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] = trading_enums.OrderStatus.OPEN.value
         return fixed
 
     def _adapt_order_type(self, fixed):
@@ -251,6 +267,10 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
     def parse_position(self, fixed, force_empty=False, **kwargs):
         try:
             parsed = super().parse_position(fixed, force_empty=force_empty, **kwargs)
+            parsed[trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value] = \
+                trading_enums.MarginType(
+                    fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value)
+                )
             # use one way by default.
             if parsed[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] is None:
                 parsed[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] = (

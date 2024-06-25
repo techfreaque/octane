@@ -15,6 +15,7 @@
 #  License along with this library
 import decimal
 import os
+import typing
 
 import octobot_trading.enums as enums
 import octobot_commons.enums as commons_enums
@@ -41,6 +42,9 @@ ALLOW_SIMULATED_ORDERS_INSTANT_FILL = os_util.parse_boolean_environment_var(
 ORDER_DATA_FETCHING_TIMEOUT = 5 * commons_constants.MINUTE_TO_SECONDS
 CHAINED_ORDER_PRICE_FETCHING_TIMEOUT = 1    # should be instant or ignored
 CHAINED_ORDERS_OUTDATED_PRICE_ALLOWANCE = decimal.Decimal("0.005")  # allows 0.5% outdated price error
+# create instantly filled limit orders 0.5% beyond market
+INSTANT_FILLED_LIMIT_ORDER_PRICE_DELTA = decimal.Decimal("0.005")
+CREATED_ORDER_FORCED_UPDATE_PERIOD = 5
 
 # Tentacles
 TRADING_MODE_REQUIRED_STRATEGIES = "required_strategies"
@@ -50,6 +54,7 @@ CONFIG_CANDLES_HISTORY_SIZE_TITLE = "Candles history size"
 CONFIG_CANDLES_HISTORY_SIZE_KEY = CONFIG_CANDLES_HISTORY_SIZE_TITLE.replace(" ", "_")
 CONFIG_BUY_ORDER_AMOUNT = "buy_order_amount"
 CONFIG_SELL_ORDER_AMOUNT = "sell_order_amount"
+TRADING_MODE_ACTIVITY_REASON = "reason"
 
 # Exchange
 DEFAULT_EXCHANGE_TIME_LAG = 10
@@ -100,7 +105,8 @@ FULL_CANDLE_HISTORY_EXCHANGES = [
     "okcoin",
     "okx",
     "mexc",
-    "binanceusdm",
+    "coinbase",
+    "binanceus",
     "mexc",
 ]
 
@@ -110,6 +116,7 @@ TESTED_EXCHANGES = [
     "kucoin",
     "okx",
 ] + sorted([
+    "binanceus",
     "coinbase",
     "cryptocom",
     "htx",
@@ -122,13 +129,25 @@ TESTED_EXCHANGES = [
     "binanceusdm"
     "mexc",
     "bingx",
-    "bitget",
     "coinex",
 ])
 DEFAULT_FUTURE_EXCHANGES = sorted(["bybit"])
 SIMULATOR_TESTED_EXCHANGES = sorted(["bitfinex2", "bithumb", "bitstamp", "bittrex",
                               "hitbtc", "kraken", "poloniex", "bitso", "ndax", "upbit",
                               "wavesexchange"])
+
+# text content of errors due to exchange compliancy rules
+# Warning: should never be a false positive
+EXCHANGE_COMPLIANCY_ERRORS: typing.List[typing.Iterable[str]] = [
+    # OKX ex: Trading of this pair or contract is restricted due to local compliance requirements
+    ("restricted", "compliance"),
+]
+
+# text content of errors due to exchange local account permissions (ex: accounts from X country can't trade XYZ)
+EXCHANGE_ACCOUNT_TRADED_SYMBOL_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
+    # Binance ex: InvalidOrder binance {"code":-2010,"msg":"This symbol is not permitted for this account."}
+    ("symbol", "not permitted", "for this account"),
+]
 
 CONFIG_DEFAULT_FEES = 0.001
 CONFIG_DEFAULT_SIMULATOR_FEES = 0
@@ -206,6 +225,7 @@ CANCEL_ORDER_STATUS_SCOPE = [enums.OrderStatus.PENDING_CANCEL,
 
 DEFAULT_INITIALIZATION_EVENT_TOPICS = [
     commons_enums.InitializationEventExchangeTopics.BALANCE,
+    commons_enums.InitializationEventExchangeTopics.PROFITABILITY,
     commons_enums.InitializationEventExchangeTopics.ORDERS,
     commons_enums.InitializationEventExchangeTopics.TRADES,
     commons_enums.InitializationEventExchangeTopics.CANDLES,

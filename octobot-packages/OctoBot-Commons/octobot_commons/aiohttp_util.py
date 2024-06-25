@@ -14,6 +14,14 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import ssl
+
+import contextlib
+import aiohttp
+import certifi
+
+import octobot_commons.logging
+import octobot_commons.constants
 
 
 async def download_stream_file(
@@ -53,3 +61,87 @@ async def download_stream_file(
             else:
                 output_file.write(chunk)
     return last_modified
+
+
+async def _check_local_certificates_availability(
+    session: aiohttp.ClientSession, test_url: str
+):
+    try:
+        # try fetching https://tentacles.octobot.online/ using local certificates
+        async with session.get(test_url) as resp:
+            if resp.status >= 400:
+                octobot_commons.logging.get_logger(__name__).error(
+                    f"Error when checking ssl certificates: fetching {test_url} returned {resp.status}. "
+                    f"Considering certificates as valid."
+                )
+            return True
+    except aiohttp.ClientConnectorCertificateError:
+        return False
+    except Exception as err:
+        octobot_commons.logging.get_logger(__name__).info(
+            f"Impossible to check ssl certificate: {err}. Consider valid"
+        )
+        return True
+
+
+def _get_certify_aiohttp_client_session() -> aiohttp.ClientSession:
+    # from https://docs.aiohttp.org/en/stable/client_advanced.html#example-use-certifi
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    return aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl_context))
+
+
+async def get_ssl_fallback_aiohttp_client_session(
+    test_url: str,
+) -> aiohttp.ClientSession:
+    """
+    :return: an aiohttp.ClientSession using certifi ssl certificates if necessary
+    """
+    base_session = aiohttp.ClientSession()
+    if (
+        not octobot_commons.constants.ENABLE_CERTIFI_SSL_CERTIFICATES
+        or await _check_local_certificates_availability(base_session, test_url)
+    ):
+        return base_session
+    try:
+        await base_session.close()
+    except Exception as err:
+        octobot_commons.logging.get_logger(__name__).exception(
+            err, True, f"Error when closing test session: {err}"
+        )
+    # use custom SSL certificates session
+    fallback_session = _get_certify_aiohttp_client_session()
+    octobot_commons.logging.get_logger(__name__).info(
+        "Falling back to certifi configured aiohttp connector."
+    )
+    return fallback_session
+
+
+@contextlib.asynccontextmanager
+async def ssl_fallback_aiohttp_client_session(test_url: str):
+    """
+    yields an aiohttp.ClientSession using certifi ssl certificates if necessary
+    """
+    session = None
+    try:
+        session = await get_ssl_fallback_aiohttp_client_session(test_url)
+        yield session
+    finally:
+        if session is not None:
+            await session.close()
+
+
+@contextlib.asynccontextmanager
+async def certify_aiohttp_client_session():
+    """
+    yields an aiohttp.ClientSession always using certifi ssl certificates
+    """
+    session = None
+    try:
+        octobot_commons.logging.get_logger(__name__).debug(
+            "Using certifi configured aiohttp connector."
+        )
+        session = _get_certify_aiohttp_client_session()
+        yield session
+    finally:
+        if session is not None:
+            await session.close()

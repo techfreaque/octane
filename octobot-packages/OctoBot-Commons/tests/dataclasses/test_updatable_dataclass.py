@@ -291,3 +291,20 @@ def test_get_update_and_update():
     assert group_2_3.present_people == group_3.present_people
     assert group_2_3.absent_people == group_3.absent_people
     assert group_2_3.leader == group_3.leader
+
+
+def test_to_dict_without_updated_fields():
+    person_2 = TestPersonClass("olive", 25, likes=["football", "poe"])
+    # _updated_fields included (default behavior)
+    assert dataclasses.asdict(person_2) == {
+        "_updated_fields": [],
+        "name": "olive",
+        "age": 25,
+        "likes": ["football", "poe"]
+    }
+    # _updated_fields not included
+    assert person_2.to_dict_without_updated_fields() == {
+        "name": "olive",
+        "age": 25,
+        "likes": ["football", "poe"]
+    }

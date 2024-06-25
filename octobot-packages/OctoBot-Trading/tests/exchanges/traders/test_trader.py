@@ -18,6 +18,7 @@ import os
 import ccxt.async_support
 import decimal
 
+import mock
 import pytest
 import time
 from mock import AsyncMock, patch, Mock
@@ -28,6 +29,7 @@ import octobot_commons.constants as commons_constants
 from octobot_commons.asyncio_tools import wait_asyncio_next_cycle
 from octobot_commons.tests.test_config import load_test_config
 from octobot_trading.personal_data.orders import Order
+import octobot_trading.errors as errors
 from octobot_trading.enums import TraderOrderType, TradeOrderSide, TradeOrderType, OrderStatus, \
     ExchangeConstantsPositionColumns, PositionMode, MarginType, TakeProfitStopLossMode, ExchangeSupportedElements
 from octobot_trading.exchanges.exchange_manager import ExchangeManager
@@ -565,8 +567,9 @@ class TestTrader:
         with patch.object(ccxt.async_support.binanceus, "calculate_fee",
                           Mock(return_value=get_fees_mock("SOL"))) as calculate_fee_mock:
             await limit_buy.on_fill(force_fill=True)
-            # ensure call ccxt calculate_fee for order fees
-            calculate_fee_mock.assert_called_once()
+            # called twice: once for filled order fee calculation, once for forecasted fees calculation used to restore
+            # available amounts if relevant
+            assert calculate_fee_mock.call_count == 2
 
         # added filled orders as filled trades
         assert len(trades_manager.trades) == 1
@@ -609,7 +612,9 @@ class TestTrader:
         with patch.object(ccxt.async_support.binanceus, "calculate_fee", Mock(return_value=get_fees_mock("SOL"))) \
                 as calculate_fee_mock:
             await limit_buy.on_fill(force_fill=True)
-            calculate_fee_mock.assert_called_once()
+            # called twice: once for filled order fee calculation, once for forecasted fees calculation used to restore
+            # available amounts if relevant
+            assert calculate_fee_mock.call_count == 2
 
         assert limit_buy not in orders_manager.get_open_orders()
 
@@ -1090,6 +1095,37 @@ async def test__has_open_position(future_trader_simulator_with_default_linear):
     )
     exchange_manager_inst.exchange_personal_data.positions_manager.upsert_position_instance(position_inst)
     assert trader_inst._has_open_position(DEFAULT_FUTURE_SYMBOL)
+
+
+async def test_create_order(future_trader_simulator_with_default_linear):
+    _, exchange_manager_inst, trader_inst, default_contract = future_trader_simulator_with_default_linear
+    order_mock = mock.Mock()
+    with mock.patch.object(trader_inst, "_create_new_order", mock.AsyncMock()) as _create_new_order_mock:
+        assert await trader_inst.create_order(order_mock)
+        _create_new_order_mock.assert_called_once_with(
+            order_mock, {}, wait_for_creation=True, creation_timeout=constants.INDIVIDUAL_ORDER_SYNC_TIMEOUT
+        )
+    for err in (errors.MissingFunds, errors.AuthenticationError, errors.ExchangeCompliancyError):
+        with mock.patch.object(
+                trader_inst, "_create_new_order", mock.AsyncMock(side_effect=err)
+        ) as _create_new_order_mock:
+            with pytest.raises(err):
+                assert await trader_inst.create_order(
+                    order_mock, params="params", wait_for_creation=False, creation_timeout=1
+                )
+            _create_new_order_mock.assert_called_once_with(
+                order_mock, "params", wait_for_creation=False, creation_timeout=1
+            )
+        with mock.patch.object(
+            trader_inst, "_create_new_order", mock.AsyncMock(side_effect=ZeroDivisionError)
+        ) as _create_new_order_mock:
+            # does not raise
+            assert await trader_inst.create_order(
+                order_mock, params="params", wait_for_creation=False, creation_timeout=1
+            ) is None
+            _create_new_order_mock.assert_called_once_with(
+                order_mock, "params", wait_for_creation=False, creation_timeout=1
+            )
 
 
 def make_coroutine(response):

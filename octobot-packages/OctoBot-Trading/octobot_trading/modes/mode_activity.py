@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot-Tentacles
+#  Drakkar-Software OctoBot-Trading
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -12,12 +12,17 @@
 #  Lesser General Public License for more details.
 #
 #  You should have received a copy of the GNU Lesser General Public
-#  License along with this library.
-import tentacles.Trading.Exchange.huobipro.huobipro_exchange as huobipro_exchange
-import tentacles.Trading.Exchange.huobi_websocket_feed.huobi_websocket as huobi_websocket
+#  License along with this library
+import dataclasses
+import enum
+import octobot_trading.enums
+import octobot_trading.constants
 
 
-class HuobiProCCXTWebsocketConnector(huobi_websocket.HuobiCCXTWebsocketConnector):
-    @classmethod
-    def get_name(cls):
-        return huobipro_exchange.HuobiPro.get_name()
+@dataclasses.dataclass
+class TradingModeActivity:
+    type: enum.Enum = octobot_trading.enums.TradingModeActivityType.NO_ACTIVITY
+    details: dict = dataclasses.field(default_factory=dict)
+
+    def set_reason(self, reason):
+        self.details = {octobot_trading.constants.TRADING_MODE_ACTIVITY_REASON: reason}

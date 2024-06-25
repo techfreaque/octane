@@ -18,6 +18,8 @@ import flask
 import werkzeug.http as werk_http
 import urllib.parse as url_parse
 
+import octobot_commons.os_util as os_util
+
 
 CACHE_CONTROL_KEY = 'Cache-Control'
 
@@ -51,8 +53,6 @@ def _prepare_response_extra_headers(include_security_headers):
     }
     if include_security_headers:
         response_security_headers = {
-            # X-Frame-Options: page can only be shown in an iframe of the same site
-            'X-Frame-Options': 'SAMEORIGIN',
             # ensure all app communication is sent over HTTPS
             'Strict-Transport-Security': 'max-age=63072000; includeSubdomains',
             # instructs the browser not to override the response content type
@@ -60,6 +60,9 @@ def _prepare_response_extra_headers(include_security_headers):
             # enable browser cross-site scripting (XSS) filter
             'X-XSS-Protection': '1; mode=block',
         }
+        if not os_util.parse_boolean_environment_var("CORS_MODE_ENABLED", "False"):
+            # X-Frame-Options: page can only be shown in an iframe of the same site
+            response_security_headers['X-Frame-Options'] = 'SAMEORIGIN'
         response_extra_headers.update(response_security_headers)
 
     return response_extra_headers

@@ -133,7 +133,8 @@ def get_currencies_with_status():
             status_explanation = "N/A"
             status = "N/A"
             for trading_mode in trading_modes:
-                if trading_api.get_trading_mode_symbol(trading_mode) == pair:
+                if trading_api.get_trading_mode_symbol(trading_mode) == pair \
+                        or trading_api.is_trading_mode_symbol_wildcard(trading_mode):
                     status_explanation, status = trading_api.get_trading_mode_current_state(trading_mode)
                     try:
                         status = round(status, 3)
