@@ -19,9 +19,10 @@
 # please contact me at max@a42.ch
 
 import asyncio
+
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
 from octobot_services.interfaces.util.util import run_in_bot_main_loop
 import octobot_trading.enums as trading_enums
-from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords import matrix_enums
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_constants as ping_pong_constants
 from .ping_pong_storage import storage as storage
 from .ping_pong_storage import element as element
@@ -100,7 +101,7 @@ def is_relevant_take_profit_order(
         triggered_order.get("status") == trading_enums.OrderStatus.FILLED.value
         and triggered_order.get("type") == trading_enums.TradeOrderType.LIMIT.value
         and triggered_order["tag"]
-        and triggered_order["tag"].startswith(ping_pong_constants.TAKE_PROFIT)
+        and triggered_order["tag"].startswith(matrix_enums.TAKE_PROFIT)
     )
 
 

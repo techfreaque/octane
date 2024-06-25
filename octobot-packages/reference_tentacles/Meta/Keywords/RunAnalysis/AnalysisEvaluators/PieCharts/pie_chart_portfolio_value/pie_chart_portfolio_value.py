@@ -37,56 +37,63 @@ class PieChartPortfolio(abstract_analysis_evaluator.AnalysisEvaluator):
             default_chart_location="pie-chart",
         )
         if plotted_element is not None:
-            start_end_portfolio_values = await run_data.get_start_end_portfolio_values()
-            start_portfolio = start_end_portfolio_values[0][
-                "starting_portfolio"
-            ] or json.loads(run_data.metadata["start portfolio"].replace("'", '"'))
-            end_portfolio = start_end_portfolio_values[0][
-                "ending_portfolio"
-            ] or json.loads(run_data.metadata["end portfolio"].replace("'", '"'))
-            for portfolio_name, portfolio, portfolio_time in (
-                (
-                    "starting_portfolio",
-                    start_portfolio,
-                    start_end_portfolio_values[0]["starting_time"],
-                ),
-                (
-                    "ending_portfolio",
-                    end_portfolio,
-                    start_end_portfolio_values[0]["last_update_time"],
-                ),
-            ):
+            try:
+                start_end_portfolio_values = (
+                    await run_data.get_start_end_portfolio_values()
+                )
+                start_portfolio = start_end_portfolio_values[0][
+                    "starting_portfolio"
+                ] or json.loads(run_data.metadata["start portfolio"].replace("'", '"'))
+                end_portfolio = start_end_portfolio_values[0][
+                    "ending_portfolio"
+                ] or json.loads(run_data.metadata["end portfolio"].replace("'", '"'))
+                for portfolio_name, portfolio, portfolio_time in (
+                    (
+                        "starting_portfolio",
+                        start_portfolio,
+                        start_end_portfolio_values[0]["starting_time"],
+                    ),
+                    (
+                        "ending_portfolio",
+                        end_portfolio,
+                        start_end_portfolio_values[0]["last_update_time"],
+                    ),
+                ):
 
-                values = []
-                labels = []
-                for currency, balance in portfolio.items():
-                    total_balance_in_ref, currency = await get_currency_value(
-                        currency,
-                        value_time=portfolio_time,
-                        total_balance=balance["total"],
-                        run_data=run_data,
-                    )
-                    if total_balance_in_ref and currency:
-                        values.append(total_balance_in_ref)
-                        labels.append(currency)
-                    else:
-                        break
-                if values and labels:
-                    plotted_element.pie_chart(
-                        values,
-                        labels,
-                        title=(
-                            "Starting Portfolio"
-                            if portfolio_name == "starting_portfolio"
-                            else "Current Portfolio"
-                        ),
-                        text=(
-                            "Starting"
-                            if portfolio_name == "starting_portfolio"
-                            else "Current"
-                        ),
-                        hole_size=0.4,
-                    )
+                    values = []
+                    labels = []
+                    for currency, balance in portfolio.items():
+                        total_balance_in_ref, currency = await get_currency_value(
+                            currency,
+                            value_time=portfolio_time,
+                            total_balance=balance["total"],
+                            run_data=run_data,
+                        )
+                        if total_balance_in_ref and currency:
+                            values.append(total_balance_in_ref)
+                            labels.append(currency)
+                        else:
+                            break
+                    if values and labels:
+                        plotted_element.pie_chart(
+                            values,
+                            labels,
+                            title=(
+                                "Starting Portfolio"
+                                if portfolio_name == "starting_portfolio"
+                                else "Current Portfolio"
+                            ),
+                            text=(
+                                "Starting"
+                                if portfolio_name == "starting_portfolio"
+                                else "Current"
+                            ),
+                            hole_size=0.4,
+                        )
+            except:
+                run_data.logger.error(
+                    "Failed to get pie chart data, data is probably not available yet"
+                )
 
 
 async def get_currency_value(
