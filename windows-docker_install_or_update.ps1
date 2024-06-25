@@ -7,6 +7,21 @@ if (-not (test-path $destinationFile)) {
   $opts = @{'path' = $sourceFile; 'destination' = $destinationFile; 'confirm' = $false }
   copy-item @opts
 }
+
+# Read and process the .env file
+Get-Content $destinationFile | ForEach-Object {
+  # Skip empty lines and lines starting with #
+  if ($_ -and $_ -notmatch '^#') {
+      # Split the line into key and value
+      $parts = $_ -split '=', 2
+      $key = $parts[0].Trim()
+      $value = $parts[1].Trim()
+      
+      # Set the environment variable
+      [System.Environment]::SetEnvironmentVariable($key, $value)
+  }
+}
+
 if (!(Test-Path "custom_requirements.txt")) {
   Copy-Item "scripts/custom_requirements.txt.template" -Destination "custom_requirements.txt"
 }
