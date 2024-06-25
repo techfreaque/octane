@@ -20,17 +20,18 @@
 
 import decimal as decimal
 import uuid
+
+import octobot_trading.constants as trading_constants
+import octobot_trading.modes.script_keywords.basic_keywords.position as position
+import octobot_trading.modes.script_keywords.basic_keywords.account_balance as account_balance
+import octobot_trading.enums as trading_enums
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_errors as matrix_errors
-from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.daemons.ping_pong import (
-    ping_pong_constants,
-)
+import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_constants as ping_pong_constants
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_storage.storage as storage
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.settings.position_size_settings as size_settings
 import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_public_data as exchange_public_data
 import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_private_data.open_positions as open_positions
-import octobot_trading.modes.script_keywords.basic_keywords.account_balance as account_balance
-import octobot_trading.enums as trading_enums
 
 
 async def get_manged_order_position_size(
@@ -211,13 +212,9 @@ async def adapt_sizes_to_limits(
 
 
 async def get_current_open_risk(ctx, market_fee):
-    current_average_long_entry = await open_positions.average_open_pos_entry(
-        ctx, side="long"
-    )
+    current_average_long_entry = await average_open_pos_entry(ctx, side="long")
 
-    current_average_short_entry = await open_positions.average_open_pos_entry(
-        ctx, side="short"
-    )
+    current_average_short_entry = await average_open_pos_entry(ctx, side="short")
 
     current_open_orders = (
         ctx.exchange_manager.exchange_personal_data.orders_manager.orders
@@ -397,3 +394,16 @@ def get_managed_order_tags(maker, order_tag_prefix):
         f"{order_tag_prefix}{matrix_enums.TAG_SEPERATOR}{order_tag_id}"
     )
     return entry_order_tag, tp_order_tag, sl_order_tag, order_tag_id
+
+
+async def average_open_pos_entry(context, side="long"):
+    if context.exchange_manager.is_future:
+        return position.get_position(context, context.symbol, side).entry_price
+    elif context.exchange_manager.is_margin:
+        return trading_constants.ZERO
+    else:
+        return trading_constants.ZERO
+
+    # for spot just get the current currency value
+    # todo for spot: collect data to get average entry and use input field for already existing funds
+    # TODO: get real average entry price (for now position entry price is giving a different result)
