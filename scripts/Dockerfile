@@ -46,7 +46,7 @@ WORKDIR /
 COPY . .
 WORKDIR /octobot-packages
 RUN mkdir -p /octobot
-RUN cp /.env /octobot/.env
+COPY ./.env /octobot/.env
 
 WORKDIR /octobot-packages/Async-Channel
 RUN pip install ./
