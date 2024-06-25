@@ -18,10 +18,6 @@
 # or you want your own custom solution,
 # please contact me at max@a42.ch
 
-TAKE_PROFIT = "tp"
-ENTRY = "e"
-STOP_LOSS = "sl"
-
 
 class PingPongOrderToOrderGroupIdConstants:
     GROUP_KEY = "group_key"

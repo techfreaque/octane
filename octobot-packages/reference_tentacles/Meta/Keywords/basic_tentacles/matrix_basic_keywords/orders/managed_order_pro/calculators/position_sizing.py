@@ -382,15 +382,15 @@ def get_managed_order_tags(maker, order_tag_prefix):
     else:
         order_tag_id = ping_pong_storage.generate_next_grid_instance_id()
     tp_order_tag = (
-        f"{ping_pong_constants.TAKE_PROFIT}{matrix_enums.TAG_SEPERATOR}"
+        f"{matrix_enums.TAKE_PROFIT}{matrix_enums.TAG_SEPERATOR}"
         f"{order_tag_prefix}{matrix_enums.TAG_SEPERATOR}{order_tag_id}"
     )
     sl_order_tag = (
-        f"{ping_pong_constants.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}"
+        f"{matrix_enums.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}"
         f"{order_tag_prefix}{matrix_enums.TAG_SEPERATOR}{order_tag_id}"
     )
     entry_order_tag = (
-        f"{ping_pong_constants.ENTRY}{matrix_enums.TAG_SEPERATOR}"
+        f"{matrix_enums.ENTRY}{matrix_enums.TAG_SEPERATOR}"
         f"{order_tag_prefix}{matrix_enums.TAG_SEPERATOR}{order_tag_id}"
     )
     return entry_order_tag, tp_order_tag, sl_order_tag, order_tag_id
