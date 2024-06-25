@@ -71,6 +71,8 @@ RUN python setup.py install
 WORKDIR /
 RUN pip install --prefer-binary -r /custom_requirements.txt
 
+WORKDIR /octobot-packages/OctoBot
+
 # FROM python:3.11-slim-buster
 
 ARG TENTACLES_URL_TAG=""
