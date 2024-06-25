@@ -1,3 +1,4 @@
+import octobot_commons.enums as commons_enums
 import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.common_user_inputs as common_user_inputs
 import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.analysis_enums as analysis_enums
 import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.table_keywords as table_keywords
@@ -71,21 +72,26 @@ class TradesTable(abstract_analysis_evaluator.AnalysisEvaluator):
                 }
                 additional_columns = [
                     {
-                        "field": "total",
-                        "text": "Total",
-                        "render": None,
+                        "key": "total",
+                        "dataIndex": "total",
+                        "title": "Total",
                         "sortable": True,
                     },
-                    {"field": "fees", "text": "Fees", "render": None, "sortable": True},
+                    {
+                        "key": "fees",
+                        "dataIndex": "fees",
+                        "title": "Fees",
+                        "sortable": True,
+                    },
                 ]
 
                 def datum_columns_callback(datum):
-                    datum[
-                        "total"
-                    ] = f"{datum['cost']} {datum['origin_value']['market']}"
-                    datum[
-                        "volume"
-                    ] = f"{datum['volume']} {datum['origin_value']['quantity_currency']}"
+                    datum["total"] = (
+                        f"{datum['cost']} {datum['origin_value']['market']}"
+                    )
+                    datum["volume"] = (
+                        f"{datum['volume']} {datum['origin_value']['quantity_currency']}"
+                    )
                     datum["fees"] = f'{datum["fees_amount"]} {datum["fees_currency"]}'
 
                 table_keywords.plot_table_data(

@@ -1,12 +1,14 @@
 {
   "buttons": {
+    "closePairSelectorTooltip": "点击关闭兑换设置"
+  },
+  "powerMenu": {
+    "powerMenuTooltip": "电源菜单",
     "backToOctoBot": "返回八爪鱼",
     "restartBot": "重启机器人",
-    "softRefresh": "软刷新",
     "stopBot": "停止机器人",
     "updateBot": "更新机器人",
     "logout": "从机器人注销",
-    "closePairSelectorTooltip": "点击关闭兑换设置",
     "colorModeSwitch": "颜色模式",
     "login": "登录机器人"
   },
@@ -31,17 +33,11 @@
   "pairExchangeSettings": {
     "currentPairTooltip": "选择和设置货币和符号"
   },
-  "title": {
-    "warning": "警告"
-  },
-  "description": {
-    "warning": "您将要重置所有选定的设置。\n你想继续吗？"
-  },
-  "Reset": {
-    "Selected": "重置选择"
-  },
-  "select": {
-    "all": "全选"
+  "resetConfigs": {
+    "warning_title": "警告",
+    "warning": "您将要重置所有选定的设置。\n你想继续吗？",
+    "Selected": "重置选择",
+    "select_all": "全选"
   },
   "pairSelector": {
     "SaveAndRestart": "保存并重启"
@@ -51,7 +47,9 @@
     "exchangeNotAuthenticatedTooltip": "无法验证您的 API 密钥。\n真实交易需要有效的 API 密钥。",
     "isTestedExchangeTooltip": "该交易所得到全面支持和测试",
     "isTestedExchangeSimulatedTooltip": "此交换仅在模拟模式下经过测试和支持。",
-    "isUntestedExchangeTooltip": "此交换尚未经过测试，未得到官方支持。"
+    "isUntestedExchangeTooltip": "此交换尚未经过测试，未得到官方支持。",
+    "hasWebsocketTooltip": "这个交换支持websocket，可以支持很多对。",
+    "noWebsocketTooltip": "该交易所不支持 websocket，只能使用有限数量的对。"
   },
   "progress": {
     "backtestingProgressTooltip": "回测已完成 {{progressPercent}}%"
@@ -59,7 +57,7 @@
   "apps": {
     "cantSelectStrategyModeTooltip": "您不能更改只读策略的模式。\n克隆策略以自定义所有设置。"
   },
-  "modal": {
-    "powerMenuTooltip": "电源菜单"
+  "footer": {
+    "softRefresh": "软刷新"
   }
 }

@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/octo_ui2/static/static/css/main.015f41cb.css",
-    "main.js": "/octo_ui2/static/static/js/main.653ebc98.js",
+    "main.css": "/octo_ui2/static/static/css/main.26dd9975.css",
+    "main.js": "/octo_ui2/static/static/js/main.e904ac7d.js",
     "static/media/octane-logo.png": "/octo_ui2/static/static/media/octane-logo.816aa8d0fbd3f1d83e6e.png",
     "index.html": "/octo_ui2/static/index.html",
-    "static/media/getFetch.cjs": "/octo_ui2/static/static/media/getFetch.40f37ddea2378391108f.cjs",
-    "main.015f41cb.css.map": "/octo_ui2/static/static/css/main.015f41cb.css.map",
-    "main.653ebc98.js.map": "/octo_ui2/static/static/js/main.653ebc98.js.map"
+    "static/media/getFetch.cjs": "/octo_ui2/static/static/media/getFetch.c4cca45e22bc1b2c7d0d.cjs",
+    "main.26dd9975.css.map": "/octo_ui2/static/static/css/main.26dd9975.css.map",
+    "main.e904ac7d.js.map": "/octo_ui2/static/static/js/main.e904ac7d.js.map"
   },
   "entrypoints": [
-    "static/css/main.015f41cb.css",
-    "static/js/main.653ebc98.js"
+    "static/css/main.26dd9975.css",
+    "static/js/main.e904ac7d.js"
   ]
 }
