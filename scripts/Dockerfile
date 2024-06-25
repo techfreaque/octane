@@ -47,9 +47,6 @@ WORKDIR /octobot-packages
 RUN mkdir -p /octobot
 RUN cp /.env /octobot/.env
 
-WORKDIR /
-RUN pip install --prefer-binary -r /custom_requirements.txt
-
 WORKDIR /octobot-packages/Async-Channel
 RUN pip install ./
 WORKDIR /octobot-packages/trading-backend
@@ -69,6 +66,9 @@ RUN pip install ./
 
 WORKDIR /octobot-packages/OctoBot
 RUN python setup.py install
+
+WORKDIR /
+RUN pip install --prefer-binary -r /custom_requirements.txt
 
 # FROM python:3.11-slim-buster
 
