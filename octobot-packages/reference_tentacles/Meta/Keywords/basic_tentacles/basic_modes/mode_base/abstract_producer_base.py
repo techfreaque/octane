@@ -256,9 +256,13 @@ class AbstractBaseModeProducer(
     async def start(self):
         await super().start()
         try:
-            if self.trading_mode.block_factory.current_nodes["mode_node"][
-                "config_mode_node"
-            ].get("enable_ping_pong"):
+            if (
+                hasattr(self.trading_mode, "block_factory")
+                and hasattr(self.trading_mode.block_factory, "current_nodes")
+                and self.trading_mode.block_factory.current_nodes["mode_node"][
+                    "config_mode_node"
+                ].get("enable_ping_pong")
+            ):
                 await ping_pong_storage_management.init_ping_pong_storage(
                     self.exchange_manager
                 )
