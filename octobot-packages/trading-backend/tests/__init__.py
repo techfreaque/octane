@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import mock
 import pytest
 import ccxt.async_support
 
@@ -20,6 +21,16 @@ import ccxt.async_support
 @pytest.fixture
 def binance_exchange():
     return ExchangeWrapper(ccxt.async_support.binanceus())  # binanceus not to fail on CI
+
+
+@pytest.fixture
+def binanceus_exchange():
+    return ExchangeWrapper(ccxt.async_support.binanceus())  # binanceus not to fail on CI
+
+
+@pytest.fixture
+def coinbase_exchange():
+    return ExchangeWrapper(ccxt.async_support.coinbase())
 
 
 @pytest.fixture
@@ -124,3 +135,4 @@ class ExchangeWrapper:
     def __init__(self, ccxt_exchange, is_margin=False, is_future=False):
         self.connector = ExchangeConnector(ccxt_exchange)
         self.exchange_manager = ExchangeManager(is_margin=is_margin, is_future=is_future)
+        self.is_api_permission_error = mock.Mock(return_value=False)

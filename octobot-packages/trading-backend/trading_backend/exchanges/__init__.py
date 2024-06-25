@@ -23,6 +23,16 @@ from trading_backend.exchanges.binance import (
     Binance
 )
 
+from trading_backend.exchanges import binanceus
+from trading_backend.exchanges.binanceus import (
+    BinanceUS
+)
+
+from trading_backend.exchanges import coinbase
+from trading_backend.exchanges.coinbase import (
+    Coinbase
+)
+
 from trading_backend.exchanges import okx
 from trading_backend.exchanges.okx import (
     OKX

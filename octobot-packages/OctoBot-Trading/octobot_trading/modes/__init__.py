@@ -58,12 +58,19 @@ from octobot_trading.modes.modes_factory import (
     create_temporary_trading_mode_with_local_config,
 )
 
+from octobot_trading.modes import mode_activity
+from octobot_trading.modes.mode_activity import (
+    TradingModeActivity,
+)
+
 from octobot_trading.modes import modes_util
 from octobot_trading.modes.modes_util import (
     get_required_candles_count,
     get_assets_requiring_extra_price_data_to_convert,
     convert_assets_to_target_asset,
     convert_asset_to_target_asset,
+    get_instantly_filled_limit_order_adapted_price,
+    get_instantly_filled_limit_order_adapted_price_and_quantity,
     notify_portfolio_optimization_complete,
 )
 
@@ -81,6 +88,7 @@ __all__ = [
     "create_trading_modes",
     "create_trading_mode",
     "create_temporary_trading_mode_with_local_config",
+    "TradingModeActivity",
     "get_activated_trading_mode",
     "should_emit_trading_signals_user_input",
     "is_trading_signal_emitter",
@@ -91,5 +99,7 @@ __all__ = [
     "get_assets_requiring_extra_price_data_to_convert",
     "convert_assets_to_target_asset",
     "convert_asset_to_target_asset",
+    "get_instantly_filled_limit_order_adapted_price",
+    "get_instantly_filled_limit_order_adapted_price_and_quantity",
     "notify_portfolio_optimization_complete",
 ]

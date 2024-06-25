@@ -22,6 +22,7 @@ import trading_backend.exchanges as exchanges
 import trading_backend.enums
 import trading_backend
 import tests.util.create_order_tests as create_order_tests
+import tests.util.account_tests as account_tests
 from tests import binance_exchange
 
 
@@ -214,3 +215,9 @@ def test_use_legacy_ids(binance_exchange):
     assert exchange.SPOT_ID == origin_legacy_spot_id
     assert exchange._get_id() == origin_legacy_spot_id
     assert exchange.FUTURE_ID == origin_legacy_future_id
+
+
+@pytest.mark.asyncio
+async def test_invalid_api_key_get_api_key_rights(binance_exchange):
+    exchange = exchanges.Binance(binance_exchange)
+    await account_tests.check_invalid_account_keys(exchange)

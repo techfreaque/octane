@@ -93,9 +93,34 @@ class FailedRequest(Exception):
     """
 
 
+class RateLimitExceeded(Exception):
+    """
+    Raised upon an exchange API rate limit error
+    """
+
+
+class UnavailableOrderTypeForMarketError(Exception):
+    """
+    Raised when an exchange refuses to create a given type of order that should normally be supported
+    """
+
+
 class AuthenticationError(Exception):
     """
     Raised when an exchange failed to authenticate
+    """
+
+
+class ExchangeCompliancyError(Exception):
+    """
+    Raised when an exchange failed to execute the given request because of compliance rules for the current user account
+    """
+
+
+class ExchangeAccountSymbolPermissionError(Exception):
+    """
+    Raised when an exchange failed to execute the given request because of allowed traded symbols
+    on the current user account
     """
 
 

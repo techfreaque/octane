@@ -50,10 +50,7 @@ class TestHTXRealExchangeTester(RealExchangeTester):
 
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
-            assert market_status
-            assert market_status[Ecmsc.TYPE.value] == self.MARKET_STATUS_TYPE
-            assert market_status[Ecmsc.SYMBOL.value] in (self.SYMBOL, self.SYMBOL_2, self.SYMBOL_3)
-            assert market_status[Ecmsc.PRECISION.value]
+            self.ensure_required_market_status_values(market_status)
             assert 1e-06 <= market_status[Ecmsc.PRECISION.value][
                 Ecmsc.PRECISION_AMOUNT.value] <= 1  # to be fixed in tentacle
             assert 1e-09 <= market_status[Ecmsc.PRECISION.value][
@@ -85,7 +82,7 @@ class TestHTXRealExchangeTester(RealExchangeTester):
 
         # without useHistoricalEndpointForSpot=False
         useHistoricalEndpointForSpot_symbol_prices = await self.get_symbol_prices(limit=200)
-        assert len(useHistoricalEndpointForSpot_symbol_prices) == 150
+        assert len(useHistoricalEndpointForSpot_symbol_prices) == 200
 
     async def test_get_historical_symbol_prices(self):
         # try with since and limit (used in data collector)

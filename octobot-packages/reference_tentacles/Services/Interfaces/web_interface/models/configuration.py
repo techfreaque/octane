@@ -50,6 +50,7 @@ import octobot_commons.authentication as authentication
 import octobot_commons.symbols as commons_symbols
 import octobot_commons.display as display
 import octobot_commons.errors as commons_errors
+import octobot_commons.aiohttp_util as aiohttp_util
 import octobot_commons
 import octobot_backtesting.api as backtesting_api
 import octobot.community as community
@@ -1141,7 +1142,8 @@ async def _fetch_currency_logo(session, data_provider, currency_id):
 
 
 async def _fetch_missing_currency_logos(data_provider, currency_ids):
-    async with aiohttp.ClientSession() as session:
+    # always use certify_aiohttp_client_session to avoid triggering rate limit with test request
+    async with aiohttp_util.certify_aiohttp_client_session() as session:
         await asyncio.gather(
             *(
                 _fetch_currency_logo(session, data_provider, currency_id)

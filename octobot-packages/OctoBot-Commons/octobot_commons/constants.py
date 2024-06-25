@@ -243,3 +243,10 @@ USD_LIKE_COINS = [
     "BOB",
     "MIMATIC",
 ]
+
+ENABLE_CERTIFI_SSL_CERTIFICATES = bool(
+    os.getenv("ENABLE_CERTIFI_SSL_CERTIFICATES", "true").lower() == "true"
+)
+KNOWN_POTENTIALLY_SSL_FAILED_REQUIRED_URL = (
+    "https://tentacles.octobot.online/officials/packages/full/base/1.0.9/metadata.yaml"
+)

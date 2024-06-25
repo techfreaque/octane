@@ -4,6 +4,99 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.87] - 2024-06-09
+### Updated
+- [Exchanges] allow market status fetch override
+### Fixed
+- [ModesUtil] asset convertor error on missing traded symbol
+
+## [2.4.86] - 2024-06-07
+### Added
+- [ModesUtil] limit order price & quantity convertors
+
+## [2.4.85] - 2024-05-31
+### Added
+- [Exchanges] Fix permission issue false positive
+
+## [2.4.84] - 2024-05-26
+### Added
+- [ExchangeData] IncompatibleAssetDetails
+
+## [2.4.83] - 2024-05-16
+### Updated
+- [Orders] log unparsable orders 
+
+## [2.4.82] - 2024-05-15
+### Updated
+- [Exchanges] auto-remove leading and trailing whitespaces 
+
+## [2.4.81] - 2024-05-10
+### Updated
+- [Exchanges] wrap NotSupported and RateLimit ccxt errors
+
+## [2.4.80] - 2024-05-10
+### Fixed
+- [Orders] missing trading permission error
+
+## [2.4.79] - 2024-04-24
+### Updated
+- [Keywords] add ignored orders to amount keyword
+
+## [2.4.78] - 2024-04-15
+### Added
+- [Exchanges] key adapter
+### Updated
+- CCXT to 4.2.95
+
+## [2.4.77] - 2024-04-13
+### Added
+- [Exchanges] Handle inactive markets
+
+## [2.4.76] - 2024-04-12
+### Added
+- [Exchanges] Handle order type open status for symbol
+### Updated
+- [Exchanges] Handle portfolio optimization using limit orders
+
+## [2.4.75] - 2024-04-11
+### Fixed
+- [Exchanges] Properly handle order not found errors
+- [Order] Rare synch issues on creation
+- [Order] Missing ungrouped stop orders when restarting
+
+## [2.4.74] - 2024-04-07
+### Added
+- [Exchanges] ExchangeCompliancyError error
+
+## [2.4.73] - 2024-04-04
+### Added
+- [Exchanges] BinanceUS to full history exchanges
+
+## [2.4.72] - 2024-04-03
+### Added
+- [Exchanges] IS_SKIPPING_EMPTY_CANDLES_IN_OHLCV_FETCH
+
+## [2.4.71] - 2024-04-03
+### Added
+- [API] is_api_permission_error
+
+## [2.4.70] - 2024-03-28
+### Added
+- [API] get_minimal_order_cost
+
+## [2.4.69] - 2024-03-26
+### Added
+- [TradingMode] update activity from consumer
+
+## [2.4.68] - 2024-03-25
+### Added
+- [TradingMode] last_activity
+
+## [2.4.67] - 2024-03-23
+### Updated
+- [TradingMode] Requirements for indexes
+- [Orders] Use creation_time in to_dict
+
 ## [2.4.66] - 2024-03-19
 ### Updated
 - [CCXT] to 4.2.77

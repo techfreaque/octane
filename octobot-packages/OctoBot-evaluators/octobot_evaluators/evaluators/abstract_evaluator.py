@@ -59,6 +59,9 @@ class AbstractEvaluator(tentacles_management.AbstractTentacle):
         # Evaluator specific config (Is loaded from tentacle specific file)
         self.specific_config: dict = {}
 
+        # Evaluator specific config snapshot before a config update
+        self.previous_specific_config: dict = None
+
         # If this indicator is enabled
         self.enabled: bool = self.is_enabled(self.tentacles_setup_config, False)
 

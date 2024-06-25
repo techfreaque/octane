@@ -22,14 +22,17 @@ import ccxt.pro as ccxt_pro
 import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_trading.constants as constants
 import octobot_trading.enums as enums
+import octobot_trading.errors as errors
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.ccxt_clients_cache as ccxt_clients_cache
 import octobot_trading.exchanges.util.exchange_util as exchange_util
 
 
-def create_client(exchange_class, exchange_manager, logger,
-                  options, headers, additional_config, 
-                  should_authenticate, unauthenticated_exchange_fallback=None):
+def create_client(
+    exchange_class, exchange_manager, logger, options, headers,
+    additional_config, should_authenticate, unauthenticated_exchange_fallback=None,
+    keys_adapter=None
+):
     """
     Exchange instance creation
     :return: the created ccxt (pro, async or sync) client
@@ -43,10 +46,12 @@ def create_client(exchange_class, exchange_manager, logger,
     if exchange_manager.ignore_config or exchange_manager.check_config(exchange_manager.exchange_name):
         try:
             key, secret, password = exchange_manager.get_exchange_credentials(exchange_manager.exchange_name)
+            if keys_adapter:
+                key, secret, password = keys_adapter(key, secret, password)
             if not (key and secret) and not exchange_manager.is_simulated and not exchange_manager.ignore_config:
                 logger.warning(f"No exchange API key set for {exchange_manager.exchange_name}. "
                                f"Enter your account details to enable real trading on this exchange.")
-            if should_authenticate:
+            if should_authenticate and not exchange_manager.is_backtesting:
                 client = exchange_class(_get_client_config(options, headers, additional_config,
                                                            key, secret, password))
                 is_authenticated = True
@@ -134,8 +139,16 @@ def get_ccxt_client_login_options(exchange_manager):
     return {'defaultType': 'spot'}
 
 
-def get_symbols(client):
+def get_symbols(client, active_only):
     try:
+        if active_only:
+            return set(
+                symbol
+                for symbol in client.symbols
+                if client.markets.get(symbol, {}).get(
+                    enums.ExchangeConstantsMarketStatusColumns.ACTIVE.value, True
+                )
+            )
         return set(client.symbols)
     except (AttributeError, TypeError):
         # ccxt exchange load_markets failed
@@ -214,6 +227,17 @@ def add_options(client, options_dict):
     """
     for option_key, option_value in options_dict.items():
         client.options[option_key] = option_value
+
+
+def converted_ccxt_common_errors(f):
+    async def converted_ccxt_common_errors_wrapper(*args, **kwargs):
+        try:
+            return await f(*args, **kwargs)
+        except ccxt.RateLimitExceeded as err:
+            raise errors.RateLimitExceeded(err) from err
+        except ccxt.NotSupported as err:
+            raise errors.NotSupported(err) from err
+    return converted_ccxt_common_errors_wrapper
 
 
 def _use_http_proxy_if_necessary(client):

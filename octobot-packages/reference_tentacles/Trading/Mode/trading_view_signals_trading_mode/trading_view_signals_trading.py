@@ -25,11 +25,14 @@ import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes as trading_modes
+import octobot_trading.errors as trading_errors
 import octobot_trading.modes.script_keywords as script_keywords
 
 
 class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     SERVICE_FEED_CLASS = trading_view_service_feed.TradingViewServiceFeed
+    TRADINGVIEW_FUTURES_SUFFIXES = [".P"]
+
     EXCHANGE_KEY = "EXCHANGE"
     SYMBOL_KEY = "SYMBOL"
     SIGNAL_KEY = "SIGNAL"
@@ -39,6 +42,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     ORDER_TYPE_SIGNAL = "ORDER_TYPE"
     STOP_PRICE_KEY = "STOP_PRICE"
     TAG_KEY = "TAG"
+    EXCHANGE_ORDER_IDS = "EXCHANGE_ORDER_IDS"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
     PARAM_PREFIX_KEY = "PARAM_"
     BUY_SIGNAL = "buy"
@@ -122,6 +126,15 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         consumers = await super().create_consumers()
         return consumers + await self._get_feed_consumers()
 
+    def _adapt_symbol(self, parsed_data):
+        if self.SYMBOL_KEY not in parsed_data:
+            return
+        symbol = parsed_data[self.SYMBOL_KEY]
+        for suffix in self.TRADINGVIEW_FUTURES_SUFFIXES:
+            if symbol.endswith(suffix):
+                parsed_data[self.SYMBOL_KEY] = symbol.split(suffix)[0]
+                return
+
     async def _trading_view_signal_callback(self, data):
         parsed_data = {}
         signal_data = data.get("metadata", "")
@@ -140,11 +153,14 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
             except IndexError:
                 self.logger.error(f"Invalid signal line in trading view signal, ignoring it. Line: \"{line}\"")
 
+        self._adapt_symbol(parsed_data)
         try:
             if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
                     (parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
                      parsed_data[self.SYMBOL_KEY] == self.str_symbol):
                 await self.producers[0].signal_callback(parsed_data, script_keywords.get_base_context(self))
+        except trading_errors.MissingFunds as e:
+            self.logger.error(f"Error when handling trading view signal: not enough funds: {e}")
         except KeyError as e:
             self.logger.error(f"Error when handling trading view signal: missing {e} required value. "
                               f"Signal: \"{signal_data}\"")
@@ -228,26 +244,42 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         elif side == TradingViewSignalsTradingMode.CANCEL_SIGNAL:
             state = trading_enums.EvaluatorStates.NEUTRAL
         else:
-            self.logger.error(f"Unknown signal: {parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY]}, "
-                              f"full data= {parsed_data}")
+            self.logger.error(
+                f"Unknown signal: {parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY]}, full data= {parsed_data}"
+            )
             state = trading_enums.EvaluatorStates.NEUTRAL
-        target_price = decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.PRICE_KEY, 0)))
+        target_price = await self._parse_price(ctx, parsed_data, TradingViewSignalsTradingMode.PRICE_KEY, 0)
+        stop_price = await self._parse_price(
+            ctx, parsed_data, TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan
+        )
+        tp_price = await self._parse_price(
+            ctx, parsed_data, TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY, math.nan
+        )
         order_data = {
             TradingViewSignalsModeConsumer.PRICE_KEY: target_price,
-            TradingViewSignalsModeConsumer.VOLUME_KEY: await self._parse_volume(ctx, parsed_data, parsed_side,
-                                                                                target_price),
-            TradingViewSignalsModeConsumer.STOP_PRICE_KEY:
-                decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan))),
+            TradingViewSignalsModeConsumer.VOLUME_KEY: await self._parse_volume(
+                ctx, parsed_data, parsed_side, target_price
+            ),
+            TradingViewSignalsModeConsumer.STOP_PRICE_KEY: stop_price,
             TradingViewSignalsModeConsumer.STOP_ONLY: order_type == TradingViewSignalsTradingMode.STOP_SIGNAL,
-            TradingViewSignalsModeConsumer.TAKE_PROFIT_PRICE_KEY:
-                decimal.Decimal(str(parsed_data.get(TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY, math.nan))),
+            TradingViewSignalsModeConsumer.TAKE_PROFIT_PRICE_KEY: tp_price,
             TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY:
                 parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False),
             TradingViewSignalsModeConsumer.TAG_KEY:
                 parsed_data.get(TradingViewSignalsTradingMode.TAG_KEY, None),
+            TradingViewSignalsModeConsumer.EXCHANGE_ORDER_IDS:
+                parsed_data.get(TradingViewSignalsTradingMode.EXCHANGE_ORDER_IDS, None),
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS: order_exchange_creation_params,
         }
         return state, order_data
+
+    async def _parse_price(self, ctx, parsed_data, key, default):
+        target_price = decimal.Decimal(str(default))
+        if input_price_or_offset := parsed_data.get(key, 0):
+            target_price = await script_keywords.get_price_with_offset(
+                ctx, input_price_or_offset, use_delta_type_as_flat_value=True
+            )
+        return target_price
 
     async def _parse_volume(self, ctx, parsed_data, side, target_price):
         user_volume = str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0))
@@ -261,6 +293,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             is_stop_order=False,
             use_total_holding=False,
             target_price=target_price,
+            allow_holdings_adaptation=False,    # raise when not enough funds to create an order according to user input
         )
 
     async def signal_callback(self, parsed_data: dict, ctx):
@@ -297,6 +330,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         if not self.trading_mode.consumers:
             return False
 
+        exchange_ids = order_data.get(TradingViewSignalsModeConsumer.EXCHANGE_ORDER_IDS, None)
         cancel_order_raw_side = order_data.get(
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS, {}).get(
                 TradingViewSignalsTradingMode.SIDE_PARAM_KEY, None)
@@ -305,4 +339,6 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         cancel_order_tag = order_data.get(TradingViewSignalsModeConsumer.TAG_KEY, None)
 
         # cancel open orders
-        return await self.cancel_symbol_open_orders(symbol, side=cancel_order_side, tag=cancel_order_tag)
+        return await self.cancel_symbol_open_orders(
+            symbol, side=cancel_order_side, tag=cancel_order_tag, exchange_order_ids=exchange_ids
+        )

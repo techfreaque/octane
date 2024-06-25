@@ -36,11 +36,19 @@ class OrdersProducer(exchanges_channel.ExchangeChannelProducer):
             pending_groups = {}  # Used when restoring orders from order storage:
             # a dict of order groups for which to check if associated self-managed orders are to be created
             for order in orders:
+                exchange_order_id: str = self.channel.exchange_manager.exchange.parse_exhange_order_id(order)
                 symbol = self.channel.exchange_manager.get_exchange_symbol(
                     self.channel.exchange_manager.exchange.parse_order_symbol(order)
                 )
+                if self.channel.exchange_manager.exchange.is_creating_order(exchange_order_id):
+                    # ignore orders that are being created
+                    self.logger.debug(
+                        f"Ignored update from order channel for {symbol} order with exchange order id "
+                        f"{exchange_order_id} as "
+                        f"this order is being created and will automatically be updated once creation is complete."
+                    )
+                    continue
                 symbols.add(symbol)
-                exchange_order_id: str = self.channel.exchange_manager.exchange.parse_exhange_order_id(order)
 
                 # if this order was not managed by order_manager before
                 is_new_order = not self.channel.exchange_manager.exchange_personal_data.orders_manager. \
@@ -82,6 +90,16 @@ class OrdersProducer(exchanges_channel.ExchangeChannelProducer):
             self.logger.info("Update tasks cancelled.")
         except Exception as e:
             self.logger.exception(e, True, f"Exception when triggering update: {e}")
+
+    async def _restore_required_virtual_orders(self):
+        """
+        Restore virtual orders that would not be restored otherwise
+        Should only be called once or will create the same virtual orders multiple times
+        """
+        pending_groups = {}
+        await orders_storage_operations.create_required_virtual_orders(
+            pending_groups, self.channel.exchange_manager
+        )
 
     async def _handle_open_order_update(
         self, symbol, order_dict, exchange_order_id, is_from_bot, is_new_order, pending_groups

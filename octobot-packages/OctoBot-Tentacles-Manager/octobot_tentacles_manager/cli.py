@@ -16,8 +16,9 @@
 import argparse
 import asyncio
 
-import aiohttp
 import octobot_commons.logging as logging
+import octobot_commons.aiohttp_util as aiohttp_util
+import octobot_commons.constants as commons_constants
 import sys
 
 import octobot_tentacles_manager
@@ -42,7 +43,9 @@ async def _handle_package_manager_command(starting_args,
                                           cythonize) -> int:
     error_count = 0
     LOGGER = logging.get_logger(f"{octobot_tentacles_manager.PROJECT_NAME}-CLI")
-    async with aiohttp.ClientSession() as aiohttp_session:
+    async with aiohttp_util.ssl_fallback_aiohttp_client_session(
+        commons_constants.KNOWN_POTENTIALLY_SSL_FAILED_REQUIRED_URL
+    ) as aiohttp_session:
         include_dev_mode = starting_args.include_dev_mode
         include_tentacles_export = starting_args.include_tentacles_export
         should_use_package_name_when_exporting = starting_args.export_with_package_name

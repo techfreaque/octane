@@ -120,8 +120,7 @@ class MetaDatabase:
         """
         yield self.get_run_db()
         exchange = exchange or self.run_dbs_identifier.context.exchange_name
-        for db in self.exchange_dbs[exchange].all_basic_run_db(account_type):
-            yield db
+        yield from self.exchange_dbs[exchange].all_basic_run_db(account_type)
 
     def get_db(self, db_identifier):
         """

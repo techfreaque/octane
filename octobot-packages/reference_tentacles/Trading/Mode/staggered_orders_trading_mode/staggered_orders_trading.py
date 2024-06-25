@@ -464,7 +464,8 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                 created_order = await self.trading_mode.create_order(current_order)
             if not created_order:
                 self.logger.warning(
-                    f"No order created for {order_data}: incompatible with exchange minimum rules. "
+                    f"No order created for {order_data} (quantity: {quantity}): "
+                    f"incompatible with exchange minimum rules. "
                     f"Limits: {symbol_market[trading_enums.ExchangeConstantsMarketStatusColumns.LIMITS.value]}"
                 )
         except trading_errors.MissingFunds as e:
@@ -660,6 +661,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         asyncio.create_task(self._ensure_staggered_orders_and_reschedule())
 
     async def _ensure_staggered_orders_and_reschedule(self):
+        if self.should_stop:
+            return
         can_create_orders = (
             not trading_api.get_is_backtesting(self.exchange_manager)
             or trading_api.is_mark_price_initialized(self.exchange_manager, symbol=self.symbol)

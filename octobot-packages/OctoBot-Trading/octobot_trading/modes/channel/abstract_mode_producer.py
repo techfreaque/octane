@@ -35,6 +35,7 @@ import octobot_trading.exchanges.exchanges as exchanges
 import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.modes.channel as modes_channel
 import octobot_trading.modes.script_keywords as script_keywords
+import octobot_trading.modes.mode_activity as mode_activity
 import octobot_trading.storage.util as storage_util
 
 
@@ -95,6 +96,8 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
         # cleared (awaitable) when inside self.trading_mode_trigger
         self._is_trigger_completed = asyncio.Event()
         self._is_trigger_completed.set()
+
+        self.last_activity: mode_activity.TradingModeActivity = mode_activity.TradingModeActivity()
 
     def on_reload_config(self):
         """
@@ -508,6 +511,16 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
                 await util.wait_for_topic_init(self.exchange_manager, self.CONFIG_INIT_TIMEOUT,
                                                common_enums.InitializationEventExchangeTopics.CONTRACTS.value)
             await script_keywords.set_leverage(context, await script_keywords.user_select_leverage(context))
+
+    async def _wait_for_symbol_prices_and_profitability_init(self, timeout) -> bool:
+        try:
+            await util.wait_for_topic_init(self.exchange_manager, timeout,
+                                           common_enums.InitializationEventExchangeTopics.PRICE.value)
+            await util.wait_for_topic_init(self.exchange_manager, timeout,
+                                           common_enums.InitializationEventExchangeTopics.PROFITABILITY.value)
+        except (asyncio.TimeoutError, concurrent.futures.TimeoutError):
+            self.logger.error(f"Symbol price initialization took more than {timeout} seconds")
+        return False
 
     @classmethod
     def producer_exchange_wide_lock(cls, exchange_manager) -> asyncio_tools.RLock():

@@ -18,6 +18,7 @@ import pytest
 import ccxt.async_support
 import trading_backend.exchanges as exchanges
 import tests.util.create_order_tests as create_order_tests
+import tests.util.account_tests as account_tests
 from tests import kucoin_exchange
 
 
@@ -34,3 +35,9 @@ async def test_broker_id(kucoin_exchange):
         "KC-API-PARTNER",
         broker_sign_header_key="KC-API-PARTNER-SIGN",
     )
+
+
+@pytest.mark.asyncio
+async def test_invalid_api_key_get_api_key_rights(kucoin_exchange):
+    exchange = exchanges.Kucoin(kucoin_exchange)
+    await account_tests.check_invalid_account_keys(exchange)

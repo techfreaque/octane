@@ -22,7 +22,6 @@ import flask_socketio
 from flask_compress import Compress
 from flask_caching import Cache
 
-from octobot_commons import os_util
 import octobot_commons.logging as bot_logging
 import octobot_services.constants as services_constants
 import octobot_services.interfaces as services_interfaces
@@ -231,12 +230,6 @@ class WebInterface(services_interfaces.AbstractWebInterface):
 
         try:
             self.server_instance = flask.Flask(__name__)
-            
-            if os_util.parse_boolean_environment_var("CORS_MODE_ENABLED", "False"):
-                @self.server_instance.after_request
-                def allow_i_frames_on_octane_dev(response):
-                    response.headers['X-Frame-Options'] = 'ALLOW-FROM *'  # replace example.com with the domain you want to allow framing from
-                    return response
 
             self._register_routes(self.server_instance)
             self.registered_plugins = web_interface_plugins.register_all_plugins(

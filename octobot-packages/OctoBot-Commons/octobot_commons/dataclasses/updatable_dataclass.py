@@ -91,6 +91,15 @@ class UpdatableDataclass:
                 setattr(update_content, field_name, other_val)
         return update_content
 
+    def to_dict_without_updated_fields(self) -> dict:
+        """
+        :return: same as dataclasses.asdict(self) but without the
+        "_updated_fields" internal field added by this class
+        """
+        dict_repr = dataclasses.asdict(self)
+        dict_repr.pop("_updated_fields", None)
+        return dict_repr
+
 
 def _should_be_changed(current_value, new_value):
     return (
