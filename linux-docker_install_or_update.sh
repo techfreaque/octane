@@ -7,9 +7,11 @@ git pull
 chmod +x linux-docker_install_or_update.sh
 cp -n scripts/.env-example-unix .env
 cp -n scripts/custom_requirements.txt.template custom_requirements.txt
-docker build --tag octane -f scripts/Dockerfile .
-
 source ./.env
+DOCKER_PYTHON_VERSION=${DOCKER_PYTHON_VERSION:-3.11}
+echo using python $DOCKER_PYTHON_VERSION
+docker build --tag octane --build-arg "DOCKER_PYTHON_VERSION=$DOCKER_PYTHON_VERSION" -f scripts/Dockerfile .
+
 if [ -z "$AMOUNT_OF_DOCKER_INSTANCES" ]
 then
       AMOUNT_OF_DOCKER_INSTANCES=1

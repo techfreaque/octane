@@ -1,4 +1,5 @@
-FROM python:3.11-slim-buster AS base
+ARG DOCKER_PYTHON_VERSION
+FROM python:${DOCKER_PYTHON_VERSION}-slim-buster AS base
 
 VOLUME /octobot/backtesting
 VOLUME /octobot/logs
