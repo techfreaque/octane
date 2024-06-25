@@ -1,3 +1,4 @@
+git stash
 git pull
 
 $sourceFile = 'scripts/.env-example-unix'
@@ -14,11 +15,20 @@ $DOCKER_PYTHON_VERSION = $env:DOCKER_PYTHON_VERSION
 if (-not $DOCKER_PYTHON_VERSION) {
   $DOCKER_PYTHON_VERSION = "3.11"
 }
-Write-Output using python $DOCKER_PYTHON_VERSION
+Write-Output "using python $DOCKER_PYTHON_VERSION"
 
 docker build --tag octane --build-arg "DOCKER_PYTHON_VERSION=$DOCKER_PYTHON_VERSION" -f scripts/Dockerfile-win .
 
-docker stop octane1
-docker rm octane1
-docker run -d --name octane1 -p 5001:5001 -v $PSScriptRoot/users/user1/user:/octobot/user -v $PSScriptRoot/users/user1/tentacles:/octobot/tentacles -v $PSScriptRoot/users/user1/logs:/octobot/logs -v $PSScriptRoot/users/user1/backtesting:/octobot/backtesting octane
+# Check if AMOUNT_OF_DOCKER_INSTANCES is not set or empty
+if (-not $env:AMOUNT_OF_DOCKER_INSTANCES) {
+  $env:AMOUNT_OF_DOCKER_INSTANCES = 1
+}
+
+# Loop through the number of Docker instances
+for ($n = 1; $n -le $env:AMOUNT_OF_DOCKER_INSTANCES; $n++) {
+  docker stop octane$n
+  docker rm octane$n
+  docker run -d --name octane$n -p 500$n:5001 -p 900$n:9000 -v "$PSScriptRoot/users/user$n/user:/octobot/user" -v "$PSScriptRoot/users/user$n/tentacles:/octobot/tentacles" -v "$PSScriptRoot/users/user$n/logs:/octobot/logs" -v "$PSScriptRoot/users/user$n/backtesting:/octobot/backtesting" octane
+}
+
 docker logs -f octane1
