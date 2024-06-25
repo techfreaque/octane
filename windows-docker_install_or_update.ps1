@@ -12,7 +12,12 @@ if (!(Test-Path "custom_requirements.txt"))
     Copy-Item "scripts/custom_requirements.txt.template" -Destination "custom_requirements.txt"
 }
 
-docker build --tag octane -f scripts/Dockerfile-win .
+$DOCKER_PYTHON_VERSION = $env:DOCKER_PYTHON_VERSION
+if (-not $DOCKER_PYTHON_VERSION) {
+    $DOCKER_PYTHON_VERSION = "3.11"
+}
+
+docker build --tag octane --build-arg "DOCKER_PYTHON_VERSION=$DOCKER_PYTHON_VERSION" -f scripts/Dockerfile-win .
 
 docker stop octane1
 docker rm octane1
