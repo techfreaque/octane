@@ -1,3 +1,4 @@
+import octobot_commons.enums as commons_enums
 import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.common_user_inputs as common_user_inputs
 import tentacles.Meta.Keywords.RunAnalysis.AnalysisKeywords.table_keywords as table_keywords
 import tentacles.Meta.Keywords.RunAnalysis.BaseDataProvider.default_base_data_provider.base_data_provider as base_data_provider
@@ -70,12 +71,17 @@ class PositionsTable(abstract_analysis_evaluator.AnalysisEvaluator):
                 }
                 additional_columns = [
                     {
-                        "field": "total",
-                        "text": "Total",
-                        "render": None,
+                        "key": "total",
+                        "dataIndex": "total",
+                        "title": "Total",
                         "sortable": True,
                     },
-                    {"field": "fees", "text": "Fees", "render": None, "sortable": True},
+                    {
+                        "key": "fees",
+                        "dataIndex": "fees",
+                        "title": "Fees",
+                        "sortable": True,
+                    },
                 ]
 
                 def datum_columns_callback(datum):

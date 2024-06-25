@@ -1,4 +1,5 @@
 import typing
+import octobot_commons.enums as commons_enums
 from tentacles.Meta.Keywords.RunAnalysis.BaseDataProvider.default_base_data_provider import (
     base_data_provider,
 )
@@ -128,7 +129,12 @@ def plot_table_data(
 
 
 def _get_default_column_render():
-    return {"Time": "datetime", "Entry time": "datetime", "Exit time": "datetime"}
+    return {
+        "Time": "datetime",
+        "Entry time": "datetime",
+        "Exit time": "datetime",
+        "Open Time": "datetime",
+    }
 
 
 def _get_default_types():
@@ -143,9 +149,11 @@ def _get_default_columns(plotted_element, data, column_render, key_to_label=None
     key_to_label = key_to_label or plotted_element.TABLE_KEY_TO_COLUMN
     return [
         {
-            "field": row_key,
-            "text": key_to_label[row_key],
-            "render": column_render.get(key_to_label[row_key], None),
+            "key": row_key,
+            "dataIndex": row_key,
+            "title": key_to_label[row_key],
+            "renderType": column_render.get(key_to_label[row_key], None)
+            or column_render.get(row_key, None),
             "sortable": True,
         }
         for row_key, row_value in data[0].items()
@@ -154,18 +162,20 @@ def _get_default_columns(plotted_element, data, column_render, key_to_label=None
 
 
 def _get_default_rows(data, columns):
-    column_fields = set(col["field"] for col in columns)
+    column_fields = set(col["key"] for col in columns)
     return [
-        {key: val for key, val in row.items() if key in column_fields} for row in data
+        {key: val for key, val in row.items() if key in column_fields}
+        | {"key": row[commons_enums.DBRows.ID.value]}
+        for row in data
     ]
 
 
 def _get_default_searches(columns, types):
     return [
         {
-            "field": col["field"],
-            "label": col["text"],
-            "type": types.get(col["text"]),
+            "key": col["key"],
+            "label": col["title"],
+            "type": types.get(col["title"]),
         }
         for col in columns
     ]
