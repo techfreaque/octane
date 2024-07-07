@@ -89,6 +89,7 @@ NaN = decimal.Decimal("nan")
 FULL_CANDLE_HISTORY_EXCHANGES = [
     "ascendex",
     "binance",
+    "binanceusdm",
     "bitfinex2",
     "bitstamp",
     "bittrex",
