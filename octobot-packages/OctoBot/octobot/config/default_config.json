@@ -1,14 +1,14 @@
 {
   "backtesting": {
-    "files": []
+      "files": []
   },
   "exchanges": {},
   "services": {
-    "web": {
-      "auto-open-in-web-browser": true
-    }
+        "web": {
+            "auto-open-in-web-browser": true
+        }
   },
-  "notification": {
+  "notification":{
     "global-info": true,
     "price-alerts": true,
     "trades": true,
@@ -17,9 +17,6 @@
     "notification-type": [
       "web"
     ]
-  },
-  "metrics": {
-    "enabled": false
   },
   "profile": "default",
   "accepted_terms": false

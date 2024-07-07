@@ -70,6 +70,9 @@ class AbstractService(singleton.Singleton):
     def get_read_only_info(self) -> dict:
         return {}
 
+    def is_improved_by_extensions(self) -> bool:
+        return False
+
     @classmethod
     def get_help_page(cls) -> str:
         """

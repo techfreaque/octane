@@ -58,6 +58,20 @@ class TentaclesSetupConfiguration:
     def unregister_tentacles_package(self, package_name):
         self.registered_tentacles.pop(package_name)
 
+    def get_installed_packages_from_url(self, url: str):
+        return [
+            package
+            for package, package_url in self.registered_tentacles.items()
+            if url == package_url
+        ]
+
+    def get_all_installed_package_urls(self):
+        return list(set(
+            url
+            for url in self.registered_tentacles.values()
+            if url != constants.UNKNOWN_TENTACLES_PACKAGE_LOCATION
+        ))
+
     def fill_tentacle_config(self, tentacles, default_tentacle_config=constants.DEFAULT_TENTACLE_CONFIG,
                                    remove_missing_tentacles=True, update_location=None,
                                    force_update_registered_tentacles=False, newly_installed_tentacles=None,
@@ -225,11 +239,15 @@ class TentaclesSetupConfiguration:
             self._apply_reference_tentacles_config(read_activation_config)
             self.save_config()
 
-    def save_config(self):
+    def save_config(self, is_config_update: bool = False) -> bool:
+        changed = False
         parent_dir, _ = path.split(self.config_path)
         if not path.exists(parent_dir):
             os.makedirs(parent_dir)
-        configuration.write_config(self.config_path, self._to_dict())
+        if not is_config_update or not configuration.is_same_config(self.config_path, self._to_dict()):
+            configuration.write_config(self.config_path, self._to_dict())
+            changed = True
+        return changed
 
     def _update_tentacles_setup_config(self,
                                        tentacles,

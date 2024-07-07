@@ -37,6 +37,16 @@ def validate(config, schema_file) -> None:
     jsonschema.validate(instance=config, schema=loaded_schema)
 
 
+def has_same_content(file_path: str, expected_content: dict) -> bool:
+    """
+    :return: True if the content of the parsed json file at file_path equals the given expected_content
+    """
+    if os.path.isfile(file_path):
+        content = read_file(file_path, raise_errors=False)
+        return content == expected_content
+    return False
+
+
 def read_file(
     file_path: str,
     raise_errors: bool = True,

@@ -34,7 +34,35 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "args": [
-                "-o", "${workspaceFolder}/profiler/result.prof", "start.py"
+                "-o",
+                "${workspaceFolder}/profiler/result.prof",
+                "octobot-packages/OctoBot/start.py"
+            ],
+            "justMyCode": false
+        },
+        {
+            // run the following to be able to view profiler reports:
+            // pip install snakeviz
+            //
+            // snakeviz profiler/result.prof
+            "name": "Start Backtesting in profiler mode",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "EXIT_BEFORE_TENTACLES_AUTO_REINSTALL": "True",
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "module": "cProfile",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "-o",
+                "${workspaceFolder}/profiler/result-backtesting.prof",
+                "octobot-packages/OctoBot/start.py",
+                "--backtesting",
+                "-nl",
+                "-bf",
+                "ExchangeBotSnapshotWithHistoryCollector_binance_1000SATSUSDT-1INCHUSDT-AAVEUSDT-ACAUSDT-ACEUSDT-ACHUSDT-ACMUSDT-ADAUSDT-ADXUSDT-AEVOUSDT-A_4h.data"
             ],
             "justMyCode": false
         },
@@ -46,7 +74,7 @@
                 "EXIT_BEFORE_TENTACLES_AUTO_REINSTALL": "True",
                 "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
             },
-            "program": "start.py",
+            "program": "octobot-packages/OctoBot/start.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "args": [
@@ -66,7 +94,7 @@
                 "EXIT_BEFORE_TENTACLES_AUTO_REINSTALL": "True",
                 "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
             },
-            "program": "start.py",
+            "program": "octobot-packages/OctoBot/start.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "args": [
@@ -77,7 +105,8 @@
                 "./output/tentacle_zips/any_platform.zip"
             ],
             "justMyCode": false
-        }, {
+        },
+        {
             "name": "Start backtesting on binance_BTCUSDT_1m data file",
             "type": "python",
             "request": "launch",
@@ -85,14 +114,18 @@
                 "EXIT_BEFORE_TENTACLES_AUTO_REINSTALL": "True",
                 "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Commons${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Trading${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Backtesting${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-evaluators${pathSeparator}${workspaceFolder}/octobot-packages/OctoBot-Services${pathSeparator}${workspaceFolder}/octobot-packages/trading-backend"
             },
-            "program": "start.py",
+            "program": "octobot-packages/OctoBot/start.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "args": [
-                "--backtesting", "-nl", "-bf", "ExchangeBotSnapshotWithHistoryCollector_binance_BTCUSDT_1m.data"
+                "--backtesting",
+                "-nl",
+                "-bf",
+                "ExchangeBotSnapshotWithHistoryCollector_binance_BTCUSDT_1m.data"
             ],
             "justMyCode": false
-        }, {
+        },
+        {
             "name": "Start backtesting with profiler on binance_BTCUSDT_1m data file",
             "type": "python",
             "request": "launch",
@@ -113,13 +146,15 @@
                 "ExchangeBotSnapshotWithHistoryCollector_binance_BTCUSDT_1m.data"
             ],
             "justMyCode": false
-        }, {
+        },
+        {
             "name": "View profiler results",
             "type": "PowerShell",
             "request": "launch",
             "script": "${workspaceFolder}/profiler/start_view_profiler_result.ps1",
             "cwd": "${workspaceFolder}"
-        }, {
+        },
+        {
             "name": "Start Async-Channel tests",
             "type": "python",
             "request": "launch",
@@ -130,10 +165,12 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/octobot-packages/Async-Channel",
             "args": [
-                "-vv", "tests"
+                "-vv",
+                "tests"
             ],
             "justMyCode": true
-        }, {
+        },
+        {
             "name": "Start OctoBot-Commons tests",
             "type": "python",
             "request": "launch",
@@ -144,10 +181,12 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/octobot-packages/OctoBot-Commons",
             "args": [
-                "-vv", "tests"
+                "-vv",
+                "tests"
             ],
             "justMyCode": true
-        }, {
+        },
+        {
             "name": "Start OctoBot-Backtesting tests",
             "type": "python",
             "request": "launch",
@@ -158,10 +197,12 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/octobot-packages/OctoBot-Backtesting",
             "args": [
-                "-vv", "tests"
+                "-vv",
+                "tests"
             ],
             "justMyCode": true
-        }, {
+        },
+        {
             "name": "Start OctoBot-Trading tests",
             "type": "python",
             "request": "launch",
@@ -172,10 +213,12 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/octobot-packages/OctoBot-Trading",
             "args": [
-                "-vv", "tests"
+                "-vv",
+                "tests"
             ],
             "justMyCode": true
-        }, {
+        },
+        {
             "name": "Start OctoBot-evaluators tests",
             "type": "python",
             "request": "launch",
@@ -186,10 +229,12 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/octobot-packages/OctoBot-evaluators",
             "args": [
-                "-vv", "tests"
+                "-vv",
+                "tests"
             ],
             "justMyCode": true
-        }, {
+        },
+        {
             "name": "Start OctoBot-Tentacles-Manager tests",
             "type": "python",
             "request": "launch",
@@ -200,10 +245,12 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager",
             "args": [
-                "-vv", "tests"
+                "-vv",
+                "tests"
             ],
             "justMyCode": true
-        }, {
+        },
+        {
             "name": "Start OctoBot-Services tests",
             "type": "python",
             "request": "launch",
@@ -214,10 +261,12 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/octobot-packages/OctoBot-Services",
             "args": [
-                "-vv", "tests"
+                "-vv",
+                "tests"
             ],
             "justMyCode": true
-        }, {
+        },
+        {
             "name": "Start OctoBot tests",
             "type": "python",
             "request": "launch",
@@ -228,10 +277,12 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/octobot-packages/OctoBot",
             "args": [
-                "-vv", "tests"
+                "-vv",
+                "tests"
             ],
             "justMyCode": true
-        }, {
+        },
+        {
             "name": "Start trading-backend tests",
             "type": "python",
             "request": "launch",
@@ -242,10 +293,12 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/octobot-packages/trading-backend",
             "args": [
-                "-vv", "tests"
+                "-vv",
+                "tests"
             ],
             "justMyCode": true
-        }, {
+        },
+        {
             "name": "Start OctoBot tentacles tests",
             "type": "python",
             "request": "launch",
@@ -256,7 +309,8 @@
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/octobot-packages/OctoBot",
             "args": [
-                "-vv", "tentacles"
+                "-vv",
+                "tentacles"
             ],
             "justMyCode": true
         }

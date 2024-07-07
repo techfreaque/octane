@@ -24,13 +24,14 @@ USER_HELP = """Install or re-install the given tentacles modules with their requ
 async def install_all_tentacles(tentacles_path_or_url, tentacle_path=constants.TENTACLES_PATH,
                                 bot_path=constants.DEFAULT_BOT_PATH, aiohttp_session=None, quite_mode=False,
                                 setup_config=None, bot_install_dir=constants.DEFAULT_BOT_INSTALL_DIR,
-                                authenticator=None) -> int:
+                                hide_url=False, authenticator=None) -> int:
     return await _install_tentacles(None, tentacles_path_or_url,
                                     tentacle_path,
                                     bot_path,
                                     aiohttp_session=aiohttp_session,
                                     quite_mode=quite_mode,
                                     tentacles_setup_config_to_update=setup_config,
+                                    hide_url=hide_url,
                                     bot_install_dir=bot_install_dir,
                                     authenticator=authenticator)
 
@@ -38,11 +39,11 @@ async def install_all_tentacles(tentacles_path_or_url, tentacle_path=constants.T
 async def install_tentacles(tentacle_names, tentacles_path_or_url, bot_path=constants.DEFAULT_BOT_PATH,
                             tentacle_path=constants.TENTACLES_PATH, aiohttp_session=None, quite_mode=False,
                             setup_config=None, bot_install_dir=constants.DEFAULT_BOT_INSTALL_DIR,
-                            authenticator=None) -> int:
+                            hide_url=False, authenticator=None) -> int:
     return await _install_tentacles(tentacle_names, tentacles_path_or_url,
                                     tentacle_path, bot_path, aiohttp_session=aiohttp_session,
                                     quite_mode=quite_mode, tentacles_setup_config_to_update=setup_config,
-                                    bot_install_dir=bot_install_dir,
+                                    hide_url=hide_url, bot_install_dir=bot_install_dir,
                                     authenticator=authenticator)
 
 
@@ -67,10 +68,11 @@ async def repair_installation(tentacle_path=constants.TENTACLES_PATH, bot_path=c
 async def _install_tentacles(tentacle_names, tentacles_path_or_url, tentacle_path=constants.TENTACLES_PATH,
                              bot_path=constants.DEFAULT_BOT_PATH, use_confirm_prompt=False, aiohttp_session=None,
                              quite_mode=False, tentacles_setup_config_to_update=None,
-                             bot_install_dir=constants.DEFAULT_BOT_INSTALL_DIR, authenticator=None) -> int:
+                             hide_url=False, bot_install_dir=constants.DEFAULT_BOT_INSTALL_DIR,
+                             authenticator=None) -> int:
     install_worker = workers.InstallWorker(constants.TENTACLES_INSTALL_TEMP_DIR, tentacle_path,
                                            bot_path, use_confirm_prompt, aiohttp_session, quite_mode=quite_mode,
-                                           bot_install_dir=bot_install_dir)
+                                           hide_url=hide_url, bot_install_dir=bot_install_dir)
     install_worker.tentacles_path_or_url = tentacles_path_or_url
     install_worker.tentacles_setup_config_to_update = tentacles_setup_config_to_update
     return await util.manage_tentacles(install_worker, tentacle_names, tentacles_path_or_url, aiohttp_session,

@@ -26,3 +26,7 @@ def read_config(config_file: str, raise_errors: bool = True) -> dict:
 
 def write_config(config_file: str, content: dict) -> None:
     json_util.safe_dump(content, config_file)
+
+
+def is_same_config(config_file: str, content: dict) -> bool:
+    return json_util.has_same_content(config_file, content)

@@ -13,14 +13,18 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import time
 import flask
 
 import octobot_commons.authentication as authentication
 import octobot_services.interfaces.util as interfaces_util
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.flask_util as flask_util
+import tentacles.Services.Interfaces.web_interface.constants as web_constants
 import octobot.constants as constants
 import tentacles.Services.Interfaces.octo_ui2.models.octo_ui2 as octo_ui2_models
+import octobot_commons.constants
+import octobot_commons.enums
 
 
 
@@ -53,6 +57,22 @@ def register(blueprint):
                 # no authenticated user: don't display form
                 user_id = None
                 display_feedback_form = False
+            past_launch_time = (
+                web_constants.PRODUCT_HUNT_ANNOUNCEMENT_DAY
+                + (
+                        octobot_commons.enums.TimeFramesMinutes[octobot_commons.enums.TimeFrames.ONE_DAY]
+                        * octobot_commons.constants.MINUTE_TO_SECONDS
+                )
+            )
+            is_launching = (
+               web_constants.PRODUCT_HUNT_ANNOUNCEMENT_DAY
+               <= time.time()
+               <= past_launch_time
+            )
+
+            display_ph_launch = (
+                models.get_display_announcement(web_constants.PRODUCT_HUNT_ANNOUNCEMENT) or is_launching
+            ) and not time.time() > past_launch_time
             return flask.render_template(
                 'index.html',
                 has_pnl_history=bool(pnl_symbols),
@@ -68,7 +88,9 @@ def register(blueprint):
                 user_id=user_id,
                 form_to_display=form_to_display,
                 display_feedback_form=display_feedback_form,
-                sandbox_exchanges=sandbox_exchanges
+                sandbox_exchanges=sandbox_exchanges,
+                display_ph_launch=display_ph_launch,
+                is_launching=is_launching,
             )
         else:
             return flask.redirect(flask.url_for("terms"))

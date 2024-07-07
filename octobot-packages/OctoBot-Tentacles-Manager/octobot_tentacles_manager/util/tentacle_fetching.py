@@ -27,7 +27,9 @@ import octobot_tentacles_manager.util as util
 DOWNLOADED_DATA_CHUNK_SIZE = 60000
 
 
-async def fetch_and_extract_tentacles(tentacles_temp_dir, tentacles_path_or_url, aiohttp_session, merge_dirs=False):
+async def fetch_and_extract_tentacles(
+    tentacles_temp_dir, tentacles_path_or_url, aiohttp_session, merge_dirs=False, hide_url=False
+):
     compressed_file = tentacles_path_or_url
     should_download = _is_url(tentacles_path_or_url)
     try:
@@ -40,7 +42,8 @@ async def fetch_and_extract_tentacles(tentacles_temp_dir, tentacles_path_or_url,
         await _extract_tentacles(compressed_file, tentacles_temp_dir, merge_dirs)
     except Exception as err:
         commons_logging.get_logger("TentaclesFetching").warning(
-            f"Error when fetching tentacles from {tentacles_path_or_url}: {err} ({err.__class__.__name__})"
+            f"Error when fetching tentacles from {'***' if hide_url else tentacles_path_or_url}: "
+            f"{'' if hide_url else err} ({err.__class__.__name__})"
         )
         raise
     finally:

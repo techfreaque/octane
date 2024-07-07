@@ -14,10 +14,12 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import copy
 import os
 import uuid
 
 import octobot_commons.profiles.profile_data as profile_data_import
+import octobot_commons.profiles.profile as profile_import
 import octobot_commons.logging as bot_logging
 import octobot_commons.json_util as json_util
 import octobot_commons.constants as constants
@@ -30,42 +32,74 @@ IMPORTED_PROFILES_DEFAULT_EXTRA_BACKTESTING_TIMEFRAME = (
 )
 
 
+def init_profile_directory(
+    output_path: str,
+):
+    """
+    :param output_path: profile folder path
+    """
+    if os.path.exists(output_path):
+        raise OSError(f"{output_path} already exists")
+    os.mkdir(output_path)
+
+
 async def convert_profile_data_to_profile_directory(
     profile_data: profile_data_import.ProfileData,
-    description: str,
-    risk: enums.ProfileRisk,
-    avatar_url: str,
     output_path: str,
-    aiohttp_session,
-):
+    description: str = None,
+    risk: enums.ProfileRisk = None,
+    auto_update: bool = False,
+    slug: str = None,
+    avatar_url: str = None,
+    aiohttp_session=None,
+    profile_to_update: profile_import.Profile = None,
+    changed: bool = False,
+) -> bool:
     """
     Creates a profile folder from the given ProfileData
     :param profile_data: path to the profile zipped archive
     :param description: profile description
     :param risk: profile risk
+    :param slug: slug of the associated strategy
+    :param auto_update: True if the profile should be kept up-to-date
     :param avatar_url: profile avatar_url
     :param output_path: profile folder path
     :param aiohttp_session: session to use
+    :param profile_to_update: profile to update instead of creating a new one
+    :param changed: if True, profile will be saved even if no change are identified
     """
-    logger = bot_logging.get_logger(__name__)
-    if os.path.exists(output_path):
-        raise OSError(f"{output_path} already exists")
-    os.mkdir(output_path)
-    profile = _get_profile(profile_data, description, risk, output_path)
-    # tentacles_config.json
-    tentacles_setup_config = _get_tentacles_setup_config(profile_data, output_path)
-    tentacles_setup_config.save_config()
-    # specific_config
-    _save_specific_config(profile_data, output_path)
-    # avatar file
-    try:
-        await _download_and_set_avatar(
-            profile, avatar_url, output_path, aiohttp_session
+    profile = (
+        profile_to_update
+        if profile_to_update
+        else _get_profile(
+            profile_data, description, risk, output_path, auto_update, slug
         )
-    except Exception as err:
-        logger.exception(err, True, f"Error when downloading profile avatar: {err}")
+    )
+    # when updating profile, keep existing registered tentacles
+    import_registered_tentacles = profile_to_update is not None
+    # tentacles_config.json
+    tentacles_setup_config = _get_tentacles_setup_config(
+        profile_data, output_path, import_registered_tentacles
+    )
+    if tentacles_setup_config.save_config(is_config_update=True):
+        changed = True
+    # specific_config
+    if _save_specific_config(profile_data, output_path, bool(profile_to_update)):
+        changed = True
+    # avatar file
+    if avatar_url:
+        try:
+            await _download_and_set_avatar(
+                profile, avatar_url, output_path, aiohttp_session
+            )
+        except Exception as err:
+            bot_logging.get_logger(__name__).exception(
+                err, True, f"Error when downloading profile avatar: {err}"
+            )
     # finish with profile.json to include edits from previous methods
-    profile.save()
+    if changed:
+        profile.save()
+    return changed
 
 
 def _get_profile(
@@ -73,6 +107,8 @@ def _get_profile(
     description: str,
     risk: enums.ProfileRisk,
     output_path: str,
+    auto_update: bool,
+    slug: str,
 ):
     profile = profile_data.to_profile(output_path)
     # use trading simulator by default
@@ -80,6 +116,8 @@ def _get_profile(
     profile.config[constants.CONFIG_SIMULATOR][constants.CONFIG_ENABLED_OPTION] = True
     profile.description = description
     profile.risk = risk
+    profile.auto_update = auto_update
+    profile.slug = slug
     profile.profile_id = str(uuid.uuid4().hex)
     profile.read_only = True
     profile.extra_backtesting_time_frames = [
@@ -88,8 +126,52 @@ def _get_profile(
     return profile
 
 
+def get_updated_profile(
+    profile_to_update: profile_import.Profile,
+    profile_data: profile_data_import.ProfileData,
+) -> bool:
+    """
+    :param profile_to_update: the profile to be updated
+    :param profile_data: the profile_data to get the update from
+    :return: True if something changed in the updated profile
+    """
+    updated_profile = profile_data.to_profile("")
+    changed = False
+    # update traded currencies (add new currencies)
+    origin_currencies = copy.deepcopy(
+        profile_to_update.config[constants.CONFIG_CRYPTO_CURRENCIES]
+    )
+    profile_to_update.config[constants.CONFIG_CRYPTO_CURRENCIES] = {
+        **origin_currencies,
+        **updated_profile.config[constants.CONFIG_CRYPTO_CURRENCIES],
+    }
+    if (
+        origin_currencies
+        != profile_to_update.config[constants.CONFIG_CRYPTO_CURRENCIES]
+    ):
+        changed = True
+    # update ref market
+    origin_ref_market = profile_to_update.config[constants.CONFIG_TRADING][
+        constants.CONFIG_TRADER_REFERENCE_MARKET
+    ]
+    profile_to_update.config[constants.CONFIG_TRADING][
+        constants.CONFIG_TRADER_REFERENCE_MARKET
+    ] = profile_data.trading.reference_market
+    if (
+        origin_ref_market
+        != profile_to_update.config[constants.CONFIG_TRADING][
+            constants.CONFIG_TRADER_REFERENCE_MARKET
+        ]
+    ):
+        changed = True
+    # leave other fields as is (tentacles config will be updated)
+    return changed
+
+
 def _get_tentacles_setup_config(
-    profile_data: profile_data_import.ProfileData, output_path: str
+    profile_data: profile_data_import.ProfileData,
+    output_path: str,
+    import_registered_tentacles: bool,
 ):
     try:
         import octobot_tentacles_manager.api
@@ -107,7 +189,8 @@ def _get_tentacles_setup_config(
             )
         )
         octobot_tentacles_manager.api.fill_with_installed_tentacles(
-            tentacles_setup_config
+            tentacles_setup_config,
+            import_registered_tentacles=import_registered_tentacles,
         )
         return tentacles_setup_config
     except ImportError:
@@ -115,8 +198,11 @@ def _get_tentacles_setup_config(
 
 
 def _save_specific_config(
-    profile_data: profile_data_import.ProfileData, output_path: str
-):
+    profile_data: profile_data_import.ProfileData,
+    output_path: str,
+    is_config_update: bool,
+) -> bool:
+    changed = False
     try:
         import octobot_tentacles_manager.constants
 
@@ -124,17 +210,26 @@ def _save_specific_config(
             output_path,
             octobot_tentacles_manager.constants.TENTACLES_SPECIFIC_CONFIG_FOLDER,
         )
-        os.mkdir(specific_config_dir)
+        if not os.path.exists(specific_config_dir):
+            os.mkdir(specific_config_dir)
         for tentacle_config in profile_data.tentacles:
+            file_path = os.path.join(
+                specific_config_dir,
+                f"{tentacle_config.name}{octobot_tentacles_manager.constants.CONFIG_EXT}",
+            )
+            if is_config_update and json_util.has_same_content(
+                file_path, tentacle_config.config
+            ):
+                # nothing to do
+                continue
+            changed = True
             json_util.safe_dump(
                 tentacle_config.config,
-                os.path.join(
-                    specific_config_dir,
-                    f"{tentacle_config.name}{octobot_tentacles_manager.constants.CONFIG_EXT}",
-                ),
+                file_path,
             )
     except ImportError:
         raise
+    return changed
 
 
 async def _download_and_set_avatar(

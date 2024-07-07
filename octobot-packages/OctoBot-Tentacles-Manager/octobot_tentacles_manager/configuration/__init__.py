@@ -34,6 +34,7 @@ from octobot_tentacles_manager.configuration.tentacle_configuration import (
 from octobot_tentacles_manager.configuration.config_file import (
     read_config,
     write_config,
+    is_same_config,
 )
 
 __all__ = [
@@ -48,4 +49,5 @@ __all__ = [
     "get_profile_config_specific_file_path",
     "read_config",
     "write_config",
+    "is_same_config",
 ]

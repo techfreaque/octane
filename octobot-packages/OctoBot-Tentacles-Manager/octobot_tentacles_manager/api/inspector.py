@@ -174,3 +174,19 @@ def get_tentacle_class_from_string(tentacle_name, allow_cache=True):
 
 def get_tentacles_classes_names_for_type(tentacle_type) -> list:
     return loaders.get_tentacles_classes_names_for_type(tentacle_type)
+
+
+def get_installed_packages_from_url(tentacles_package_manager, url: str) -> list[str]:
+    return tentacles_package_manager.get_installed_packages_from_url(url)
+
+
+def get_all_installed_package_urls(tentacles_package_manager) -> list[str]:
+    return tentacles_package_manager.get_all_installed_package_urls()
+
+
+def get_tentacles_from_package_name(package_name: str) -> list[str]:
+    return [
+        tentacle.name
+        for tentacle in get_installed_tentacles_modules()
+        if tentacle.origin_package == package_name
+    ]
