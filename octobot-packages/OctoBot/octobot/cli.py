@@ -231,7 +231,7 @@ def _load_or_create_tentacles(community_auth, config, logger):
         tentacles_setup_config = tentacles_manager_api.get_tentacles_setup_config(
             config.get_tentacles_config_path()
         )
-        commands.run_update_or_repair_tentacles_if_necessary(community_auth, config, tentacles_setup_config)
+        # commands.run_update_or_repair_tentacles_if_necessary(community_auth, config, tentacles_setup_config)
     else:
         # when no tentacles folder has been found
         logger.info("OctoBot tentacles can't be found. Installing default tentacles ...")
