@@ -1,0 +1,63 @@
+{
+  "buttons": {
+    "closePairSelectorTooltip": "Haga clic para cerrar la configuración de intercambio"
+  },
+  "powerMenu": {
+    "powerMenuTooltip": "Menú de energía",
+    "backToOctoBot": "Volver a OctoBot",
+    "restartBot": "Reiniciar robot",
+    "stopBot": "Detener robot",
+    "updateBot": "Actualizar robot",
+    "logout": "Cerrar sesión de Bot",
+    "colorModeSwitch": "Modo de color",
+    "login": "Inicie sesión en el bot"
+  },
+  "notFoundPage": {
+    "goHome": "Vete a casa",
+    "title": "Página no encontrada"
+  },
+  "notificationCenter": {
+    "botErrorLog": "Registro de errores del bot",
+    "botNotifications": "Notificaciones de bots"
+  },
+  "plotting": {
+    "switchtotheDisplaySettings": "Cambiar a la configuración de pantalla",
+    "switchtotheTablesView": "Cambiar a la vista de tablas",
+    "switchtotheChartsView": "Cambiar a la vista de gráficos",
+    "switchToThePieChartView": "Cambiar al diseño de gráfico circular"
+  },
+  "profile": {
+    "profileInfoButtonToolTip": "Abre la configuración del perfil.",
+    "profileSettingsButtonToolTip": "Abra la configuración de intercambio para esta estrategia."
+  },
+  "pairExchangeSettings": {
+    "currentPairTooltip": "Seleccionar y configurar monedas y símbolos"
+  },
+  "resetConfigs": {
+    "warning_title": "Advertencia",
+    "warning": "Está a punto de restablecer todas las configuraciones seleccionadas. \n¿Quieres continuar?",
+    "Selected": "Restablecer seleccionado",
+    "select_all": "Seleccionar todo"
+  },
+  "pairSelector": {
+    "SaveAndRestart": "Guardar y reiniciar"
+  },
+  "exchangeSelector": {
+    "exchangeAuthenticatedTooltip": "Sus claves API son válidas.",
+    "exchangeNotAuthenticatedTooltip": "No se pudieron verificar sus claves de API. \nSe requieren claves API válidas para el comercio real.",
+    "isTestedExchangeTooltip": "Este intercambio es totalmente compatible y probado.",
+    "isTestedExchangeSimulatedTooltip": "Este intercambio se prueba y admite solo en modo de simulación.",
+    "isUntestedExchangeTooltip": "Este intercambio aún no se ha probado y no es compatible oficialmente.",
+    "hasWebsocketTooltip": "Este intercambio admite websocket y puede admitir muchos pares.",
+    "noWebsocketTooltip": "Este intercambio no es compatible con websocket y solo puede utilizar una cantidad limitada de pares."
+  },
+  "progress": {
+    "backtestingProgressTooltip": "El backtest está {{progressPercent}}% completado"
+  },
+  "apps": {
+    "cantSelectStrategyModeTooltip": "No puede cambiar el modo en una estrategia de solo lectura. \nClona una estrategia para personalizar todos los ajustes."
+  },
+  "footer": {
+    "softRefresh": "Actualización suave"
+  }
+}

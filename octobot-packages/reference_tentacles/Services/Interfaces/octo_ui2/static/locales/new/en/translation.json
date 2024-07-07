@@ -1,0 +1,493 @@
+{
+  "buttons": {
+    "closePairSelectorTooltip": "Click to close the exchange settings"
+  },
+  "powerMenu": {
+    "powerMenuTooltip": "Power Menu",
+    "backToOctoBot": "Back to OctoBot",
+    "restartBot": "Restart Bot",
+    "stopBot": "Shutdown Bot",
+    "updateBot": "Update Bot",
+    "logout": "Log out from Bot",
+    "colorModeSwitch": "Color Mode",
+    "login": "Log into bot",
+    "contributeTranslations": "Edit Translations"
+  },
+  "notFoundPage": {
+    "goHome": "Back to the Home Page",
+    "title": "Page not found"
+  },
+  "notificationCenter": {
+    "botErrorLog": "Bot Error Log",
+    "botNotifications": "Bot Notifications",
+    "no-notifications-yet": "No notifications yet",
+    "export-debug-logs": "Export Debug Logs"
+  },
+  "plotting": {
+    "switchtotheDisplaySettings": "Switch to the Display Settings",
+    "switchtotheTablesView": "Switch to the Tables View",
+    "switchtotheChartsView": "Switch to the Charts View",
+    "switchToThePieChartView": "Switch to the pie chart layout"
+  },
+  "profile": {
+    "profileInfoButtonToolTip": "Open the profile settings",
+    "profileSettingsButtonToolTip": "Open the exchange settings for this strategy."
+  },
+  "pairExchangeSettings": {
+    "currentPairTooltip": "Select and setup currencies and symbols"
+  },
+  "resetConfigs": {
+    "warning_title": "Warning",
+    "warning": "You are about to reset all selected settings. Do you want to continue?",
+    "Selected": "Reset Selected",
+    "select_all": "Select All",
+    "successfully-resetted-projectname-config": "Successfully resetted {{projectName}} config",
+    "failed-to-reset-projectname-config": "Failed to reset {{projectName}} config",
+    "successfully-cleared-plotting-cache": "Successfully cleared plotting cache",
+    "failed-to-reset-plotting-cache": "Failed to reset plotting cache",
+    "reset-data-and-configuration": "Reset data and configuration",
+    "reset-all-projectname-settings": "Reset all {{projectName}} Settings",
+    "resets-the-following-settings": "Resets the following settings:",
+    "backtesting-settings": "Backtesting Settings",
+    "optimizer-settings": "Optimizer Settings",
+    "trading-analysis-settings": "Trading Analysis Settings",
+    "display-settings": "Display Settings",
+    "page-builder-page-layout": "Page Builder Page Layout",
+    "reset-trading-mode-plotting-cache": "Reset strategy plotting cache",
+    "reset-current-trading-mode-settings": "Reset current Strategy settings",
+    "resets-the-following-tentacle-settings-to-the-defaults": "Resets the following app settings to the defaults:",
+    "resets-the-plotting-cache-for-all-tentacles-settings": "Resets the plotting cache for all app settings",
+    "reset-the-portfolio-history": "Reset the Portfolio History",
+    "resets-the-portfolio-history": "Resets the portfolio history",
+    "reset-the-orders-history": "Reset the Orders History",
+    "resets-the-orders-history": "Resets the orders history",
+    "reset-the-trades-history": "Reset the Trades History",
+    "resets-the-trades-history": "Resets the trades history",
+    "reset-the-transactions-history": "Reset the Transactions History",
+    "resets-the-transactions-history": "Resets the transactions history"
+  },
+  "pairSelector": {
+    "SaveAndRestart": "Save And Restart"
+  },
+  "exchangeSelector": {
+    "exchangeAuthenticatedTooltip": "Your API keys are valid.",
+    "exchangeNotAuthenticatedTooltip": "Failed to verify your API keys. Valid API keys are required for real trading.",
+    "isTestedExchangeTooltip": "This exchange is fully supported and tested.",
+    "isTestedExchangeSimulatedTooltip": "This exchange is tested and supported in simulation mode only.",
+    "isUntestedExchangeTooltip": "This exchange has not been tested yet and is not officially supported.",
+    "hasWebsocketTooltip": "This exchange supports websocket and can support a lot of pairs.",
+    "noWebsocketTooltip": "This exchange does not support websocket and can only use a limited amount of pairs."
+  },
+  "progress": {
+    "backtestingProgressTooltip": "Backtest is {{progressPercent}}% completed"
+  },
+  "apps": {
+    "cantSelectStrategyModeTooltip": "You cant change the mode on a read only strategy. Clone a strategy to customize all settings."
+  },
+  "optimizer": {
+    "pause-optimizer": "Pause Optimizer",
+    "optimizer-is-pausing": "Optimizer is Pausing",
+    "start-optimizer": "Start Optimizer",
+    "reload-optimizer-queue": "Reload optimizer queue",
+    "the-optimizer-queue-is-empty": "The optimizer queue is empty",
+    "runs-for-optimizer-optimizerid": "Runs for optimizer {{optimizerId}}",
+    "deletes-the-selected-runs-from-the-queue": "Deletes the selected runs from the queue",
+    "queue-delete-selected": "Delete selected",
+    "queue-this-will-delete-all-runs-in-this-optimizer-id": "This will delete all runs in this optimizer id",
+    "queue-delete-all": "Delete all",
+    "queue-this-will-randomize-all-records-in-this-optimizer-id": "This will randomize all records in this optimizer id",
+    "queue-randomize": "Randomize",
+    "add-to-queue": "Add to Queue",
+    "runConfig": {
+      "runFilter": {
+        "input-name": "Input name",
+        "condition": "Condition",
+        "other-input-name": "Other input name",
+        "value": "Value",
+        "remove": "Remove",
+        "add-filter": "Add filter"
+      },
+      "input-name": "Input name",
+      "values": "Values",
+      "enabled": "Enabled",
+      "true": "True",
+      "false": "False",
+      "select-values-to-use": "Select values to use",
+      "valuetype-not-handled-yet": "{{valueType}} not handled yet",
+      "min": "Min",
+      "max": "Max",
+      "step": "Step",
+      "config-is-loading": "Config is loading...",
+      "seems-like-you-havent-installed-projectProName": "Seems like you haven't installed {{projectProName}}",
+      "projectProName-is-required-to-use-the-optimizer": "{{projectProName}} is required to use the Optimizer",
+      "no-input-name-found": "no input name found"
+    }
+  },
+  "backtesting": {
+    "training-is-about-to-stop": "Training is About to stop",
+    "stop-training": "Stop Training",
+    "stop-backtest": "Stop Backtest",
+    "start-backtest": "Start Backtest",
+    "runDataTable": {
+      "reload-backtestings": "Reload Backtestings",
+      "no-backtests-finished-yet-message": "No backtests finished yet. Once a backtest is finished, you can select them here to analyze the results.",
+      "failed-to-restore-settings": "Failed to restore settings",
+      "no-settings-found-for-this-run": "No settings found for this run",
+      "run-information": "Run Information",
+      "backtesting-delete-selected": "Delete selected",
+      "restore-settings": "Restore Settings",
+      "restores-all-settings-from-this-run": "Restores all settings from this run",
+      "select-only-one-run-to-be-able-to-restore-the-settings": "Select only one run to be able to restore the settings",
+      "load-plots-for-selected-runs-or-just-select-them-tooltip": "Load plots for selected runs or just select them. Helpful when you want to select runs to delete.",
+      "display-run-settings": "Display Run Settings",
+      "display-all-run-information": "Display All Run Information",
+      "display-run-information": "Display Run Information",
+      "current-campaign-campaignName": "Current campaign: {{currentCampaignName}}",
+      "backtesting-info": "Info",
+      "backtesting-all-info": "All Info",
+      "backtestings-settings": "Settings",
+      "toggle-displaying-data-only-from-the-current-campaign-or-from-all-activated-ones-tooltip": "Toggle displaying data only from the current campaign or from all activated ones",
+      "refreshes-the-run-data-table": "Refreshes the run data table"
+    }
+  },
+  "footer": {
+    "restore-panel": "Restore Panel",
+    "minimize-panel": "Minimize Panel",
+    "maximize-panel": "Maximize Panel",
+    "softRefresh": "Soft Refresh",
+    "notSupportedOctoBotDistroWarning": {
+      "this-distribution-isnt-officially-supported": "This distribution isn't officially supported",
+      "get-octane-today": "Get Octane today!",
+      "octobotproject-is-not-officially-supported-yet-by-projectname": "{{octobotProject}} is not officially supported yet by {{projectName}}",
+      "switch-to-projectname-for-free": "Switch To {{projectName}} For Free",
+      "warningMessage": "For some features to work properly, {{projectName}} requires modifications to the core of OctoBot which are not ported back yet. It is recommended to use {{projectName}}, which is a distribution of OctoBot.",
+      "warning-title": "{{projectName}} wont work as intended!"
+    },
+    "discord": "Discord",
+    "github": "GitHub",
+    "youtube": "YouTube"
+  },
+  "start-real-time-strategy": "Start Real Time Strategy",
+  "stop-real-time-strategy": "Stop Real Time Strategy",
+  "successfully-activated-real-time-strategy": "Successfully activated real time strategy",
+  "failed-to-activate-real-time-strategy": "Failed to activate real time strategy",
+  "save-strategy-mode-settings": "Save Strategy Mode Settings",
+  "save-strategy-mode-settings-tooltip": "Save Strategy Mode Settings",
+  "switch-to-language-name": "Switch to {{lang}}",
+  "close-all-positions": "Close all positions",
+  "cancel-all-orders": "Cancel All Orders",
+  "uiConfig": {
+    "failed-to-autosave-ui-config": "Failed to autosave UI config",
+    "ui-config-title": "UI Config",
+    "plot-settings": {
+      "plot-settings": "Plot Settings",
+      "plot-unrealized-portfolio-value": "Plot unrealized portfolio value",
+      "chart-location-unrealized-portfolio-value": "Chart location unrealized portfolio value",
+      "plot-unrealized-portfolio-value-for-each-asset": "Plot unrealized portfolio value for each asset",
+      "plot-unrealized-portfolio-value-in-btc": "Plot unrealized portfolio value in BTC"
+    }
+  },
+  "componentError": {
+    "something-went-wrong": "Something went wrong. :(",
+    "oh-no-this-componentname-crashed-notification": "Oh no! {{componentName}} crashed!"
+  },
+  "timeFrameSelector": {
+    "pending-restart": "Pending restart",
+    "the-newly-selected-time-frames-will-be-available-after-a-restart": "The newly selected time frames will be available after a restart"
+  },
+  "dataTable": {
+    "there-are-no-historical-trading-data-tables-to-display": "There are no historical trading data tables to display :(",
+    "to-display-tables-for-trades-orders-etc-you-can": "To display tables for trades, orders, etc you can:",
+    "noDataYetText": {
+      "select-a-backtesting-run": "Select a backtesting run",
+      "enter-valid-exchange-api-keys-and-activate-real-trading": "Enter valid exchange api keys and activate real trading",
+      "in-simulation-mode-wait-until-your-strategy-takes-the-first-trade": "In simulation mode wait until your strategy takes the first trade"
+    },
+    "select-a-table-from-the-sidebar": "Select a table from the sidebar",
+    "live-trading": "Live trading",
+    "backtesting-trading": "Backtesting trading",
+    "cancel-selected-orders": "Cancel selected orders",
+    "orders": "Orders",
+    "refresh-tooltip": "Refreshes all tables"
+  },
+  "strategyConfigurator": {
+    "select-a-setting-category-from-the-sidebar": "Select a setting category from the sidebar",
+    "select-a-app-category-from-the-sidebar": "Select a app category from the sidebar",
+    "other-apps": "Other Apps",
+    "strategyFlowMaker": {
+      "search-for-ema-rsi-strategy": "Search for EMA, RSI, strategy...",
+      "you-can-drag-these-building-blocks-to-the-pane": "You can drag these building blocks to the pane",
+      "successfully-changed-autosave-setting": "Successfully changed auto save setting",
+      "failed-to-activate-autosave": "Failed to activate auto save",
+      "auto-save-on": "auto save on",
+      "auto-save-off": "auto save off",
+      "save": "Save",
+      "reload-plots": "Reload Plots",
+      "save-and-reload-plots": "Save & Reload Plots"
+    },
+    "profileSettings": {
+      "real-trading": "Real Trading",
+      "simulated-trading": "Simulated Trading",
+      "trading-disabled": "Trading Disabled",
+      "trading-type": "Trading Type:",
+      "reference-market": "Reference Market:",
+      "enter-a-reference-market-like-usdt-or-btc": "enter a reference market like USDT or BTC",
+      "maker-fees-limit-orders": "Maker Fees (Limit Orders):",
+      "taker-fees-market-orders": "Taker Fees (Market Orders):",
+      "simulated-starting-portfolio": "Simulated Starting Portfolio:",
+      "changes-to-the-simulated-starting-portfolio-will-reset-enabled-exchanges-simulated-portfolio-history": "Changes to the simulated starting portfolio will reset enabled exchanges simulated portfolio history.",
+      "add-a-new-asset": "Add a new Asset:",
+      "asset-name": "Asset name",
+      "asset-amount": "Asset amount",
+      "add-coin": "Add Coin",
+      "click-to-edit-the-asset": "Click to edit the asset",
+      "remove-coinName": "Remove {{coinName}}",
+      "real-trading-settings": "Real Trading Settings",
+      "load-trades-history-from-exchange": "load trades history from exchange",
+      "dont-load-trades-history-from-exchange": "don't load trades history from exchange",
+      "simulation-settings": "Simulation Settings",
+      "traded-pairs": "Traded Pairs",
+      "exchanges": "Exchanges",
+      "cancel": "Cancel",
+      "save-and-restart-later": "Save And Restart Later",
+      "save-and-restart-now": "Save And Restart Now",
+      "strategy-info": "Strategy Info"
+    }
+  },
+  "manageAccount": {
+    "manage-your-octane-account": "Manage your Octane account",
+    "logout": "Logout",
+    "sign-up": "Sign Up",
+    "log-in": "Log In",
+    "create-an-octane-account-now": "Create an Octane account now",
+    "log-into-octane-now": "Log into Octane now",
+    "enter-your-email": "Enter your email",
+    "enter-your-password": "Enter your password",
+    "enter-a-referral-code-if-you-have-one": "Enter a referral code if you have one",
+    "create-account-now": "Create Account Now",
+    "login-now": "Login Now",
+    "backend": {
+      "users": "Users",
+      "delete-user-email": "Delete {{userEmail}}",
+      "store-subscriptions": "Store Subscriptions",
+      "store-payments": "Store Payments",
+      "visits": "Visits"
+    },
+    "affiliateDashboard": {
+      "affiliate-program": "Affiliate Program",
+      "with-projectname-affiliate-program-you-get-commissions-when-people-from-your-network-become-our-customers-you-earn-money-they-get-a-top-product-a-win-win-situation": "With {{projectName}} Affiliate Program you get commissions when people from your network become our customers. You earn money. They get a top product. A win-win situation!",
+      "monetize-your-network": "Monetize your Network"
+    }
+  },
+  "appStore": {
+    "appCard": {
+      "installed": "Installed",
+      "current-categoryName": "Current {{categoryName}}",
+      "uploadApp": {
+        "upload-new-package-version": "Upload new package version",
+        "select-the-type-of-your-update": "Select the type of your update",
+        "how-stable-is-your-app-category": "How stable is your {{category}}",
+        "share-release-notes": "Share release notes",
+        "let-your-users-know-what-youve-changed": "Let your users know what you've changed.",
+        "add-at-least-missingCharacters-more-characters": "Add at least {{missingCharacters}} more characters",
+        "define-a-monthly-price-for-your-appCategory": "Define a monthly price for your {{appCategory}}",
+        "define-a-price-for-your-app": "Define a price for your app",
+        "publish-update": "Publish Update",
+        "sell-strat-mode": "Sell Strat Mode",
+        "sell-strategy": "Sell Strategy",
+        "sell-app": "Sell App",
+        "you-need-to-be-signed-in-to-publish-an-update": "You need to be signed in to publish an update.",
+        "publish-strat-mode-now": "Publish Strat Mode Now",
+        "publish-strategy-now": "Publish Strategy Now",
+        "publish-app-now": "Publish App Now",
+        "you-need-to-be-signed-in-to-sell-an-app": "You need to be signed in to sell an app."
+      },
+      "downloadApp": {
+        "alpha-versions": "Alpha Versions",
+        "alpha-veriosn-icon": "α",
+        "switch-to-the-alpha-version": "Switch to the alpha version",
+        "beta-versions": "Beta Versions",
+        "beta-version-icon": "β",
+        "switch-to-the-beta-version": "Switch to the beta version",
+        "stable-versions": "Stable Versions",
+        "switch-to-the-stable-version": "Switch to the stable version",
+        "stable-version-icon": "S",
+        "appTitle-is-part-of-these-packages": "{{appTitle}} is part of these Packages:",
+        "v-major_version-minor_version-bug_fix_version-version_tag-details": "v{{majorVersion}}.{{minorVersion}}.{{bugFixVersion}} {{versionTag}} Details:",
+        "release-notes-of-appTitle-v-major_version-minor_version-bug_fix_version-version_tag": "Release Notes of {{appTitle}} v{{majorVersion}}.{{minorVersion}}.{{bugFixVersion}} {{versionTag}}:",
+        "the-app-package-is-already-installed": "The App package is already installed",
+        "the-app-package-isnt-installed-yet": "The App Package isn't installed yet",
+        "appPrice-month": "{{appPrice}}$ / month",
+        "appPrice-free": "free",
+        "required-apps": "Required Apps:",
+        "the-app-is-already-installed": "The App is already installed",
+        "the-app-isnt-installed-yet": "The App isn't installed yet",
+        "all-included-apps-in-package": "All included apps in package:",
+        "all-requirements-must-be-satisfied-before-you-can-download-this-app": "All requirements must be satisfied before you can download this app",
+        "download-now": "Download Now",
+        "update-now": "Update Now",
+        "go-to-shopping-basket": "Go to Shopping Basket",
+        "add-to-shopping-basket": "Add To Shopping Basket",
+        "download-for-free": "Download For Free",
+        "see-all-versions-of-app-title": "See all versions of {{appTitle}}",
+        "versions-of-app-title": "Versions of {{appTitle}}",
+        "select-a-version": "Select a version",
+        "alpha-version": "Alpha Version",
+        "beta-version": "Beta Version",
+        "stable-version": "Stable Version",
+        "this-app-gets-updated-with-your-octobot-distribution": "This app gets updated with your OctoBot distribution",
+        "you-need-to-be-signed-in-to-download-updates": "You need to be signed in to download updates.",
+        "update-appCategory": "Update {{appCategory}}",
+        "download": "Download",
+        "you-need-to-be-signed-in-to-download-apps": "You need to be signed in to download apps.",
+        "you-need-to-be-signed-in-to-download-free-apps": "You need to be signed in to download free apps.",
+        "free-download": "Free download",
+        "go-back": "Go Back",
+        "buy-app-title-today": "Buy {{appTitle}} today",
+        "download-appCategory": "Download {{appCategory}}"
+      },
+      "appInfo": {
+        "appCategory-info": "{{appCategory}} Info",
+        "close": "Close"
+      }
+    },
+    "cart": {
+      "shopping-cart": "Shopping Cart",
+      "no-app-in-package-originpackagename": "No app in package {{originPackageName}}",
+      "no-price-for-firstappinpackage-package_id": "No price for {{packageId}}",
+      "remove-from-basket": "Remove from Basket",
+      "title": {
+        "complete-your-purchase": "Complete your purchase",
+        "shopping-basket": "Shopping Basket"
+      },
+      "firstappinpackage-price-month": "{{price}}$ / month",
+      "total-totalprice-incl-tax": "Total: {{totalPrice}}$ (incl. Tax)",
+      "no-payment-detected-check-payment-status": "No Payment Detected - Check Payment Status",
+      "cancel-purchase": "Cancel Purchase",
+      "finalize-payment": "Finalize Payment",
+      "complete-purchase-and-pay-now": "Complete Purchase & Pay Now",
+      "cart-table": {
+        "package-name": "Package Name",
+        "price": "Price",
+        "months": "Months",
+        "total": "Total",
+        "action": "Action"
+      }
+    }
+  },
+  "table": {
+    "search": "Search",
+    "reset": "Reset",
+    "search-columnName": "Search {{columnName}}"
+  },
+  "realTradingSwitch": {
+    "real-trading": "Real trading",
+    "simulated-trading": "Simulated trading",
+    "trading-paused": "Trading paused",
+    "currently-using-tradingType": "Currently using: {{tradingType}}",
+    "by-switching-to-simulated-trading-projectName-will-only-use-its-simulation-mode-on-real-market-conditions": "By switching to simulated trading, {{projectName}} will only use its simulation mode on real market conditions.",
+    "it-will-no-longer-create-trades-with-your-exchange-account-it-will-use-a-simulated-portfolio-managed-by-projectName": "It will no longer create trades with your exchange account, it will use a simulated portfolio managed by {{projectName}}.",
+    "by-switching-to-real-trading-projectName-will-use-your-real-funds": "By switching to real trading, {{projectName}} will use your real funds",
+    "warning-the-switch-button-will-also-restart-projectName": "Warning! The switch button will also restart {{projectName}}",
+    "cancel": "Cancel",
+    "switch-to-simulated-trading": "Switch to Simulated trading",
+    "switch-to-real-trading": "Switch to Real trading"
+  },
+  "projectInfoPage": {
+    "about-the-project": "About the Project",
+    "welcomeMessage": {
+      "welcome-to-the": "Welcome to the",
+      "projectname-logo": "{{projectName}} Logo",
+      "project": "Project"
+    },
+    "try-the-demo-version": "Try the Demo Version",
+    "revolutionize-your-trading-strategy-with-cutting-edge-automation-solutions": "Revolutionize Your Trading Strategy with Cutting-Edge Automation Solutions",
+    "are-you-tired-of-outdated-trading-strategies-that-fail-to-keep-up-with-the-fast-paced-market": "Are you tired of outdated trading strategies that fail to keep up with the fast-paced market?",
+    "it-and-apos-s-time-to-revolutionize-your-approach-with-our-advanced-automation-solutions": "It's time to revolutionize your approach with our advanced automation solutions.",
+    "by-harnessing-cutting-edge-technology-our-custom-trading-bot-empowers-you-to-stay-ahead-of-the-curve-and-optimize-your-trading-strategy-like-never-before": "By harnessing cutting-edge technology, our custom trading bot empowers you to stay ahead of the curve and optimize your trading strategy like never before.",
+    "say-goodbye-to-manual-execution-and-hello-to-streamlined-efficiency-take-the-leap-into-the-future-of-trading-and-unlock-new-possibilities-for-success": "Say goodbye to manual execution and hello to streamlined efficiency. Take the leap into the future of trading and unlock new possibilities for success.",
+    "get-project-logo-now-message": {
+      "get": "Get",
+      "now": "now!"
+    },
+    "get-your-custom-trading-bot": "Get Your Custom Trading Bot",
+    "automate-your-strategy-and-boost-your-trading-success": "Automate Your Strategy and Boost Your Trading Success",
+    "unlock-the-power-of-automation-with-your-own-custom-trading-bot": "Unlock the power of automation with your own custom trading bot.",
+    "designed-for-both-traders-seeking-to-streamline-their-strategy-and-startups-looking-to-provide-cutting-edge-trading-solutions-to-their-customers": "Designed for both traders seeking to streamline their strategy and startups looking to provide cutting-edge trading solutions to their customers.",
+    "get-in-touch-with-a-strategy-developer-today": "Get in touch with a strategy developer today!",
+    "transform-your-trading-today": "Transform Your Trading Today!",
+    "lets-discuss-my-trading-bot-project": "Let's discuss my trading bot project!",
+    "cloud-based-trading-bot-deployment": "Cloud-Based Trading Bot Deployment",
+    "streamline-your-strategy-with-ease": "Streamline Your Strategy with Ease",
+    "experience-seamless-deployment-of-your-trading-bot-in-the-cloud": "Experience seamless deployment of your trading bot in the cloud.",
+    "leave-maintenance-and-updates-to-our-team-of-experts-while-you-focus-on-maximizing-your-profits": "Leave maintenance and updates to our team of experts while you focus on maximizing your profits.",
+    "with-hassle-free-management-you-can-unleash-the-full-potential-of-your-trading-strategy": "With hassle-free management, you can unleash the full potential of your trading strategy.",
+    "download-your-free-trading-bot": "Download Your Free Trading Bot",
+    "empower-your-trading-journey": "Empower Your Trading Journey",
+    "gain-a-competitive-edge-with-our-powerful-trading-bot-available-for-free": "Gain a competitive edge with our powerful trading bot, available for free.",
+    "take-control-of-your-trading-decisions-and-unlock-new-possibilities": "Take control of your trading decisions and unlock new possibilities.",
+    "get-your-free-trading-bot-today": "Get Your Free Trading Bot Today!",
+    "a-special-thanks-to-all-open-source-projects-that-are-used-within-projectname": "A special thanks to all Open Source Projects that are used within {{projectName}}",
+    "the-kernel-and-backend-for-the-bot": "The Kernel and Backend for the bot",
+    "without-octobot-the-project-would-be-nothing": "Without OctoBot the project would be nothing",
+    "check-out-and-support-the-octobot-project": "Check out and support the OctoBot Project",
+    "library-used-to-build-the-frontend": "Library used to build the frontend",
+    "we-all-hate-facebook-but-react-is-nice": "We all hate FaceBook, but react is nice",
+    "check-out-the-react-project": "Check out the react project",
+    "charting-library": "Charting library",
+    "plotly": "Plotly",
+    "check-out-the-plotly-project": "Check out the plotly project",
+    "flow-chart-library-used-for-the-strategy-designer": "Flow chart library used for the Strategy Designer",
+    "reactflow": "Reactflow",
+    "check-out-the-reactflow-project": "Check out the Reactflow project",
+    "machine-learning-library-used-for-the-neural-net-evaluator": "Machine learning library used for the neural net evaluator",
+    "so-simple-to-use-and-yet-so-powerful": "So simple to use and yet so powerful",
+    "check-out-the-tensorflow-project": "Check out the tensorflow project",
+    "and-many-more-that-you-can-find-in-the-requirements-txt": "And many more that you can find in the requirements.txt",
+    "get-projectname-now": "Get {{projectName}} Now",
+    "cloudDeployment": {
+      "deploy-your-bot-in-the-cloud-now": "Deploy Your Bot in the Cloud Now!",
+      "cloud-deployment": "Cloud Deployment",
+      "cloud-trading-bot-servers": "Cloud Trading Bot Servers",
+      "effortless-and-fully-managed-solutions-for-your-trading-strategies": "Effortless and Fully Managed Solutions for Your Trading Strategies",
+      "cloud-deployment-will-be-available-soon": "Cloud Deployment will be available soon!",
+      "select-and-configure": "Select and configure",
+      "sunny-nano": "Sunny (Nano)",
+      "sunny-nano-description": "The Nano server option provides a lightweight and cost-effective solution for running your trading bot. It offers a single instance, making it suitable for small-scale trading operations.",
+      "foggy-micro": "Foggy (Micro)",
+      "foggy-micro-description": "The Micro server option is slightly more powerful than the Nano option, offering two instances for increased flexibility and performance. It is suitable for moderate trading volumes and strategies.",
+      "snow-small": "Snow (Small)",
+      "snow-small-description": "The Small server option provides scalability and cost-efficiency for your trading bot. With four instances, you can distribute workloads effectively and adapt to market changes with ease.",
+      "ice-medium": "Ice (Medium)",
+      "ice-medium-description": "The Medium server option offers enhanced computing power and resources, making it suitable for demanding trading strategies and higher trading volumes. It provides a scalable solution with no instance limit.",
+      "wind-large": "Wind (Large)",
+      "wind-large-description": "The Large server option is optimized for high-performance trading. It provides ample computing power and resources, ensuring smooth execution of complex trading strategies. It offers a scalable solution with no limit on instances.",
+      "storm-x-large": "Storm (X Large)",
+      "storm-x-large-description": "The X large server option is specifically designed for intensive trading operations. It offers significant computing power and resources, making it suitable for advanced trading strategies and high-frequency trading.",
+      "flash-xx-large": "Flash (XX Large)",
+      "flash-xx-large-description": "Unleash exceptional trading power with the Flash server option. Designed for intensive operations, it offers robust computing resources and unlimited instances. Execute advanced strategies and handle substantial trading volumes effortlessly, maximizing profitability.",
+      "tornado-xxx-large": "Tornado (XXX Large)",
+      "tornado-xxx-large-description": "The XXX large server option is the most powerful and robust choice for running your trading bot. It provides unparalleled computing power and resources, enabling you to handle massive trading volumes and execute complex strategies with ease.",
+      "no-limit": "no limit",
+      "instancePrice-month": "{{instancePrice}}$ / month",
+      "projectName-instances-instanceLimit": "{{projectName}} Instances: {{instanceLimit}}"
+    }
+  },
+  "uiEditor": {
+    "failed-to-restored-default-ui-layout": "Failed to restored default UI layout",
+    "successfully-restored-default-ui-layout": "Successfully restored default UI layout",
+    "failed-to-save-new-ui-layout": "Failed to save new UI layout",
+    "failed-to-read-the-config-from-the-editor": "Failed to read the config from the editor",
+    "successfully-saved-new-ui-layout": "Successfully saved new UI layout",
+    "customize-the-ui": "Customize the UI",
+    "customize-info-text": "Once you have saved the page layout, it won't get overridden by an updated default layout in the future. You should reset your config after each update to make sure you'll get the latest futures. You can copy the config of your custom config with the help of the editor, and then past it after resetting.",
+    "save-page-layout": "Save Page Layout",
+    "reset-to-default-layout": "Reset to default layout",
+    "pages": "Pages",
+    "page-layout": "Page Layout"
+  },
+  "projectLogo": {
+    "tooltip": "Click to learn more about {{projectName}}",
+    "projectname-logo": "{{projectName}} Logo"
+  }
+}
