@@ -29,7 +29,7 @@ async def test_get_orders_parameters(coinex_exchange):
     exchange = exchanges.Coinex(coinex_exchange)
     await create_order_tests.create_order_mocked_test_args(
         exchange,
-        exchange_private_post_order_method_name="v1PrivatePostOrderLimit",
+        exchange_private_post_order_method_name="v2PrivatePostSpotOrder",
         exchange_request_referral_key="client_id",
         should_contains=True)
 

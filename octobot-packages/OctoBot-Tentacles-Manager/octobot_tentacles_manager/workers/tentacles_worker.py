@@ -32,9 +32,11 @@ class TentaclesWorker:
                  use_confirm_prompt,
                  aiohttp_session,
                  quite_mode=False,
+                 hide_url=False,
                  bot_install_dir=constants.DEFAULT_BOT_INSTALL_DIR):
         self.logger = logging.get_logger(self.__class__.__name__)
         self.quite_mode = quite_mode
+        self.hide_url = hide_url
         self.aiohttp_session = aiohttp_session
         self.use_confirm_prompt = use_confirm_prompt
 
@@ -77,14 +79,15 @@ class TentaclesWorker:
 
     def log_summary(self):
         if not self.quite_mode:
-            url_identifier = f" from '{self.tentacles_path_or_url.split('tentacles/')[-1]}'" \
-                if self.tentacles_path_or_url else ""
+            url_identifier = "from ***" if self.hide_url else (
+                f"from '{self.tentacles_path_or_url.split('tentacles/')[-1]}'" if self.tentacles_path_or_url else ""
+            )
             if self.errors:
-                self.logger.info(f" *** Error summary{url_identifier}: ***")
+                self.logger.info(f" *** Error summary {url_identifier}: ***")
                 for error in self.errors:
                     self.logger.error(f"Error when handling tentacle: {error}")
             else:
-                self.logger.info(f" *** All tentacles{url_identifier} have been successfully processed ***")
+                self.logger.info(f" *** All tentacles {url_identifier} have been successfully processed ***")
 
     def register_to_process_tentacles_modules(self, to_process_tentacle):
         self.to_process_tentacle_modules = self._get_version_by_tentacle(to_process_tentacle)
@@ -134,8 +137,10 @@ class TentaclesWorker:
         self.requirements_downloading_event.set()
 
     async def _fetch_tentacles_for_requirement(self, repo):
-        await util.fetch_and_extract_tentacles(repo, self.tentacles_path_or_url or constants.DEFAULT_TENTACLES_URL,
-                                               self.aiohttp_session, merge_dirs=True)
+        await util.fetch_and_extract_tentacles(
+            repo, self.tentacles_path_or_url or constants.DEFAULT_TENTACLES_URL,
+            self.aiohttp_session, merge_dirs=True, hide_url=self.hide_url
+        )
         requirements_tentacles_path = path.join(repo, constants.TENTACLES_ARCHIVE_ROOT)
         self.fetched_for_requirements_tentacles = util.load_tentacle_with_metadata(requirements_tentacles_path)
         self.fetched_for_requirements_tentacles_versions = \

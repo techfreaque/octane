@@ -44,6 +44,18 @@ def refresh_profile_tentacles_setup_config(
     tentacles_setup_manager.refresh_profile_tentacles_config(profile_folder)
 
 
+def refresh_all_tentacles_setup_configs(
+    tentacle_path=constants.TENTACLES_PATH,
+    bot_installation_path=constants.DEFAULT_BOT_PATH,
+    bot_install_dir=constants.DEFAULT_BOT_INSTALL_DIR
+):
+    tentacles_setup_manager = managers.TentaclesSetupManager(path.join(bot_installation_path, tentacle_path),
+                                                             bot_installation_path,
+                                                             path.join(bot_install_dir,
+                                                                       constants.DEFAULT_TENTACLE_CONFIG))
+    tentacles_setup_manager.refresh_user_tentacles_setup_config_file(force_update_registered_tentacles=True)
+
+
 def get_tentacles_setup_config(
     config_path=constants.USER_REFERENCE_TENTACLE_CONFIG_FILE_PATH
 ) -> configuration.TentaclesSetupConfiguration:
@@ -62,13 +74,16 @@ def create_tentacles_setup_config_with_tentacles(
 
 def fill_with_installed_tentacles(
     tentacles_setup_config: configuration.TentaclesSetupConfiguration,
-    tentacles_folder: str = constants.TENTACLES_PATH
+    tentacles_folder: str = constants.TENTACLES_PATH,
+    import_registered_tentacles: bool = False,
 ):
     available_tentacle = util.load_tentacle_with_metadata(tentacles_folder)
     # fill overall tentacles setup config data
-    tentacles_setup_config.fill_tentacle_config(
-        available_tentacle,
-    )
+    tentacles_setup_config.fill_tentacle_config(available_tentacle)
+    if import_registered_tentacles and path.isfile(tentacles_setup_config.config_path):
+        # reuse existing registered tentacles to avoid loosing their url
+        origin_tentacles_setup_config = get_tentacles_setup_config(tentacles_setup_config.config_path)
+        tentacles_setup_config.registered_tentacles = origin_tentacles_setup_config.registered_tentacles
 
 
 def is_tentacle_activated_in_tentacles_setup_config(tentacles_setup_config: configuration.TentaclesSetupConfiguration,

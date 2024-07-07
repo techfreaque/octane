@@ -28,6 +28,7 @@ import octobot_commons.enums as enums
 import octobot_commons.logging as bot_logging
 import octobot_commons.errors as errors
 import octobot_commons.json_util as json_util
+import octobot_commons.authentication as authentication
 
 # avoid cyclic import
 from octobot_commons.profiles.profile import Profile
@@ -165,6 +166,7 @@ async def import_profile_data_as_profile(
     bot_install_path: str = ".",
     origin_url: str = None,
     logo_url: str = None,
+    auto_update: bool = False,
 ) -> Profile:
     """
     Imports the given ProfileData into the user's profile directory with the "imported_" prefix
@@ -174,14 +176,24 @@ async def import_profile_data_as_profile(
     :param bot_install_path: path to the octobot installation
     :param origin_url: url the profile is coming from
     :param logo_url: url the profile avatar
+    :param auto_update: True if the profile should automatically be kept up-to-date
     :return: The created profile
     """
     logger = bot_logging.get_logger("ProfileSharing")
     import_path = f"{name}-{uuid.uuid4().hex}"
     try:
+        slug = profile_data.profile_details.name
         profile_data.profile_details.name = name
+        profile_data_importer.init_profile_directory(import_path)
         await profile_data_importer.convert_profile_data_to_profile_directory(
-            profile_data, description, risk, logo_url, import_path, aiohttp_session
+            profile_data,
+            import_path,
+            description=description,
+            risk=risk,
+            auto_update=auto_update,
+            slug=slug,
+            avatar_url=logo_url,
+            aiohttp_session=aiohttp_session,
         )
         return import_profile(
             import_path=import_path,
@@ -196,6 +208,24 @@ async def import_profile_data_as_profile(
                 shutil.rmtree(import_path)
         except Exception as err:
             logger.exception(err, True, f"Error when removing profile temp dir: {err}")
+
+
+async def update_profile(
+    profile: Profile,
+) -> bool:
+    """
+    :param profile: profile to update
+    """
+    authenticator = authentication.Authenticator.instance()
+    profile_data = await authenticator.get_strategy_profile_data(
+        None, product_slug=profile.slug
+    )
+    changed = profile_data_importer.get_updated_profile(profile, profile_data)
+    if await profile_data_importer.convert_profile_data_to_profile_directory(
+        profile_data, profile.path, profile_to_update=profile, changed=changed
+    ):
+        changed = True
+    return changed
 
 
 def download_profile(url, target_file, timeout=60):

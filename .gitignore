@@ -40,3 +40,5 @@ Octane_install.zip
 docker-compose.yml
 .gitpod.yml
 custom_requirements.txt
+profiler/result-backtesting.prof
+profiler/result.prof

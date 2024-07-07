@@ -60,11 +60,20 @@ def register(blueprint):
         request_data = flask.request.get_json()
         success = False
         message = "nothing to do"
+        if "color_mode" in request_data:
+            success, message = models.set_color_mode(request_data["color_mode"])
         if "time_frame" in request_data:
             success, message = models.set_display_timeframe(request_data["time_frame"])
         if "display_orders" in request_data:
             success, message = models.set_display_orders(request_data["display_orders"])
         return util.get_rest_reply(flask.jsonify(message), 200 if success else 500)
+
+
+    @blueprint.route('/hide_announcement<key>', methods=["POST"])
+    @login.login_required_when_activated
+    def hide_announcement(key):
+        models.set_display_announcement(key, False)
+        return util.get_rest_reply(flask.jsonify(""), 200)
 
 
     @blueprint.route('/start_copy_trading', methods=["POST"])

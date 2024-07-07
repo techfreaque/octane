@@ -167,6 +167,8 @@ def test_as_dict(profile):
             constants.CONFIG_ORIGIN_URL: None,
             constants.CONFIG_READ_ONLY: False,
             constants.CONFIG_IMPORTED: False,
+            constants.CONFIG_AUTO_UPDATE: False,
+            constants.CONFIG_SLUG: None,
             constants.CONFIG_COMPLEXITY: enums.ProfileComplexity.MEDIUM.value,
             constants.CONFIG_RISK: enums.ProfileRisk.MODERATE.value,
             constants.CONFIG_TYPE: enums.ProfileType.LIVE.value,
@@ -181,6 +183,8 @@ def test_as_dict(profile):
     profile.imported = True
     profile.complexity = enums.ProfileComplexity.DIFFICULT
     profile.risk = enums.ProfileRisk.LOW
+    profile.auto_update = True
+    profile.slug = "slugg"
     profile.profile_type = enums.ProfileType.BACKTESTING
     profile.extra_backtesting_time_frames = [enums.TimeFrames.ONE_DAY.value]
     assert profile.as_dict() == {
@@ -192,6 +196,8 @@ def test_as_dict(profile):
             constants.CONFIG_ORIGIN_URL: "https://default.url",
             constants.CONFIG_READ_ONLY: False,
             constants.CONFIG_IMPORTED: True,
+            constants.CONFIG_AUTO_UPDATE: True,
+            constants.CONFIG_SLUG: "slugg",
             constants.CONFIG_COMPLEXITY: enums.ProfileComplexity.DIFFICULT.value,
             constants.CONFIG_RISK: enums.ProfileRisk.LOW.value,
             constants.CONFIG_TYPE: enums.ProfileType.BACKTESTING.value,

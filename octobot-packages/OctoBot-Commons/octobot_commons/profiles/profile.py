@@ -63,11 +63,13 @@ class Profile:
         self.path: str = profile_path
         self.schema_path: str = schema_path or constants.PROFILE_FILE_SCHEMA
         self.name: str = None
+        self.slug: str = None
         self.description: str = None
         self.required_trading_tentacles: list = []
         self.avatar: str = None
         self.avatar_path: str = None
         self.origin_url: str = None
+        self.auto_update: bool = False
         self.read_only: bool = False
         self.imported: bool = False
         self.complexity: enums.ProfileComplexity = enums.ProfileComplexity.MEDIUM
@@ -92,10 +94,12 @@ class Profile:
         profile_config = profile_dict.get(constants.CONFIG_PROFILE, {})
         self.profile_id = profile_config.get(constants.CONFIG_ID, str(uuid.uuid4()))
         self.name = profile_config.get(constants.CONFIG_NAME, "")
+        self.slug = profile_config.get(constants.CONFIG_SLUG, "")
         self.description = profile_config.get(constants.CONFIG_DESCRIPTION, "")
         self.required_trading_tentacles = profile_config.get(constants.CONFIG_REQUIRED_TRADING_TENTACLES, [])
         self.avatar = profile_config.get(constants.CONFIG_AVATAR, "")
         self.origin_url = profile_config.get(constants.CONFIG_ORIGIN_URL, None)
+        self.auto_update = profile_config.get(constants.CONFIG_AUTO_UPDATE, False)
         self.read_only = profile_config.get(constants.CONFIG_READ_ONLY, False)
         self.imported = profile_config.get(constants.CONFIG_IMPORTED, False)
         self.complexity = enums.ProfileComplexity(
@@ -223,6 +227,7 @@ class Profile:
         clone.read_only = False
         clone.imported = False
         clone.origin_url = None
+        clone.auto_update = False
         try:
             clone.path = os.path.join(
                 os.path.split(self.path)[0], f"{clone.name}_{clone.profile_id}"
@@ -249,10 +254,12 @@ class Profile:
             constants.CONFIG_PROFILE: {
                 constants.CONFIG_ID: self.profile_id,
                 constants.CONFIG_NAME: self.name,
+                constants.CONFIG_SLUG: self.slug,
                 constants.CONFIG_DESCRIPTION: self.description,
                 constants.CONFIG_REQUIRED_TRADING_TENTACLES: self.required_trading_tentacles,
                 constants.CONFIG_AVATAR: self.avatar,
                 constants.CONFIG_ORIGIN_URL: self.origin_url,
+                constants.CONFIG_AUTO_UPDATE: self.auto_update,
                 constants.CONFIG_READ_ONLY: self.read_only,
                 constants.CONFIG_IMPORTED: self.imported,
                 constants.CONFIG_COMPLEXITY: self.complexity.value

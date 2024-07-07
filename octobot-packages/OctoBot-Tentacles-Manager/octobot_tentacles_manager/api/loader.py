@@ -25,6 +25,10 @@ def load_tentacles(verbose=True) -> bool:
     return managers.TentaclesSetupManager.is_tentacles_arch_valid(verbose=verbose)
 
 
+def is_tentacles_architecture_valid() -> bool:
+    return managers.TentaclesSetupManager.is_tentacles_arch_valid(verbose=False, import_tentacles=False)
+
+
 def are_tentacles_up_to_date(tentacles_setup_config, bot_version):
     installation_version = get_tentacles_installation_version(tentacles_setup_config)
     if installation_version == constants.TENTACLE_INSTALLATION_CONTEXT_OCTOBOT_VERSION_UNKNOWN:

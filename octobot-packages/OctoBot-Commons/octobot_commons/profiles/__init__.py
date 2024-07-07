@@ -27,6 +27,7 @@ from octobot_commons.profiles.profile_sharing import (
     install_profile,
     import_profile,
     import_profile_data_as_profile,
+    update_profile,
     download_profile,
     download_and_install_profile,
 )
@@ -40,6 +41,13 @@ from octobot_commons.profiles.profile_data import (
     OptionsData,
 )
 
+from octobot_commons.profiles import profile_sync
+
+from octobot_commons.profiles.profile_sync import (
+    start_profile_synchronizer,
+    stop_profile_synchronizer,
+)
+
 
 __all__ = [
     "Profile",
@@ -47,10 +55,13 @@ __all__ = [
     "install_profile",
     "import_profile",
     "import_profile_data_as_profile",
+    "update_profile",
     "download_profile",
     "download_and_install_profile",
     "ProfileData",
     "ExchangeData",
     "MinimalFund",
     "OptionsData",
+    "start_profile_synchronizer",
+    "stop_profile_synchronizer",
 ]

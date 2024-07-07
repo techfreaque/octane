@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [1.9.49] - 2023-07-04
+### Added
+[Profiles] handle registered tentacles in import
+
+## [1.9.48] - 2023-07-03
+### Added
+[Profiles] handle profile update
+
 ## [1.9.47] - 2023-06-12
 ### Added
 [CommunityChannelTypes] add TRADINGVIEW

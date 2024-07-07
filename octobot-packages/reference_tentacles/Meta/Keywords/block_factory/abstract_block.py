@@ -420,7 +420,7 @@ class AbstractBlock:
         show_in_optimizer=False,
         order=None,
         grid_columns=12,
-    ):
+    ) -> str:
         available_data_src = [
             matrix_enums.PriceDataSources.OPEN.value,
             matrix_enums.PriceDataSources.HIGH.value,

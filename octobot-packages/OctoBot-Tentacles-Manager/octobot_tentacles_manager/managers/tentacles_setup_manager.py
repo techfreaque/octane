@@ -36,11 +36,11 @@ class TentaclesSetupManager:
         self.bot_installation_path = bot_installation_path
 
     def refresh_user_tentacles_setup_config_file(self,
-                                                       tentacles_setup_config_to_update=None,
-                                                       update_location=None,
-                                                       force_update_registered_tentacles=False,
-                                                       newly_installed_tentacles=None,
-                                                       uninstalled_tentacles=None):
+                                                 tentacles_setup_config_to_update=None,
+                                                 update_location=None,
+                                                 force_update_registered_tentacles=False,
+                                                 newly_installed_tentacles=None,
+                                                 uninstalled_tentacles=None):
         available_tentacle = util.load_tentacle_with_metadata(self.tentacle_setup_root_path)
         if not tentacles_setup_config_to_update:
             reference_tentacle_setup_config = configuration.TentaclesSetupConfiguration(
@@ -115,12 +115,13 @@ class TentaclesSetupManager:
             shutil.rmtree(constants.TENTACLES_REQUIREMENTS_INSTALL_TEMP_DIR)
 
     @staticmethod
-    def is_tentacles_arch_valid(verbose=True, raises=False) -> bool:
+    def is_tentacles_arch_valid(verbose=True, raises=False, import_tentacles=True) -> bool:
         try:
             if not TentaclesSetupManager._is_full_arch_valid(constants.TENTACLES_PATH,
                                                              constants.TENTACLES_FOLDERS_ARCH):
                 return False
-            import tentacles
+            if import_tentacles:
+                import tentacles
             return True
         except (ImportError, SyntaxError) as e:
             if verbose:

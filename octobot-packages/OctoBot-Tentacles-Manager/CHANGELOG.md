@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.15] - 2023-07-04
+### Added
+[Logging] add option to hide url
+
+## [2.9.14] - 2023-07-04
+### Added
+[API] import_registered_tentacles to fill_with_installed_tentacles
+
+## [2.9.13] - 2023-07-03
+### Added
+[API] return value on save_config
+
+## [2.9.12] - 2023-07-03
+### Added
+[API] packages methods
+
 ## [2.9.11] - 2023-02-18
 ### Fixed
 - SSL certificate issues
