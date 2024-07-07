@@ -16,7 +16,7 @@ if (!(Test-Path "custom_requirements_to_uninstall.txt"))
 {
     Copy-Item "scripts/custom_requirements_to_uninstall.txt.template" -Destination "custom_requirements_to_uninstall.txt"
 }
-pip uninstall -r custom_requirements_to_uninstall.txt || echo "no requirement to uninstall"
+# pip uninstall -r custom_requirements_to_uninstall.txt || echo "no requirement to uninstall"
 if (!(Test-Path "custom_requirements.txt"))
 {
     Copy-Item "scripts/custom_requirements.txt.template" -Destination "custom_requirements.txt"
