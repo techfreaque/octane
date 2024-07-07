@@ -69,6 +69,7 @@ WORKDIR /octobot-packages/OctoBot
 RUN python setup.py install
 
 WORKDIR /
+RUN pip uninstall -r /custom_requirements_to_uninstall.txt || echo "no requirement to uninstall"
 RUN pip install --prefer-binary -r /custom_requirements.txt
 
 # FROM python:3.11-slim-buster

@@ -22,6 +22,10 @@ Get-Content $destinationFile | ForEach-Object {
   }
 }
 
+if (!(Test-Path "custom_requirements_to_uninstall.txt")) {
+  Copy-Item "scripts/custom_requirements_to_uninstall.txt.template" -Destination "custom_requirements_to_uninstall.txt"
+}
+
 if (!(Test-Path "custom_requirements.txt")) {
   Copy-Item "scripts/custom_requirements.txt.template" -Destination "custom_requirements.txt"
 }

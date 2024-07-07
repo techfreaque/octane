@@ -1,7 +1,6 @@
 .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -U wheel
-pip install -r octobot-packages/OctoBot/strategy_maker_requirements.txt
 
 pip install -r octobot-packages/OctoBot/requirements.txt
 pip install -r octobot-packages/Async-Channel/requirements.txt
@@ -12,6 +11,12 @@ pip install -r octobot-packages/OctoBot-Services/requirements.txt
 pip install -r octobot-packages/OctoBot-Tentacles-Manager/requirements.txt
 pip install -r octobot-packages/OctoBot-Trading/requirements.txt
 pip install -r octobot-packages/trading-backend/requirements.txt
+pip install -r octobot-packages/OctoBot/strategy_maker_requirements.txt
+if (!(Test-Path "custom_requirements_to_uninstall.txt"))
+{
+    Copy-Item "scripts/custom_requirements_to_uninstall.txt.template" -Destination "custom_requirements_to_uninstall.txt"
+}
+pip uninstall -r custom_requirements_to_uninstall.txt || echo "no requirement to uninstall"
 if (!(Test-Path "custom_requirements.txt"))
 {
     Copy-Item "scripts/custom_requirements.txt.template" -Destination "custom_requirements.txt"
