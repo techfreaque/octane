@@ -4,11 +4,11 @@ pandas_ta
 finta
 newtulipy
 statistics
-tensorflow==2.15.1
+tensorflow==2.13.1
 torch==2.2.2
 yfinance
 py_expression_eval
 mypy==1.10.0
-typing-extensions>4.6.1 # tmp fix
+typing-extensions>4.8.0 # tmp fix
 lxml_html_clean==0.1.1 # tmp fix
 # requirements inside the octobot-packages folder need to be installed as well
