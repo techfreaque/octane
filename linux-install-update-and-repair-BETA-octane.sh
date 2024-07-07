@@ -1,7 +1,7 @@
-git stash
-git pull
-git checkout dev
-git pull
+# git stash
+# git pull
+# git checkout dev
+# git pull
 
 timedatectl set-ntp true
 
