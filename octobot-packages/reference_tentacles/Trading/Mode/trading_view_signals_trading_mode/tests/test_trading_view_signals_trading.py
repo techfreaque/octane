@@ -109,6 +109,87 @@ async def _stop(exchange_manager):
     await asyncio_tools.wait_asyncio_next_cycle()
 
 
+async def test_parse_signal_data():
+    errors = []
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        """
+        KEY=value
+        EXCHANGE=1
+        PLOp=true
+        """,
+        errors
+    ) == {
+        "KEY": "value",
+        "EXCHANGE": "1",
+        "PLOp": True,
+    }
+    assert errors == []
+
+    errors = []
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "KEY=value\nEXCHANGE=1\nPLOp=false\n",
+        errors
+    ) == {
+        "KEY": "value",
+        "EXCHANGE": "1",
+        "PLOp": False,
+    }
+    assert errors == []
+
+    errors = []
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "KEY=value\\nEXCHANGE=1\\nPLOp=ABC",
+        errors
+    ) == {
+        "KEY": "value",
+        "EXCHANGE": "1",
+        "PLOp": "ABC",
+    }
+    assert errors == []
+
+    errors = []
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "KEY=value\\nEXCHANGE\\nPLOp=ABC",
+        errors
+    ) == {
+        "KEY": "value",
+        "PLOp": "ABC",
+    }
+    assert len(errors) == 1
+    assert "EXCHANGE" in str(errors[0])
+    assert "nPLOp" not in str(errors[0])
+    assert "KEY" not in str(errors[0])
+
+    errors = []
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "KEY=value;EXCHANGE;PLOp=ABC;TAKE_PROFIT_PRICE=1;TAKE_PROFIT_PRICE_2=3",
+        errors
+    ) == {
+        "KEY": "value",
+        "PLOp": "ABC",
+        "TAKE_PROFIT_PRICE": "1",
+        "TAKE_PROFIT_PRICE_2": "3",
+    }
+    assert len(errors) == 1
+    assert "EXCHANGE" in str(errors[0])
+    assert "nPLOp" not in str(errors[0])
+    assert "KEY" not in str(errors[0])
+
+    errors = []
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "KEY=value;EXCHANGE\nPLOp=ABC\\nGG=HIHI",
+        errors
+    ) == {
+        "KEY": "value",
+        "PLOp": "ABC",
+        "GG": "HIHI",
+    }
+    assert len(errors) == 1
+    assert "EXCHANGE" in str(errors[0])
+    assert "nPLOp" not in str(errors[0])
+    assert "KEY" not in str(errors[0])
+
+
 async def test_trading_view_signal_callback(tools):
     exchange_manager, symbol, mode, producer, consumer = tools
     context = script_keywords.get_base_context(producer.trading_mode)
@@ -222,6 +303,7 @@ async def test_signal_callback(tools):
             consumer.STOP_PRICE_KEY: decimal.Decimal(math.nan),
             consumer.STOP_ONLY: False,
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal(math.nan),
+            consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [],
             consumer.REDUCE_ONLY_KEY: False,
             consumer.TAG_KEY: None,
             consumer.EXCHANGE_ORDER_IDS: None,
@@ -248,6 +330,7 @@ async def test_signal_callback(tools):
             consumer.STOP_PRICE_KEY: decimal.Decimal("25000"),
             consumer.STOP_ONLY: True,
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal(math.nan),
+            consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [],
             consumer.REDUCE_ONLY_KEY: False,
             consumer.TAG_KEY: "stop_1_tag",
             consumer.EXCHANGE_ORDER_IDS: None,
@@ -278,6 +361,7 @@ async def test_signal_callback(tools):
             consumer.STOP_PRICE_KEY: decimal.Decimal("12"),
             consumer.STOP_ONLY: False,
             consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("22222"),
+            consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [],
             consumer.REDUCE_ONLY_KEY: True,
             consumer.TAG_KEY: None,
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
@@ -297,7 +381,9 @@ async def test_signal_callback(tools):
             mode.REDUCE_ONLY_KEY: True,
             mode.ORDER_TYPE_SIGNAL: "LiMiT",
             mode.STOP_PRICE_KEY: "-10%",  # price - 10%
-            mode.TAKE_PROFIT_PRICE_KEY: "120.333333333333333d",   # price  + 120.333333333333333
+            f"{mode.TAKE_PROFIT_PRICE_KEY}_0": "120.333333333333333d",   # price  + 120.333333333333333
+            f"{mode.TAKE_PROFIT_PRICE_KEY}_1": "122.333333333333333d",   # price  + 122.333333333333333
+            f"{mode.TAKE_PROFIT_PRICE_KEY}_2": "4444d",   # price  + 4444
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
             "PARAM_TAG_1": "ttt",
             "PARAM_Plop": False,
@@ -310,7 +396,10 @@ async def test_signal_callback(tools):
             consumer.VOLUME_KEY: decimal.Decimal("1"),
             consumer.STOP_PRICE_KEY: decimal.Decimal("6308.27549999"),
             consumer.STOP_ONLY: False,
-            consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("7129.52833333"),
+            consumer.TAKE_PROFIT_PRICE_KEY: decimal.Decimal("nan"), # only additional TP orders are provided
+            consumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: [
+                decimal.Decimal("7129.52833333"), decimal.Decimal("7131.52833333"), decimal.Decimal('11453.19499999')
+            ],
             consumer.REDUCE_ONLY_KEY: True,
             consumer.TAG_KEY: None,
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],

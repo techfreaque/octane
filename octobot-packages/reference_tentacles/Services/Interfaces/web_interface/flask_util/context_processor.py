@@ -15,9 +15,11 @@
 #  License along with this library.
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.constants as commons_constants
+import octobot_commons.authentication as authentication
 import octobot.constants as constants
 import octobot.enums as enums
 import octobot.community.identifiers_provider as identifiers_provider
+import octobot.community.supabase_backend.enums as community_enums
 import tentacles.Services.Interfaces.web_interface.models as models
 import tentacles.Services.Interfaces.web_interface.models.configuration as configuration_model
 import tentacles.Services.Interfaces.web_interface.enums as web_enums
@@ -111,7 +113,7 @@ def register_context_processor(web_interface_instance):
             has_open_source_package = models.has_open_source_package()
             for plugin in web_interface_instance.registered_plugins:
                 for tab in plugin.get_tabs():
-                    if tab.location is location and (not tab.requires_open_source_package or has_open_source_package):
+                    if tab.location is location and tab.is_available(has_open_source_package):
                         yield tab
 
         def is_in_stating_community_env():
@@ -121,6 +123,18 @@ def register_context_processor(web_interface_instance):
             for name, info in tentacles_info_by_name:
                 if info[web_constants.ACTIVATION_KEY]:
                     return name
+
+        def get_logged_in_email():
+            try:
+                return authentication.Authenticator.instance().get_logged_in_email()
+            except (authentication.AuthenticationRequired, authentication.UnavailableError):
+                return ""
+
+        current_profile = models.get_current_profile()
+        trading_mode = models.get_config_activated_trading_mode()
+        selected_bot = models.get_selected_user_bot()
+        selected_bot_id = (selected_bot.get(community_enums.BotKeys.ID.value) or "") if selected_bot else ""
+
 
         return dict(
             LAST_UPDATED_STATIC_FILES=web_interface.LAST_UPDATED_STATIC_FILES,
@@ -140,6 +154,13 @@ def register_context_processor(web_interface_instance):
             CAN_INSTALL_TENTACLES=constants.CAN_INSTALL_TENTACLES,
             IS_ALLOWING_TRACKING=models.get_metrics_enabled(),
             TRACKING_ID=constants.TRACKING_ID,
+            PH_TRACKING_ID=constants.PH_TRACKING_ID,
+            USER_EMAIL=get_logged_in_email(),
+            USER_SELECTED_BOT_ID=selected_bot_id,
+            PROFILE_NAME=current_profile.name,
+            TRADING_MODE_NAME=trading_mode.get_name() if trading_mode else "",
+            EXCHANGE_NAMES=",".join(get_profile_exchanges(current_profile)),
+            IS_REAL_TRADING=models.is_real_trading(current_profile),
             TAB_START=web_enums.TabsLocation.START,
             TAB_END=web_enums.TabsLocation.END,
             get_color_mode=get_color_mode,
@@ -163,5 +184,5 @@ def register_context_processor(web_interface_instance):
             are_automations_enabled=models.are_automations_enabled(),
             is_backtesting_enabled=models.is_backtesting_enabled(),
             is_advanced_interface_enabled=models.is_advanced_interface_enabled(),
-            has_open_source_package=models.has_open_source_package
+            has_open_source_package=models.has_open_source_package,
         )

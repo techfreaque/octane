@@ -34,6 +34,7 @@ class Coinex(exchanges.RestExchange):
         # ExchangeError('coinex Order not found')
         ("order not found", )
     ]
+    SUPPORT_FETCHING_CANCELLED_ORDERS = False
 
     @classmethod
     def get_name(cls):
@@ -86,14 +87,8 @@ class CoinexCCXTAdapter(exchanges.CCXTAdapter):
 
     def fix_order(self, raw, **kwargs):
         fixed = super().fix_order(raw, **kwargs)
+        self.adapt_amount_from_filled_or_cost(fixed)
         try:
-            if fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] \
-                    == trading_enums.TradeOrderType.MARKET.value and \
-                    fixed[trading_enums.ExchangeConstantsOrderColumns.SIDE.value] \
-                    == trading_enums.TradeOrderSide.BUY.value:
-                # convert amount to have the same units as evert other exchange: use FILLED for accuracy
-                fixed[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = \
-                    fixed[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]
             if fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] is None:
                 fixed[trading_enums.ExchangeConstantsOrderColumns.STATUS.value] = \
                     trading_enums.OrderStatus.CLOSED.value

@@ -118,9 +118,11 @@ function get_watched_symbol_price_graph(element, callback=undefined, no_data_cal
     });
 }
 
-const sell_color = "#ff0000";
-const buy_color = "#009900";
-const stop_color = "#FFA500";
+const stop_color = getComputedStyle(document.body).getPropertyValue('--local-price-chart-stop-color');
+const sell_color = getComputedStyle(document.body).getPropertyValue('--local-price-chart-sell-color');
+const buy_color = getComputedStyle(document.body).getPropertyValue('--local-price-chart-buy-color');
+const candle_sell_color = getComputedStyle(document.body).getPropertyValue('----local-price-chart-candle-sell-color');
+const candle_buy_color = getComputedStyle(document.body).getPropertyValue('--local-price-chart-candle-buy-color');
 
 function create_candlesticks(candles){
     const data_time = candles["time"];
@@ -132,9 +134,9 @@ function create_candlesticks(candles){
     return {
       x: data_time,
       close: data_close,
-      decreasing: {line: {color: '#F65A33'}},
+      decreasing: {line: {color: candle_sell_color}},
       high: data_high,
-      increasing: {line: {color: '#7DF98D'}},
+      increasing: {line: {color: candle_buy_color}},
       line: {color: 'rgba(31,119,180,1)'},
       low: data_low,
       open: data_open,
@@ -187,22 +189,23 @@ function create_trades(trades, trader){
         const data_trade_description = trades["trade_description"];
         const data_order_side = trades["order_side"];
 
-        const marker_size = trader === "Simulator" ? 14 : 16;
-        const marker_opacity = trader === "Simulator" ? 0.5 : 0.65;
-        const border_line_color = "#b6b8c3";
+        const marker_size = 16;
+        const marker_opacity =  0.9;
+        const border_line_color = getTextColor();
         const colors = [];
         $.each(data_order_side, function (index, value) {
             colors.push(_getOrderColor(trades["trade_description"][index], value));
         });
 
-        const line_with = trader === "Simulator" ? 0 : 1;
+        const line_with = isDarkTheme() ? 1 : 0.2;
 
         return {
             x: data_time,
             y: data_price,
             mode: 'markers',
-            name: trader,
+            name: "",
             text: data_trade_description,
+            hovertemplate: `%{text}<br>%{x}`,
             marker: {
                 color: colors,
                 size: marker_size,
@@ -315,12 +318,12 @@ function create_layout(graph_title){
             domain: [0.2, 1],
             autorange: true,
             title: 'Price',
-            gridcolor: getTextColor(),
+            gridcolor: `rgba(${getTextColorRGB()}, 0.2)`,
         },
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
         font: {
-            color: "white"
+            color: getTextColor(),
         }
     };
 }

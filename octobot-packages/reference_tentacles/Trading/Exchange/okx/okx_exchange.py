@@ -22,6 +22,7 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.constants as constants
 import octobot_trading.errors as trading_errors
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
+import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
 import octobot_trading.personal_data as trading_personal_data
 
@@ -98,6 +99,11 @@ class Okx(exchanges.RestExchange):
     EXCHANGE_COMPLIANCY_ERRORS: typing.List[typing.Iterable[str]] = [
         # OKX ex: Trading of this pair or contract is restricted due to local compliance requirements
         ("restricted", "compliance"),
+    ]
+    # text content of errors due to unhandled authentication issues
+    EXCHANGE_AUTHENTICATION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # 'okx {"msg":"API key doesn't exist","code":"50119"}'
+        ("api key doesn't exist",),
     ]
 
     FIX_MARKET_STATUS = True
@@ -412,12 +418,12 @@ class Okx(exchanges.RestExchange):
 
     async def _update_position_with_leverage_data(self, symbol, position):
         leverage_data = await self.get_symbol_leverage(symbol)
-        raw_data = leverage_data[trading_enums.ExchangeConstantsLeveragePropertyColumns.RAW.value]
         adapter = self.connector.adapter
+        OKX_info = leverage_data[ccxt_constants.CCXT_INFO]
         position[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] = \
-            adapter.parse_position_mode(raw_data[adapter.OKX_POS_SIDE])
+            adapter.parse_position_mode(OKX_info[0][adapter.OKX_POS_SIDE])
         position[trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value] = \
-            adapter.parse_margin_type(raw_data[adapter.OKX_MARGIN_MODE])
+            adapter.parse_margin_type(leverage_data[ccxt_enums.ExchangeLeverageCCXTColumns.MARGIN_MODE.value])
         position[trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value] = \
             leverage_data[trading_enums.ExchangeConstantsLeveragePropertyColumns.LEVERAGE.value]
 
@@ -462,7 +468,7 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
     OKX_DEFAULT_FUNDING_TIME = 8 * commons_constants.HOURS_TO_SECONDS
 
     def fix_order(self, raw, symbol=None, **kwargs):
-        fixed = super().fix_order(raw, **kwargs)
+        fixed = super().fix_order(raw, symbol=symbol, **kwargs)
         self._adapt_order_type(fixed)
         return fixed
 
@@ -530,16 +536,13 @@ class OKXCCXTAdapter(exchanges.CCXTAdapter):
         return trading_enums.PositionMode.HEDGE
 
     def parse_leverage(self, fixed, **kwargs):
-        # WARNING no CCXT standard leverage parsing logic
-        # HAS TO BE IMPLEMENTED IN EACH EXCHANGE IMPLEMENTATION
-        fixed = fixed[self.DATA][0]    # okx is returning a list, use the 1 element only
         fixed = super().parse_leverage(fixed, **kwargs)
+        leverages = [
+            fixed[ccxt_enums.ExchangeLeverageCCXTColumns.LONG_LEVERAGE.value],
+            fixed[ccxt_enums.ExchangeLeverageCCXTColumns.SHORT_LEVERAGE.value],
+        ]
         fixed[trading_enums.ExchangeConstantsLeveragePropertyColumns.LEVERAGE.value] = \
-            self.safe_decimal(
-                fixed[trading_enums.ExchangeConstantsLeveragePropertyColumns.RAW.value],
-                self.OKX_LEVER,
-                constants.DEFAULT_SYMBOL_LEVERAGE,
-            )
+            decimal.Decimal(str(leverages[0] or leverages[1]))
         return fixed
 
     def parse_funding_rate(self, fixed, from_ticker=False, **kwargs):

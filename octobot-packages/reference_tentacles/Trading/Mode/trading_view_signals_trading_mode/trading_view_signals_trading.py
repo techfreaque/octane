@@ -32,6 +32,7 @@ import octobot_trading.modes.script_keywords as script_keywords
 class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     SERVICE_FEED_CLASS = trading_view_service_feed.TradingViewServiceFeed
     TRADINGVIEW_FUTURES_SUFFIXES = [".P"]
+    PARAM_SEPARATORS = [";", "\\n", "\n"]
 
     EXCHANGE_KEY = "EXCHANGE"
     SYMBOL_KEY = "SYMBOL"
@@ -44,6 +45,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     TAG_KEY = "TAG"
     EXCHANGE_ORDER_IDS = "EXCHANGE_ORDER_IDS"
     TAKE_PROFIT_PRICE_KEY = "TAKE_PROFIT_PRICE"
+    ALLOW_HOLDINGS_ADAPTATION_KEY = "ALLOW_HOLDINGS_ADAPTATION"
     PARAM_PREFIX_KEY = "PARAM_"
     BUY_SIGNAL = "buy"
     SELL_SIGNAL = "sell"
@@ -126,19 +128,25 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         consumers = await super().create_consumers()
         return consumers + await self._get_feed_consumers()
 
-    def _adapt_symbol(self, parsed_data):
-        if self.SYMBOL_KEY not in parsed_data:
+    @classmethod
+    def _adapt_symbol(cls, parsed_data):
+        if cls.SYMBOL_KEY not in parsed_data:
             return
-        symbol = parsed_data[self.SYMBOL_KEY]
-        for suffix in self.TRADINGVIEW_FUTURES_SUFFIXES:
+        symbol = parsed_data[cls.SYMBOL_KEY]
+        for suffix in cls.TRADINGVIEW_FUTURES_SUFFIXES:
             if symbol.endswith(suffix):
-                parsed_data[self.SYMBOL_KEY] = symbol.split(suffix)[0]
+                parsed_data[cls.SYMBOL_KEY] = symbol.split(suffix)[0]
                 return
 
-    async def _trading_view_signal_callback(self, data):
+    @classmethod
+    def parse_signal_data(cls, signal_data: str, errors: list) -> dict:
         parsed_data = {}
-        signal_data = data.get("metadata", "")
-        for line in signal_data.split("\n"):
+        # replace all split char by a single one
+        splittable_data = signal_data
+        final_split_char = cls.PARAM_SEPARATORS[0]
+        for split_char in cls.PARAM_SEPARATORS[1:]:
+            splittable_data = splittable_data.replace(split_char, final_split_char)
+        for line in splittable_data.split(final_split_char):
             if not line.strip():
                 # ignore empty lines
                 continue
@@ -151,9 +159,18 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
                     value = lower_val == "true"
                 parsed_data[values[0].strip()] = value
             except IndexError:
-                self.logger.error(f"Invalid signal line in trading view signal, ignoring it. Line: \"{line}\"")
+                errors.append(f"Invalid signal line in trading view signal, ignoring it. Line: \"{line}\"")
 
-        self._adapt_symbol(parsed_data)
+        cls._adapt_symbol(parsed_data)
+        return parsed_data
+
+
+    async def _trading_view_signal_callback(self, data):
+        signal_data = data.get("metadata", "")
+        errors = []
+        parsed_data = self.parse_signal_data(signal_data, errors)
+        for error in errors:
+            self.logger.error(error)
         try:
             if parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and \
                     (parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
@@ -248,21 +265,28 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                 f"Unknown signal: {parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY]}, full data= {parsed_data}"
             )
             state = trading_enums.EvaluatorStates.NEUTRAL
-        target_price = await self._parse_price(ctx, parsed_data, TradingViewSignalsTradingMode.PRICE_KEY, 0)
+        target_price = 0 if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL else (
+            await self._parse_price(ctx, parsed_data, TradingViewSignalsTradingMode.PRICE_KEY, 0))
         stop_price = await self._parse_price(
             ctx, parsed_data, TradingViewSignalsTradingMode.STOP_PRICE_KEY, math.nan
         )
         tp_price = await self._parse_price(
             ctx, parsed_data, TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY, math.nan
         )
+        additional_tp_prices = await self._parse_additional_prices(
+            ctx, parsed_data, f"{TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY}_", math.nan
+        )
+        allow_holdings_adaptation = parsed_data.get(TradingViewSignalsTradingMode.ALLOW_HOLDINGS_ADAPTATION_KEY, False)
+
         order_data = {
             TradingViewSignalsModeConsumer.PRICE_KEY: target_price,
             TradingViewSignalsModeConsumer.VOLUME_KEY: await self._parse_volume(
-                ctx, parsed_data, parsed_side, target_price
+                ctx, parsed_data, parsed_side, target_price, allow_holdings_adaptation
             ),
             TradingViewSignalsModeConsumer.STOP_PRICE_KEY: stop_price,
             TradingViewSignalsModeConsumer.STOP_ONLY: order_type == TradingViewSignalsTradingMode.STOP_SIGNAL,
             TradingViewSignalsModeConsumer.TAKE_PROFIT_PRICE_KEY: tp_price,
+            TradingViewSignalsModeConsumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: additional_tp_prices,
             TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY:
                 parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False),
             TradingViewSignalsModeConsumer.TAG_KEY:
@@ -273,6 +297,13 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         }
         return state, order_data
 
+    async def _parse_additional_prices(self, ctx, parsed_data, price_prefix, default):
+        prices = []
+        for key, value in parsed_data.items():
+            if key.startswith(price_prefix) and len(key.split(price_prefix)) == 2:
+                prices.append(await self._parse_price(ctx, parsed_data, key, default))
+        return prices
+
     async def _parse_price(self, ctx, parsed_data, key, default):
         target_price = decimal.Decimal(str(default))
         if input_price_or_offset := parsed_data.get(key, 0):
@@ -281,7 +312,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             )
         return target_price
 
-    async def _parse_volume(self, ctx, parsed_data, side, target_price):
+    async def _parse_volume(self, ctx, parsed_data, side, target_price, allow_holdings_adaptation):
         user_volume = str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0))
         if user_volume == "0":
             return trading_constants.ZERO
@@ -293,7 +324,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             is_stop_order=False,
             use_total_holding=False,
             target_price=target_price,
-            allow_holdings_adaptation=False,    # raise when not enough funds to create an order according to user input
+            # raise when not enough funds to create an order according to user input
+            allow_holdings_adaptation=allow_holdings_adaptation,
         )
 
     async def signal_callback(self, parsed_data: dict, ctx):

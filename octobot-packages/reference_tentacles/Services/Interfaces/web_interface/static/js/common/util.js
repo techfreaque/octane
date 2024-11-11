@@ -155,6 +155,14 @@ const getTextColor = () => {
     return getComputedStyle(document.body).getPropertyValue('--mdb-primary-text-emphasis')
 }
 
+const getTextColorRGB = () => {
+    return getComputedStyle(document.body).getPropertyValue('--mdb-emphasis-color-rgb')
+}
+
+const isDarkTheme = () => {
+    return $("html").data("mdb-theme") === "dark"
+}
+
 const handle_rounded_numbers_display = () => {
     $(".rounded-number").each(function (){
         const text = $(this).text().trim();
@@ -451,4 +459,19 @@ function selectFirstTab(nestedNavBar=undefined){
     if (!activatedTab){
         activate_tab($("[data-tab='default']"), nestedNavBar);
     }
+}
+
+function copyToClipBoard(name, value) {
+    if(!navigator.clipboard){
+        create_alert(
+            "error",
+            "Browser security is preventing copy. Please manually copy this value"
+        );
+    }
+    navigator.clipboard.writeText(value);
+    create_alert("success", `${name} copied to clipboard`);
+}
+
+async function sleep(milliseconds) {
+    return new Promise(r => setTimeout(r, milliseconds))
 }

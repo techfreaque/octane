@@ -6,7 +6,7 @@
     <!-- Card -->
     <div data-role="exchange" class="card mb-4 {{add_class}} config-card">
 
-        <div class="card-header row">
+        <div class="card-header d-flex">
             <div class="col-7 col-lg-5">
                 <h4 class="text-capitalize">
                     {{exchange}}
@@ -95,10 +95,10 @@
                                         class="editable editable-click config-element">
                         {{keys_value}}</a><br>
 
-                        <i>API Password</i>
+                        <i>API Pass/UID</i>
                         <i class="fa-solid fa-question"
                            data-toggle="tooltip" data-placement="top"
-                           title="An API password is required by some exchanges, leave as is otherwise.">
+                           title="An API password or Memo/UID is required by some exchanges, leave as is otherwise.">
                         </i> : <a href="#"
                                   id="exchange_api-password"
                                   config-key="exchanges_{{exchange}}_api-password"
