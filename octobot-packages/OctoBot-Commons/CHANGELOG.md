@@ -4,6 +4,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.61] - 2023-10-23
+### Added
+[ProfileData] add proxy_id
+[Constants] add CONFIG_EXCHANGE_ACCESS_TOKEN
+
+## [1.9.60] - 2023-10-12
+### Added
+[ProfileData] add exchange_id
+
+## [1.9.59] - 2023-10-03
+### Added
+[CommunityChannelTypes] add CONFIGURATION
+
+## [1.9.58] - 2023-08-28
+### Updated
+[ExchangeAuthData] add exchange config when missing
+
+## [1.9.57] - 2023-08-28
+### Added
+ExchangeAuthData
+### Updated
+[ExchangeAuthData] add exchange_type and sandboxed
+
+## [1.9.56] - 2023-08-28
+### Added
+ExchangeAuthData
+### Updated
+[ProfileImport] add force_simulator param
+
+## [1.9.55] - 2023-08-25
+### Updated
+[Config] remove custom restore file
+[Config] allow restore file copy failure
+
+## [1.9.54] - 2023-08-21
+### Updated
+[Authenticator] update update_orders args 
+## [1.9.53] - 2023-08-19
+### Added
+[Constants] CONFIG_EXCHANGE_UID
+
+## [1.9.52] - 2023-08-18
+### Added
+[ProfileData] TentaclesProfileDataTranslator
+
+## [1.9.51] - 2023-07-23
+### Added
+[Authenticator] wait_and_check_has_open_source_package
+
+## [1.9.50] - 2023-07-15
+### Added
+[OS] optional RAM watcher
 
 ## [1.9.49] - 2023-07-04
 ### Added

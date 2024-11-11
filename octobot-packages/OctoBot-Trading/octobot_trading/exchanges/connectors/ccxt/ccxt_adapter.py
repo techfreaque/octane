@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import decimal
+import time
 
 import octobot_trading.exchanges.adapters as adapters
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
@@ -42,6 +43,30 @@ class CCXTAdapter(adapters.AbstractAdapter):
     def parse_order(self, fixed, **kwargs):
         # CCXT standard order parsing logic
         return fixed
+
+    def adapt_amount_from_filled_or_cost(self, fixed):
+        try:
+            if (
+                fixed[enums.ExchangeConstantsOrderColumns.TYPE.value] == enums.TradeOrderType.MARKET.value and
+                fixed[enums.ExchangeConstantsOrderColumns.SIDE.value] == enums.TradeOrderSide.BUY.value and
+                fixed[enums.ExchangeConstantsOrderColumns.FILLED.value]
+            ):
+                # convert amount to use the base unit: use FILLED for accuracy (when not None/0)
+                fixed[enums.ExchangeConstantsOrderColumns.AMOUNT.value] = (
+                    fixed[enums.ExchangeConstantsOrderColumns.FILLED.value]
+                )
+            if (
+                (not fixed[enums.ExchangeConstantsOrderColumns.AMOUNT.value]) and
+                fixed[enums.ExchangeConstantsOrderColumns.COST.value] and
+                fixed[enums.ExchangeConstantsOrderColumns.PRICE.value]
+            ):
+                # convert amount to use the base unit
+                fixed[enums.ExchangeConstantsOrderColumns.AMOUNT.value] = (
+                    fixed[enums.ExchangeConstantsOrderColumns.COST.value] /
+                    fixed[enums.ExchangeConstantsOrderColumns.PRICE.value]
+                )
+        except KeyError:
+            pass
 
     def adapt_quantities_with_contract_size(self, order_or_trade, symbol):
         if self.connector.exchange_manager.is_future:
@@ -175,6 +200,17 @@ class CCXTAdapter(adapters.AbstractAdapter):
     def fix_order_book(self, raw, **kwargs):
         fixed = super().fix_order_book(raw, **kwargs)
         # CCXT standard order_book fixing logic
+        try:
+            exchange_timestamp = fixed[enums.ExchangeConstantsOrderBookInfoColumns.TIMESTAMP.value]
+            if exchange_timestamp is None:
+                # force current time
+                fixed[enums.ExchangeConstantsOrderBookInfoColumns.TIMESTAMP.value] =  time.time()
+            else:
+                fixed[enums.ExchangeConstantsOrderBookInfoColumns.TIMESTAMP.value] = self.get_uniformized_timestamp(
+                    exchange_timestamp
+                )
+        except KeyError as e:
+            self.logger.error(f"Fail to convert order book timestamp ({e})")
         return fixed
 
     def parse_order_book(self, fixed, **kwargs):
@@ -335,11 +371,8 @@ class CCXTAdapter(adapters.AbstractAdapter):
         return fixed
 
     def parse_leverage(self, fixed, **kwargs):
-        # WARNING no CCXT standard leverage parsing logic
-        # HAS TO BE IMPLEMENTED IN EACH EXCHANGE IMPLEMENTATION
-        return {
-            enums.ExchangeConstantsLeveragePropertyColumns.RAW.value: fixed,
-        }
+        # CCXT standard leverage fixing logic
+        return fixed
 
     def fix_funding_rate_history(self, raw, **kwargs):
         fixed = super().fix_funding_rate_history(raw, **kwargs)

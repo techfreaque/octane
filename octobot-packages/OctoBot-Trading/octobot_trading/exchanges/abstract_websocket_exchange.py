@@ -42,6 +42,8 @@ class AbstractWebsocketExchange:
         octobot_trading.enums.WebsocketFeeds.CANDLE,
         octobot_trading.enums.WebsocketFeeds.KLINE,
     ]
+    # Feeds to create above which not to use websockets
+    MAX_HANDLED_FEEDS = octobot_trading.constants.NO_DATA_LIMIT
 
     def __init__(self, config, exchange_manager):
         self.config = config
@@ -92,7 +94,7 @@ class AbstractWebsocketExchange:
     def get_exchange_credentials(self):
         """
         Exchange credentials
-        :return: key, secret, password
+        :return: key, secret, password, uid
         """
         return self.exchange_manager.get_exchange_credentials(self.exchange_manager.exchange_name)
 
@@ -212,8 +214,12 @@ class AbstractWebsocketExchange:
         """
         return octobot_trading.constants.INFINITE_MAX_HANDLED_PAIRS_WITH_TIMEFRAME
 
+    @classmethod
+    def get_feeds_count(cls, pairs, time_frames) -> int:
+        raise NotImplementedError(f"get_feeds_count is not implemented")
+
     def _should_authenticate(self):
-        api_key, api_secret, _ = self.get_exchange_credentials()
+        api_key, api_secret, _, _, _ = self.get_exchange_credentials()
         return not self.exchange_manager.without_auth \
             and not self.exchange_manager.is_trader_simulated \
             and api_key and api_secret

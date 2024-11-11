@@ -63,14 +63,22 @@ INFINITE_MAX_HANDLED_PAIRS_WITH_TIMEFRAME = -1
 DEFAULT_CANDLE_HISTORY_SIZE = 200
 NO_DATA_LIMIT = -1
 DEFAULT_FAILED_REQUEST_RETRY_TIME = 1
+FAILED_NETWORK_REQUEST_RETRY_ATTEMPTS = 5
 DEFAULT_REQUEST_TIMEOUT = int(os.getenv("DEFAULT_REQUEST_TIMEOUT", "20000"))    # default ccxt is 10s, use 20
 ENABLE_EXCHANGE_HTTP_PROXY_FROM_ENV = os_util.parse_boolean_environment_var(
-    "ENABLE_EXCHANGE_HTTP_PROXY_FROM_ENV", "True")
+    "ENABLE_EXCHANGE_HTTP_PROXY_FROM_ENV", "True"
+)
+EXCHANGE_HTTP_PROXY_AUTHENTICATED_URL = os.getenv("EXCHANGE_HTTP_PROXY_AUTHENTICATED_URL")
+EXCHANGE_HTTPS_PROXY_AUTHENTICATED_URL = os.getenv("EXCHANGE_HTTPS_PROXY_AUTHENTICATED_URL")
+EXCHANGE_SOCKS_PROXY_AUTHENTICATED_URL = os.getenv("EXCHANGE_SOCKS_PROXY_AUTHENTICATED_URL")
 ENABLE_CCXT_VERBOSE = os_util.parse_boolean_environment_var("ENABLE_CCXT_VERBOSE", "False")
 ENABLE_CCXT_RATE_LIMIT = os_util.parse_boolean_environment_var("ENABLE_CCXT_RATE_LIMIT", "True")
+CCXT_DEFAULT_CACHE_LIMIT = int(os.getenv("CCXT_DEFAULT_CACHE_LIMIT", "1000"))  # 1000: default ccxt value
+CCXT_TRADES_CACHE_LIMIT = int(os.getenv("CCXT_TRADES_CACHE_LIMIT", str(CCXT_DEFAULT_CACHE_LIMIT)))
+CCXT_ORDERS_CACHE_LIMIT = int(os.getenv("CCXT_ORDERS_CACHE_LIMIT", str(CCXT_DEFAULT_CACHE_LIMIT)))
+CCXT_OHLCV_CACHE_LIMIT = int(os.getenv("CCXT_OHLCV_CACHE_LIMIT", str(CCXT_DEFAULT_CACHE_LIMIT)))
+CCXT_WATCH_ORDER_BOOK_LIMIT = int(os.getenv("CCXT_WATCH_ORDER_BOOK_LIMIT", str(CCXT_DEFAULT_CACHE_LIMIT)))
 THROTTLED_WS_UPDATES = float(os.getenv("THROTTLED_WS_UPDATES", "0.1"))  # avoid spamming CPU
-ENABLE_LIVE_CANDLES_STORAGE = os_util.parse_boolean_environment_var("ENABLE_LIVE_CANDLES_STORAGE", "False")
-ENABLE_HISTORICAL_ORDERS_UPDATES_STORAGE = os_util.parse_boolean_environment_var("ENABLE_HISTORICAL_ORDERS_UPDATES_STORAGE", "False")
 MAX_CANDLES_IN_RAM = int(os.getenv("MAX_CANDLES_IN_RAM", "3000"))    # max candles per CandlesManager
 STORAGE_ORIGIN_VALUE = "origin_value"
 ENABLE_SIMULATED_CURRENT_ORDERS_STORAGE = os_util.parse_boolean_environment_var("ENABLE_SIMULATED_CURRENT_ORDERS_STORAGE", "False")
@@ -78,6 +86,12 @@ ENABLE_BACKTESTING_CURRENT_ORDERS_STORAGE = os_util.parse_boolean_environment_va
 DISPLAY_TIME_FRAME = commons_enums.TimeFrames.ONE_HOUR
 DEFAULT_SUBACCOUNT_ID = "default_subaccount_id"
 DEFAULT_ACCOUNT_ID = "default_account_id"
+
+# Storage
+ENABLE_LIVE_CANDLES_STORAGE = os_util.parse_boolean_environment_var("ENABLE_LIVE_CANDLES_STORAGE", "False")
+ENABLE_HISTORICAL_ORDERS_UPDATES_STORAGE = os_util.parse_boolean_environment_var("ENABLE_HISTORICAL_ORDERS_UPDATES_STORAGE", "False")
+ENABLE_SIMULATED_ORDERS_STORAGE = os_util.parse_boolean_environment_var("ENABLE_SIMULATED_ORDERS_STORAGE", "False")
+AUTH_UPDATE_DEBOUNCE_DURATION = float(os.getenv("AUTH_UPDATE_DEBOUNCE_DURATION", "10"))
 
 # Decimal default values (decimals are immutable, can be stored as constant)
 ZERO = decimal.Decimal(0)
@@ -89,7 +103,6 @@ NaN = decimal.Decimal("nan")
 FULL_CANDLE_HISTORY_EXCHANGES = [
     "ascendex",
     "binance",
-    "binanceusdm",
     "bitfinex2",
     "bitstamp",
     "bittrex",
@@ -108,7 +121,7 @@ FULL_CANDLE_HISTORY_EXCHANGES = [
     "mexc",
     "coinbase",
     "binanceus",
-    "mexc",
+    "bitmart",
 ]
 
 DEFAULT_FUTURE_EXCHANGES = ["binanceusdm", "bybit"]
@@ -131,11 +144,12 @@ TESTED_EXCHANGES = [
     "mexc",
     "bingx",
     "coinex",
+    "bitmart",
 ])
 DEFAULT_FUTURE_EXCHANGES = sorted(["bybit"])
 SIMULATOR_TESTED_EXCHANGES = sorted(["bitfinex2", "bithumb", "bitstamp", "bittrex",
                               "hitbtc", "kraken", "poloniex", "bitso", "ndax", "upbit",
-                              "wavesexchange"])
+                              "wavesexchange",])
 
 # text content of errors due to exchange compliancy rules
 # Warning: should never be a false positive
@@ -188,6 +202,7 @@ BALANCE_CHANNEL = "Balance"
 BALANCE_PROFITABILITY_CHANNEL = "BalanceProfitability"
 POSITIONS_CHANNEL = "Positions"
 INDIVIDUAL_ORDER_SYNC_TIMEOUT = 1 * commons_constants.MINUTE_TO_SECONDS
+MAX_TRADES_COUNT = int(os.getenv("MAX_TRADES_COUNT", "10000"))    # larger values can use a large part of ram
 
 # History
 DEFAULT_SAVED_HISTORICAL_TIMEFRAMES = [commons_enums.TimeFrames.ONE_HOUR]

@@ -54,6 +54,10 @@ class TestBinanceRealExchangeTester(RealExchangeTester):
             TimeFrames.ONE_MONTH.value
         ))
 
+    async def test_active_symbols(self):
+        # binanceus numbers
+        await self.inner_test_active_symbols(150, 500)
+
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             self.ensure_required_market_status_values(market_status)
@@ -118,10 +122,22 @@ class TestBinanceRealExchangeTester(RealExchangeTester):
 
     async def test_get_order_book(self):
         order_book = await self.get_order_book()
+        assert 0 < order_book[Ecobic.TIMESTAMP.value] < self._get_ref_order_book_timestamp()
         assert len(order_book[Ecobic.ASKS.value]) == 5
         assert len(order_book[Ecobic.ASKS.value][0]) == 2
         assert len(order_book[Ecobic.BIDS.value]) == 5
         assert len(order_book[Ecobic.BIDS.value][0]) == 2
+
+        custom_limit_order_book = await self.get_order_book(limit=450)
+        # limit param is supported
+        # SUPPORTS_CUSTOM_LIMIT_ORDER_BOOK_FETCH = True in tentacle
+        self._ensure_book_custom_limit(
+            {self.SYMBOL: custom_limit_order_book}, True, 20, 450
+        )
+
+    async def test_get_order_books(self):
+        # not supported
+        await self.inner_test_unsupported_get_order_books()
 
     async def test_get_recent_trades(self):
         recent_trades = await self.get_recent_trades()

@@ -849,11 +849,13 @@ class StrategyDesignOptimizer:
         self,
         possible_values: list,
         config_element_values,
-        parent_values: list = [],
+        parent_values: list | None = None,
     ):
-        for combineable_value in config_element_values:
-            if combineable_value not in parent_values:
-                new_parent_values = parent_values + [combineable_value]
+        if parent_values is None:
+            parent_values = []
+        for combinable_value in config_element_values:
+            if combinable_value not in parent_values:
+                new_parent_values = parent_values + [combinable_value]
                 # sort to check uniqueness 
                 new_parent_values.sort()
                 if new_parent_values not in possible_values:

@@ -305,6 +305,9 @@ class AbstractEvaluator(tentacles_management.AbstractTentacle):
                 elif cache_if_available and eval_note != common_constants.DO_NOT_CACHE:
                     await cache_client.set_cached_value(eval_note, cache_key=eval_time, flush_if_necessary=True)
             self.ensure_eval_note_is_not_expired()
+            if notify:
+                # skip warning when evaluation is not to be broadcasted (might be a simple reset)
+                self._log_on_invalid_eval_not_time(self.exchange_name, self.matrix_id, symbol, eval_time, time_frame)
             await evaluator_channels.get_chan(constants.MATRIX_CHANNEL,
                                               self.matrix_id).get_internal_producer().send_eval_note(
                 matrix_id=self.matrix_id,
@@ -544,6 +547,27 @@ class AbstractEvaluator(tentacles_management.AbstractTentacle):
                 self.eval_note = common_constants.START_PENDING_EVAL_NOTE
                 self.eval_note_time_to_live = None
                 self.eval_note_changed_time = None
+
+    def _log_on_invalid_eval_not_time(self, exchange_name, matrix_id, symbol, eval_time, time_frame) -> None:
+        if not time_frame:
+            return
+        current_time = self._get_exchange_current_time(exchange_name, matrix_id)
+        if not matrix.is_evaluation_valid_in_time(current_time, eval_time, commons_enums.TimeFrames(time_frame)):
+            self.logger.warning(
+                f"Performed {symbol} {time_frame} evaluation on outdated data: {eval_time=}, {current_time=}. "
+                f"Up-to-date {symbol} price data on {time_frame} might not yet be available on {exchange_name}."
+            )
+
+    def _get_exchange_current_time(self, exchange_name, matrix_id):
+        try:
+            import octobot_trading.api as exchange_api
+            exchange_manager = exchange_api.get_exchange_manager_from_exchange_name_and_id(
+                exchange_name,
+                exchange_api.get_exchange_id_from_matrix_id(exchange_name, matrix_id)
+            )
+            return exchange_api.get_exchange_current_time(exchange_manager)
+        except ImportError:
+            self.logger.error("Strategy requires OctoBot-Trading package installed")
 
     def get_exchange_symbol_data(self, exchange_name: str, exchange_id: str, symbol: str):
         try:

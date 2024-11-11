@@ -127,8 +127,8 @@ async def update_or_repair_tentacles_if_necessary(community_auth, selected_profi
 
     to_install_urls, to_remove_tentacles, force_refresh_tentacles_setup_config = \
         community_tentacles_packages.get_to_install_and_remove_tentacles(
-            community_auth, selected_profile_tentacles_setup_config
-        )
+            community_auth, selected_profile_tentacles_setup_config, constants.LONG_VERSION
+        ) if community_auth else ([], [], False)
     if to_remove_tentacles:
         await community_tentacles_packages.uninstall_tentacles(to_remove_tentacles)
     elif force_refresh_tentacles_setup_config:
@@ -167,7 +167,8 @@ async def install_or_update_tentacles(
 
 
 async def install_all_tentacles(
-    tentacles_url=None, additional_tentacles_package_urls: typing.Optional[list] = None, only_additional: bool = False
+    tentacles_url=None, additional_tentacles_package_urls: typing.Optional[list] = None, only_additional: bool = False,
+    bot_version: str = constants.LONG_VERSION
 ):
     if tentacles_url is None:
         tentacles_url = configuration_manager.get_default_tentacles_url()
@@ -185,7 +186,7 @@ async def install_all_tentacles(
             if url is None:
                 continue
             hide_url = url in additional_tentacles_package_urls
-            url = community_tentacles_packages.adapt_url_to_bot_version(url)
+            url = community_tentacles_packages.adapt_url_to_bot_version(url, bot_version)
             await tentacles_manager_api.install_all_tentacles(
                 url,
                 aiohttp_session=aiohttp_session,
@@ -240,7 +241,7 @@ def select_forced_profile_if_any(config, forced_profile, logger) -> bool:
             if profile.profile_id == forced_profile \
                or profile.origin_url == forced_profile \
                or profile.name == forced_profile:
-                logger.info(f"Selecting forced profile {profile.name} (from identified by{forced_profile})")
+                logger.info(f"Selecting forced profile {profile.name} (identified by {forced_profile})")
                 config.select_profile(profile.profile_id)
                 return True
         logger.warning(f"Forced profile not found in available profiles ({forced_profile})")

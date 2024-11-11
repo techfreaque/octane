@@ -55,6 +55,7 @@ class BotDeploymentKeys(enum.Enum):
     ERROR_STATUS = "error_status"
     ACTIVITIES = "activities"
     EXPIRATION_TIME = "expiration_time"
+    STOPPED_AT = "stopped_at"
 
 
 class BotDeploymentActivitiesKeys(enum.Enum):
@@ -77,6 +78,7 @@ class BotDeploymentStatus(enum.Enum):
     STOPPED = "stopped"
     PENDING = "pending"
     UNKNOWN = "unknown"
+    ARCHIVED = "archived"
 
 
 class ProductSubscriptionDesiredStatus(enum.Enum):
@@ -107,6 +109,8 @@ class ExchangeAccountStatuses(enum.Enum):
 class ExchangeKeys(enum.Enum):
     ID = "id"
     INTERNAL_NAME = "internal_name"
+    EXCHANGE_CREDENTIAL_ID = "exchange_credential_id"
+    EXCHANGE_ID = "exchange_id"
 
 
 class SignalKeys(enum.Enum):
@@ -189,7 +193,7 @@ class BotConfigKeys(enum.Enum):
     PRODUCT_CONFIG_ID = "product_config_id"
     EXCHANGES = "exchanges"
     OPTIONS = "options"
-    SIMULATED = "simulated"
+    IS_SIMULATED = "is_simulated"
 
 
 class ProfileConfigKeys(enum.Enum):

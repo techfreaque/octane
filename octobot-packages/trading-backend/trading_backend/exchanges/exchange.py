@@ -100,8 +100,15 @@ class Exchange:
         rights = []
         try:
             rights = await self._get_api_key_rights()
-        except ccxt.BaseError:
-            raise
+        except ccxt.BaseError as err:
+            try:
+                import octobot_commons.logging as logging
+                logging.get_logger(self.__class__.__name__).info(
+                    f"Error when checking {self.__class__.__name__} api key rights: {err} ({err.__class__.__name__})"
+                )
+            except ImportError:
+                pass
+            raise err
         except Exception as err:
             try:
                 import octobot_commons.logging as logging

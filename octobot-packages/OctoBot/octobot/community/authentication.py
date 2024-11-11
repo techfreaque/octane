@@ -18,8 +18,11 @@ import contextlib
 import json
 import time
 import typing
+import hashlib
+import os
 
 import octobot.constants as constants
+import octobot.enums as enums
 import octobot.community.errors as errors
 import octobot.community.identifiers_provider as identifiers_provider
 import octobot.community.models.community_supports as community_supports
@@ -40,7 +43,31 @@ import octobot_commons.profiles as commons_profiles
 import octobot_trading.enums as trading_enums
 
 
+def expired_session_retrier(func):
+    async def expired_session_retrier_wrapper(*args, **kwargs):
+        self = args[0]
+        try:
+            with supabase_backend.error_describer():
+                return await func(*args, **kwargs)
+        except errors.SessionTokenExpiredError:
+            try:
+                with supabase_backend.error_describer():
+                    self.logger.info(f"Expired session, trying to refresh token.")
+                    await self.supabase_client.refresh_session()
+                    return await func(*args, **kwargs)
+            except errors.SessionTokenExpiredError as err:
+                if await self.auto_reauthenticate():
+                    self.logger.error(
+                        f"Impossible to use default refresh token, using saved auth details instead."
+                    )
+                    return await func(*args, **kwargs)
+                # can't refresh token: logout
+                self.logger.warning(f"Expired session, please re-authenticate. {err}")
+                await self.logout()
+    return expired_session_retrier_wrapper
+
 def _bot_data_update(func):
+    @expired_session_retrier
     async def bot_data_update_wrapper(*args, raise_errors=False, **kwargs):
         self = args[0]
         if not self.is_logged_in_and_has_selected_bot():
@@ -49,6 +76,9 @@ def _bot_data_update(func):
         try:
             self.logger.debug(f"bot_data_update: {func.__name__} initiated.")
             return await func(*args, **kwargs)
+        except errors.SessionTokenExpiredError:
+            # requried by expired_session_retrier
+            raise
         except Exception as err:
             if raise_errors:
                 raise err
@@ -76,11 +106,12 @@ class CommunityAuthentication(authentication.Authenticator):
         self.config = config
         self.backend_url = backend_url or identifiers_provider.IdentifiersProvider.BACKEND_URL
         self.backend_key = backend_key or identifiers_provider.IdentifiersProvider.BACKEND_KEY
-        self.configuration_storage = supabase_backend.SyncConfigurationStorage(self.config)
+        self.configuration_storage = supabase_backend.ASyncConfigurationStorage(self.config)
         self.supabase_client = self._create_client()
         self.user_account = community_user_account.CommunityUserAccount()
         self.public_data = community_public_data.CommunityPublicData()
         self.successfully_fetched_tentacles_package_urls = False
+        self.silent_auth = False
         self._community_feed = None
 
         self.initialized_event = None
@@ -98,7 +129,7 @@ class CommunityAuthentication(authentication.Authenticator):
         )
 
     def update(self, configuration: commons_configuration.Configuration):
-        self.configuration_storage.configuration = configuration
+        self.configuration_storage.set_configuration(configuration)
 
     def get_logged_in_email(self):
         if self.user_account.has_user_data():
@@ -151,6 +182,11 @@ class CommunityAuthentication(authentication.Authenticator):
         if not self.user_account.has_user_data():
             raise authentication.AuthenticationRequired()
         return self.user_account.get_user_id()
+
+    def get_last_email_address_confirm_code_email_content(self) -> typing.Optional[str]:
+        if not self.user_account.has_user_data():
+            raise authentication.AuthenticationRequired()
+        return self.user_account.last_email_address_confirm_code_email_content
 
     async def get_deployment_url(self):
         deployment_url_data = await self.supabase_client.fetch_deployment_url(
@@ -212,7 +248,14 @@ class CommunityAuthentication(authentication.Authenticator):
             self.configuration_storage
         )
 
-    async def _ensure_async_loop(self):
+    async def _re_create_client(self):
+        self.supabase_client = self._create_client()
+        self.logger.debug(f"Refreshing user session")
+        self.supabase_client.event_loop = asyncio.get_event_loop()
+        await self.supabase_client.refresh_session()
+        await self._on_account_updated()
+
+    async def ensure_async_loop(self):
         # elements should be bound to the current loop
         if not self.is_using_the_current_loop():
             if self._login_completed is not None:
@@ -226,9 +269,9 @@ class CommunityAuthentication(authentication.Authenticator):
                 if should_set:
                     self._fetched_private_data.set()
             # changed event loop: restart client
-            await self.supabase_client.close()
+            await self.supabase_client.aclose()
             self.user_account.flush()
-            self.supabase_client = self._create_client()
+            await self._re_create_client()
 
     def is_using_the_current_loop(self):
         return self.supabase_client.event_loop is None \
@@ -256,12 +299,15 @@ class CommunityAuthentication(authentication.Authenticator):
             return True
         return False
 
-    async def _ensure_init_community_feed(self):
+    async def _ensure_init_community_feed(
+        self,
+        stop_on_cfg_action: typing.Optional[enums.CommunityConfigurationActions]=None
+    ):
         await self._create_community_feed_if_necessary()
         if not self._community_feed.is_connected() and self._community_feed.can_connect():
             if self.initialized_event is not None and not self.initialized_event.is_set():
                 await asyncio.wait_for(self.initialized_event.wait(), self.LOGIN_TIMEOUT)
-        await self._community_feed.start()
+        await self._community_feed.start(stop_on_cfg_action)
 
     async def register_feed_callback(self, channel_type: commons_enums.CommunityChannelTypes, callback, identifier=None):
         try:
@@ -269,6 +315,14 @@ class CommunityAuthentication(authentication.Authenticator):
             await self._community_feed.register_feed_callback(channel_type, callback, identifier=identifier)
         except errors.BotError as e:
             self.logger.error(f"Impossible to connect to community signals: {e}")
+
+    async def trigger_wait_for_email_address_confirm_code_email(self):
+        if not self.get_owned_packages():
+            raise errors.ExtensionRequiredError(
+                f"The {constants.OCTOBOT_EXTENSION_PACKAGE_1_NAME} is required to use TradingView email alerts"
+            )
+        await self._ensure_init_community_feed(enums.CommunityConfigurationActions.EMAIL_CONFIRM_CODE)
+
 
     async def send(self, message, channel_type, identifier=None):
         """
@@ -299,11 +353,20 @@ class CommunityAuthentication(authentication.Authenticator):
     def must_be_authenticated_through_authenticator(self):
         return constants.IS_CLOUD_ENV
 
-    async def login(self, email, password, password_token=None, minimal=False):
+    async def login(
+        self,
+        email: str,
+        password: typing.Optional[str],
+        password_token: typing.Optional[str] = None,
+        auth_key: typing.Optional[str] = None,
+        minimal: bool = False
+    ):
         self._ensure_email(email)
         self._ensure_community_url()
         self._reset_tokens()
         with self._login_process():
+            if auth_key and not password_token:
+                password_token = await self.supabase_client.get_otp_with_auth_key(email, auth_key)
             if password_token:
                 await self.supabase_client.sign_in_with_otp_token(password_token)
             else:
@@ -312,11 +375,20 @@ class CommunityAuthentication(authentication.Authenticator):
         if self.is_logged_in():
             await self.on_signed_in(minimal=minimal)
 
+    async def auto_reauthenticate(self) -> bool:
+        if constants.IS_CLOUD_ENV and constants.USER_ACCOUNT_EMAIL and constants.USER_AUTH_KEY:
+            self.logger.debug("Attempting auth key authentication")
+            await self.login(
+                constants.USER_ACCOUNT_EMAIL, None, auth_key=constants.USER_AUTH_KEY
+            )
+            return self.is_logged_in()
+        return False
+
     async def register(self, email, password):
         if self.must_be_authenticated_through_authenticator():
             raise authentication.AuthenticationError("Creating a new account is not authorized on this environment.")
         # always logout before creating a new account
-        self.logout()
+        await self.logout()
         self._ensure_community_url()
         with self._login_process():
             await self.supabase_client.sign_up(email, password)
@@ -325,7 +397,8 @@ class CommunityAuthentication(authentication.Authenticator):
             await self.on_signed_in()
 
     async def on_signed_in(self, minimal=False):
-        self.logger.info(f"Signed in as {self.get_logged_in_email()}")
+        if not self.silent_auth:
+            self.logger.info(f"Signed in as {self.get_logged_in_email()}")
         await self._initialize_account(minimal=minimal)
 
     async def _update_account_metadata(self, metadata_update):
@@ -427,38 +500,77 @@ class CommunityAuthentication(authentication.Authenticator):
         return [
             bot
             for bot in bots
-            if self.user_account.is_self_hosted(bot)
+            if self.user_account.is_self_hosted(bot) and not self.user_account.is_archived(bot)
         ]
 
     async def on_new_bot_select(self):
         await self._update_deployment_activity()
 
-    def logout(self):
+    async def logout(self):
         """
         logout and remove saved auth details
         Warning: also call stop_feeds if feeds have to be stopped (not done here to keep method sync)
         """
-        self.supabase_client.sign_out()
+        await self.supabase_client.sign_out({"scope": "local"})
         self._reset_tokens()
         self.remove_login_detail()
 
     def is_logged_in(self):
         return bool(self.supabase_client.is_signed_in() and self.user_account.has_user_data())
 
-    def has_login_info(self):
-        return self.supabase_client.has_login_info()
+    async def has_login_info(self):
+        return await self.supabase_client.has_login_info()
 
     def remove_login_detail(self):
         self.user_account.flush()
         self._reset_login_token()
+        # force user to (re)select a bot
         self._save_bot_id("")
+        # mqtt feed can't connect as long as the user is not authenticated: don't display unusable email address
+        self.save_tradingview_email("")
         self.logger.debug("Removed community login data")
+
+    def _clear_bot_scoped_config(self):
+        """
+        Clears all bot local data including mqtt id, which will trigger a new mqtt device creation.
+        Warning: should only be called in rare cases, mostly to avoid multi connection on the same mqtt
+        device
+        """
+        self.logger.info(
+            "Clearing bot local scoped config data. Your TradingView alert email address "
+            "and webhook url will be different on this bot."
+        )
+        self._save_bot_id("")
+        self.save_tradingview_email("")
+        # also reset mqtt id to force a new mqtt id creation
+        self._save_mqtt_device_uuid("")
+        # will force reconfiguring the next email
+        self.save_tradingview_email_confirmed(False)
+
+    def clear_local_data_if_necessary(self):
+        if constants.IS_CLOUD_ENV:
+            # disabled on cloud environments
+            return
+        previous_local_identifier = self._get_saved_bot_scoped_data_identifier()
+        current_local_identifier = self._get_bot_scoped_data_identifier()
+        if not previous_local_identifier:
+            self._save_bot_scoped_data_identifier(current_local_identifier)
+            # nothing to clear
+            return
+        if current_local_identifier != previous_local_identifier:
+            self._clear_bot_scoped_config()
+            self._save_bot_scoped_data_identifier(current_local_identifier)
+
+    def _get_bot_scoped_data_identifier(self) -> str:
+        # identifier is based on the path to the local bot to ensure the same data are not re-used
+        # when copy/pasting a bot config to another bot
+        return hashlib.sha256(os.getcwd().encode()).hexdigest()
 
     async def stop(self):
         self.logger.debug("Stopping ...")
         if self._fetch_account_task is not None and not self._fetch_account_task.done():
             self._fetch_account_task.cancel()
-        await self.supabase_client.close()
+        await self.supabase_client.aclose()
         if self._community_feed:
             await self._community_feed.stop()
         self.logger.debug("Stopped")
@@ -484,7 +596,7 @@ class CommunityAuthentication(authentication.Authenticator):
 
     async def _initialize_account(self, minimal=False, fetch_private_data=True):
         try:
-            await self._ensure_async_loop()
+            await self.ensure_async_loop()
             self.initialized_event = asyncio.Event()
             if not (self.is_logged_in() or await self._restore_previous_session()):
                 return
@@ -493,6 +605,8 @@ class CommunityAuthentication(authentication.Authenticator):
                 await self._init_community_data(fetch_private_data)
                 if self._community_feed and self._community_feed.has_registered_feed():
                     await self._ensure_init_community_feed()
+        except authentication.AuthenticationError as err:
+            self.logger.info(f"Login aborted: no authenticated session: {err}")
         except authentication.UnavailableError as e:
             self.logger.exception(e, True, f"Error when fetching community data, "
                                            f"please check your internet connection.")
@@ -529,16 +643,30 @@ class CommunityAuthentication(authentication.Authenticator):
             category_types.append("index")
         return category_types
 
+    async def fetch_bot_tentacles_data_based_config(
+        self, bot_id: str, auth_key: typing.Optional[str]
+    ) -> (commons_profiles.ProfileData, list[commons_profiles.ExchangeAuthData]):
+        return await self.supabase_client.fetch_bot_tentacles_data_based_config(
+            bot_id, self, auth_key
+        )
+
     async def fetch_private_data(self, reset=False):
         try:
+            if not self.is_logged_in():
+                self.logger.info(f"Can't fetch private data: no authenticated user")
+                return
             mqtt_uuid = None
             try:
                 mqtt_uuid = self.get_saved_mqtt_device_uuid()
             except errors.NoBotDeviceError:
                 pass
-            if reset or (not self.user_account.community_package_urls or not mqtt_uuid):
+            if constants.DISABLE_COMMUNITY_EXTENSIONS_CHECK:
+                self.logger.info("Community extension check is disabled")
+            elif reset or (not self.user_account.community_package_urls or not mqtt_uuid):
                 self.successfully_fetched_tentacles_package_urls = False
-                packages, package_urls, fetched_mqtt_uuid = await self._fetch_package_urls(mqtt_uuid)
+                packages, package_urls, fetched_mqtt_uuid, tradingview_email = (
+                    await self._fetch_extensions_details(mqtt_uuid)
+                )
                 self.successfully_fetched_tentacles_package_urls = True
                 self.user_account.owned_packages = packages
                 self.save_installed_package_urls(package_urls)
@@ -551,62 +679,56 @@ class CommunityAuthentication(authentication.Authenticator):
                     self.logger.info(f"New tentacles are available for installation")
                     self.user_account.has_pending_packages_to_install = True
                 if fetched_mqtt_uuid and fetched_mqtt_uuid != mqtt_uuid:
-                    self.save_mqtt_device_uuid(fetched_mqtt_uuid)
+                    self._save_mqtt_device_uuid(fetched_mqtt_uuid)
+                if tradingview_email and tradingview_email != self.get_saved_tradingview_email():
+                    self.save_tradingview_email(tradingview_email)
         except Exception as err:
             self.logger.exception(err, True, f"Unexpected error when fetching package urls: {err}")
         finally:
+            if self._fetched_private_data is None:
+                self._fetched_private_data = asyncio.Event()
             self._fetched_private_data.set()
         if self.has_open_source_package():
             # fetch indexes as well
             await self._refresh_products()
 
-    async def _fetch_package_urls(self, mqtt_uuid: typing.Optional[str]) -> (list[str], str):
-        resp = await self.supabase_client.http_get(
-            constants.COMMUNITY_EXTENSIONS_CHECK_ENDPOINT,
-            headers={
-                "Content-Type": "application/json",
-                "X-Auth-Token": constants.COMMUNITY_EXTENSIONS_CHECK_ENDPOINT_KEY
-            },
-            params={"mqtt_id": mqtt_uuid} if mqtt_uuid else {},
-            timeout=constants.COMMUNITY_FETCH_TIMEOUT
-        )
-        resp.raise_for_status()
-        json_resp = json.loads(resp.json().get("message", {}))
-        if not json_resp:
-            return None, None, None
+    async def _fetch_extensions_details(self, mqtt_uuid: typing.Optional[str]) -> (list[str], list[str], str, str):
+        self.logger.debug(f"Fetching extension package details")
+        extensions_details = await self.supabase_client.fetch_extensions(mqtt_uuid)
+        self.logger.debug("Fetched extension package details")
+        if not extensions_details:
+            return None, None, None, None
         packages = [
             package
-            for package in json_resp["paid_package_slugs"]
+            for package in extensions_details["paid_package_slugs"]
             if package
         ]
         urls = [
             url
-            for url in json_resp["package_urls"]
+            for url in extensions_details["package_urls"]
             if url
         ]
-        mqtt_id = json_resp["mqtt_id"]
-        return packages, urls, mqtt_id
+        mqtt_id = extensions_details["mqtt_id"]
+        tradingview_email = extensions_details["tradingview_email"]
+        return packages, urls, mqtt_id, tradingview_email
 
-    async def fetch_checkout_url(self, payment_method, redirect_url):
+    async def fetch_checkout_url(self, payment_method: str, redirect_url: str):
         try:
-            resp = await self.supabase_client.http_post(
-                constants.COMMUNITY_EXTENSIONS_CHECK_ENDPOINT,
-                json={
-                    "payment_method": payment_method,
-                    "success_url": redirect_url,
-                },
-                headers={
-                    "Content-Type": "application/json",
-                    "X-Auth-Token": constants.COMMUNITY_EXTENSIONS_CHECK_ENDPOINT_KEY
-                },
-                timeout=constants.COMMUNITY_FETCH_TIMEOUT
-            )
-            resp.raise_for_status()
-            json_resp = json.loads(resp.json().get("message", {}))
-            if not json_resp:
+            if not self.is_logged_in():
+                self.logger.info(f"Can't fetch checkout url: no authenticated user")
+                return None
+            self.logger.debug(f"Fetching {payment_method} checkout url")
+            url_details = await self.supabase_client.fetch_checkout_url(payment_method, redirect_url)
+            if not url_details:
                 # valid error code but no content: user already has this product
                 return None
-            return json_resp["checkout_url"]
+            url = url_details["checkout_url"]
+            self.logger.info(
+                f"Here is your {constants.OCTOBOT_EXTENSION_PACKAGE_1_NAME} checkout url {url} "
+                f"paste it into a web browser to proceed to payment if your browser did to automatically "
+                f"redirected to it."
+            )
+            return url
         except Exception as err:
             self.logger.exception(err, True, f"Error when fetching checkout url: {err}")
             raise
@@ -621,47 +743,66 @@ class CommunityAuthentication(authentication.Authenticator):
     def save_installed_package_urls(self, package_urls: list[str]):
         self._save_value_in_config(constants.CONFIG_COMMUNITY_PACKAGE_URLS, package_urls)
 
-    def save_mqtt_device_uuid(self, mqtt_uuid):
+    def save_tradingview_email(self, tradingview_email: str):
+        self._save_value_in_config(constants.CONFIG_COMMUNITY_TRADINGVIEW_EMAIL, tradingview_email)
+
+    def save_tradingview_email_confirmed(self, confirmed: bool):
+        self._save_value_in_config(constants.CONFIG_COMMUNITY_TRADINGVIEW_EMAIL_CONFIRMED, confirmed)
+
+    def _save_mqtt_device_uuid(self, mqtt_uuid: str):
         self._save_value_in_config(constants.CONFIG_COMMUNITY_MQTT_UUID, mqtt_uuid)
+
+    def _save_bot_scoped_data_identifier(self, identifier: str):
+        self._save_value_in_config(constants.CONFIG_COMMUNITY_LOCAL_DATA_IDENTIFIER, identifier)
 
     def get_saved_package_urls(self) -> list[str]:
         return self._get_value_in_config(constants.CONFIG_COMMUNITY_PACKAGE_URLS) or []
 
-    def get_saved_mqtt_device_uuid(self):
+    def get_saved_mqtt_device_uuid(self) -> str:
         if mqtt_uuid := self._get_value_in_config(constants.CONFIG_COMMUNITY_MQTT_UUID):
             return mqtt_uuid
         raise errors.NoBotDeviceError("No MQTT device ID has been set")
 
+    def _get_saved_bot_scoped_data_identifier(self) -> str:
+        return self._get_value_in_config(constants.CONFIG_COMMUNITY_LOCAL_DATA_IDENTIFIER)
+
+    def get_saved_tradingview_email(self) -> str:
+        return self._get_value_in_config(constants.CONFIG_COMMUNITY_TRADINGVIEW_EMAIL)
+
+    def is_tradingview_email_confirmed(self) -> bool:
+        return self._get_value_in_config(constants.CONFIG_COMMUNITY_TRADINGVIEW_EMAIL_CONFIRMED) is True
+
     def _save_bot_id(self, bot_id):
         self._save_value_in_config(constants.CONFIG_COMMUNITY_BOT_ID, bot_id)
 
-    def _get_saved_bot_id(self):
+    def _get_saved_bot_id(self) -> str:
         return constants.COMMUNITY_BOT_ID or self._get_value_in_config(constants.CONFIG_COMMUNITY_BOT_ID)
 
     def _save_value_in_config(self, key, value):
-        self.configuration_storage.set_item(key, value)
+        self.configuration_storage.sync_storage.set_item(key, value)
 
     def _get_value_in_config(self, key):
-        return self.configuration_storage.get_item(key)
+        return self.configuration_storage.sync_storage.get_item(key)
 
     async def _restore_previous_session(self):
         with self._login_process():
             async with self._auth_handler():
                 # will raise on failure
-                self.supabase_client.restore_session()
+                await self.supabase_client.restore_session()
                 await self._on_account_updated()
-                self.logger.info(f"Signed in as {self.get_logged_in_email()}")
+                if not self.silent_auth:
+                    self.logger.info(f"Signed in as {self.get_logged_in_email()}")
         return self.is_logged_in()
 
     @contextlib.asynccontextmanager
     async def _auth_handler(self):
-        should_warn = self.has_login_info()
+        should_warn = await self.has_login_info()
         try:
             yield
         except authentication.FailedAuthentication as e:
             if should_warn:
                 self.logger.warning(f"Invalid authentication details, please re-authenticate. {e}")
-            self.logout()
+            await self.logout()
         except authentication.UnavailableError:
             raise
         except Exception as e:
@@ -699,12 +840,15 @@ class CommunityAuthentication(authentication.Authenticator):
             await self.supabase_client.upsert_trades(formatted_trades)
 
     @_bot_data_update
-    async def update_orders(self, orders: list, exchange_name: str):
+    async def update_orders(self, orders_by_exchange: dict[str, list]):
         """
         Updates authenticated account orders
         """
-        formatted_orders = formatters.format_orders(orders, exchange_name)
+        formatted_orders = []
+        for exchange_name, orders in orders_by_exchange.items():
+            formatted_orders += formatters.format_orders(orders, exchange_name)
         await self.supabase_client.update_bot_orders(self.user_account.bot_id, formatted_orders)
+        self.logger.info(f"Bot orders updated: using {len(formatted_orders)} orders")
 
     @_bot_data_update
     async def update_portfolio(self, current_value: dict, initial_value: dict, profitability: float,
@@ -718,16 +862,24 @@ class CommunityAuthentication(authentication.Authenticator):
                 current_value, initial_value, profitability, unit, content, price_by_asset, self.user_account.bot_id
             )
             if reset or self.user_account.get_selected_bot_current_portfolio_id() is None:
+                self.logger.info(f"Switching bot portfolio")
                 await self.supabase_client.switch_portfolio(formatted_portfolio)
                 await self.refresh_selected_bot()
 
             formatted_portfolio[backend_enums.PortfolioKeys.ID.value] = \
                 self.user_account.get_selected_bot_current_portfolio_id()
             await self.supabase_client.update_portfolio(formatted_portfolio)
+            self.logger.info(
+                f"Bot portfolio [{formatted_portfolio[backend_enums.PortfolioKeys.ID.value]}] "
+                f"updated with content: {formatted_portfolio[backend_enums.PortfolioKeys.CONTENT.value]}"
+            )
             if formatted_histories := formatters.format_portfolio_history(
                 history, unit, self.user_account.get_selected_bot_current_portfolio_id()
             ):
                 await self.supabase_client.upsert_portfolio_history(formatted_histories)
+                self.logger.info(
+                    f"Bot portfolio [{formatted_portfolio[backend_enums.PortfolioKeys.ID.value]}] history updated"
+                )
         except KeyError as err:
             self.logger.debug(f"Error when updating community portfolio {err} (missing reference market value)")
 

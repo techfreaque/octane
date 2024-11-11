@@ -19,6 +19,7 @@ import octobot_commons.configuration as configuration
 import octobot_commons.singleton as singleton
 
 import octobot_services.constants as constants
+import octobot_services.services.read_only_info as read_only_info
 
 
 class AbstractService(singleton.Singleton):
@@ -67,8 +68,8 @@ class AbstractService(singleton.Singleton):
         """
         return []
 
-    def get_read_only_info(self) -> dict:
-        return {}
+    def get_read_only_info(self) -> list[read_only_info.ReadOnlyInfo]:
+        return []
 
     def is_improved_by_extensions(self) -> bool:
         return False

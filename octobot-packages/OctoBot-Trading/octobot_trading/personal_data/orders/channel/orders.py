@@ -40,7 +40,7 @@ class OrdersProducer(exchanges_channel.ExchangeChannelProducer):
                 symbol = self.channel.exchange_manager.get_exchange_symbol(
                     self.channel.exchange_manager.exchange.parse_order_symbol(order)
                 )
-                if self.channel.exchange_manager.exchange.is_creating_order(exchange_order_id):
+                if self.channel.exchange_manager.exchange.is_creating_order(order, symbol):
                     # ignore orders that are being created
                     self.logger.debug(
                         f"Ignored update from order channel for {symbol} order with exchange order id "
@@ -214,7 +214,7 @@ class OrdersProducer(exchanges_channel.ExchangeChannelProducer):
                                               wait_for_refresh=wait_for_refresh))
         except IndexError:
             if not self.channel.exchange_manager.is_simulated and create_order_producer_if_missing:
-                self.logger.debug("Missing orders producer, starting one...")
+                self.logger.info("Missing orders producer, starting one...")
                 await exchanges.create_authenticated_producer_from_parent(self.channel.exchange_manager,
                                                                           self.__class__,
                                                                           force_register_producer=True)
@@ -245,8 +245,10 @@ class OrdersProducer(exchanges_channel.ExchangeChannelProducer):
             )
         )
         if missing_exchange_order_ids:
-            self.logger.debug(f"{len(missing_exchange_order_ids)} open orders are missing on exchange, "
-                              f"synchronizing with exchange (exchange ids: {missing_exchange_order_ids})...")
+            self.logger.info(
+                f"{len(missing_exchange_order_ids)} open orders are missing on exchange, "
+                f"synchronizing with exchange (exchange ids: {missing_exchange_order_ids})..."
+            )
             synchronize_tasks = []
             for missing_order_id in missing_exchange_order_ids:
                 try:
@@ -254,11 +256,13 @@ class OrdersProducer(exchanges_channel.ExchangeChannelProducer):
                         get_order(None, exchange_order_id=missing_order_id)
                     if order_to_update.state is not None:
                         # catch exception not to prevent multiple synchronize to be cancelled in asyncio.gather
-                        synchronize_tasks.append(order_to_update.state.synchronize(force_synchronization=True,
-                                                                                   catch_exception=True))
+                        synchronize_tasks.append(
+                            order_to_update.state.synchronize(force_synchronization=True, catch_exception=True)
+                        )
                 except KeyError:
-                    self.logger.error(f"Order with id {missing_order_id} could not be synchronized: "
-                                      f"missing from order manager")
+                    self.logger.error(
+                        f"Order with id {missing_order_id} could not be synchronized: missing from order manager"
+                    )
             await asyncio.gather(*synchronize_tasks)
 
     async def send(

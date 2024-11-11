@@ -1,4 +1,4 @@
-# pylint: disable=W0703
+# pylint: disable=W0703,R0902
 #  Drakkar-Software OctoBot
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
@@ -15,6 +15,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import threading
+import tracemalloc
 import csv
 import gc
 
@@ -33,14 +34,61 @@ class SystemResourcesWatcher(singleton.Singleton):
     )
     CPU_WATCHING_SECONDS = 2
 
-    def __init__(self, dump_resources, output_file):
+    def __init__(self, dump_resources, watch_ram, output_file):
         super().__init__()
         self.watcher_job = None
         self.watcher_interval = self.DEFAULT_WATCHER_INTERVAL
         self.logger = logging.get_logger(self.__class__.__name__)
+        self.watch_ram = watch_ram
         self.dump_resources = dump_resources
         self.output_file = output_file
         self.initialized_output = False
+        self.first_memory_snapshot = None
+        self.largest_peak = 0
+
+    def _log_memory(self):
+        self.logger.debug("Memory snapshot:")
+        # see https://docs.python.org/3/library/tracemalloc.html
+        snapshot = tracemalloc.take_snapshot()
+        if not self.first_memory_snapshot:
+            self.first_memory_snapshot = snapshot
+
+        limit = 20
+        top_stats = snapshot.compare_to(self.first_memory_snapshot, "lineno")
+
+        # Summary + changes
+        print(f"[ Top {limit} differences ]")
+        for stat in top_stats[:limit]:
+            print(stat)
+
+        # Top RAM users context
+        top_stats = snapshot.statistics("traceback")
+        print("Top %s lines" % limit)
+        for index, stat in enumerate(top_stats[:limit], 1):
+            frame = stat.traceback[0]
+            print(
+                "#%s: %s:%s: %.1f KiB"
+                % (index, frame.filename, frame.lineno, stat.size / 1024)
+            )
+            for _line in stat.traceback.format():
+                print("    %s" % _line)
+
+        # Other stats
+        other = top_stats[limit:]
+        if other:
+            size = sum(stat.size for stat in other)
+            print("%s other: %.1f KiB" % (len(other), size / 1024))
+        total = sum(stat.size for stat in top_stats)
+        print("Total allocated size: %.1f KiB" % (total / 1024))
+
+        latest_size, latest_peak = tracemalloc.get_traced_memory()
+        tracemalloc.reset_peak()
+
+        # Memory peaks
+        self.largest_peak = max(latest_peak, self.largest_peak)
+        print(
+            f"{latest_size=}, latest_peak={latest_peak/1024} largest_peak={self.largest_peak/1024}"
+        )
 
     def _exec_log_used_resources(self):
         try:
@@ -56,6 +104,8 @@ class SystemResourcesWatcher(singleton.Singleton):
             )
             if self.dump_resources:
                 self._dump_resources(cpu, percent_ram, ram, process_ram)
+            if self.watch_ram:
+                self._log_memory()
         except Exception as err:
             self.logger.exception(err, False)
             self.logger.debug(f"Error when checking system resources: {err}")
@@ -105,6 +155,10 @@ class SystemResourcesWatcher(singleton.Singleton):
             execution_interval_delay=self.watcher_interval,
         )
         await self.watcher_job.run()
+        if self.watch_ram:
+            self.logger.debug("RAM watched enabled")
+            stored_frames = 5
+            tracemalloc.start(stored_frames)
 
     def stop(self):
         """
@@ -113,13 +167,18 @@ class SystemResourcesWatcher(singleton.Singleton):
         if self.watcher_job is not None and not self.watcher_job.is_stopped():
             self.logger.debug("Stopping system resources watcher")
             self.watcher_job.stop()
+        if self.watch_ram:
+            self.logger.debug("Stopping RAM watcher")
+            tracemalloc.stop()
 
 
-async def start_system_resources_watcher(dump_resources, output_file):
+async def start_system_resources_watcher(dump_resources, watch_ram, output_file):
     """
     Start the resources watcher loop
     """
-    await SystemResourcesWatcher.instance(dump_resources, output_file).start()
+    await SystemResourcesWatcher.instance(
+        dump_resources, watch_ram, output_file
+    ).start()
 
 
 async def stop_system_resources_watcher():

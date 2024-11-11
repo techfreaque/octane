@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.29] - 2024-10-02
+### Added
+- log on invalid creds
+
+## [1.2.28] - 2024-09-18
+### Added
+- [HollaEx]
+
+## [1.2.27] - 2024-08-20
+### Added
+- [BitMart]
+
+## [1.2.26] - 2024-07-25
+### Fixed
+- [Binance] Fix crash on account check with invalid API key format
+
 ## [1.2.25] - 2024-07-05
 ### Updated
 - [CCXT] update to ccxt 4.3.56

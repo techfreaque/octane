@@ -181,6 +181,13 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
         return True
 
     @classmethod
+    def is_ignoring_cancelled_orders_trades(cls) -> bool:
+        """
+        :return: True if trades created by cancelled orders should be ignored and not stored in trades manager
+        """
+        return False
+
+    @classmethod
     def get_parent_trading_mode_classes(cls, higher_parent_class_limit=None) -> list:
         return [
             class_type
@@ -313,6 +320,10 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
             # when self.trading_config is None, should not happen
             return False
 
+    @classmethod
+    def get_forced_updater_channels(cls) -> set[str]:
+        return set()
+
     def _health_check_interval_expired(self) -> bool:
         return self.exchange_manager.exchange.get_exchange_current_time() - self._last_health_check_time \
             > self.HEALTH_CHECK_INTERVAL
@@ -356,7 +367,7 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
                 return created_orders
 
     async def single_exchange_process_optimize_initial_portfolio(
-        self, sellable_assets, target_asset: str, tickers: dict
+        self, sellable_assets: list, target_asset: str, tickers: dict
     ) -> list:
         raise NotImplementedError("single_exchange_process_optimize_initial_portfolio is not implemented")
 
@@ -443,9 +454,9 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
     """
 
     @classmethod
-    def get_required_strategies_names_and_count(cls,
-                                                tentacles_config: tm_configuration.TentaclesSetupConfiguration,
-                                                trading_mode_config=None):
+    def get_required_strategies_names_and_count(
+        cls, tentacles_config: tm_configuration.TentaclesSetupConfiguration, trading_mode_config=None
+    ):
         config = trading_mode_config or tentacles_manager_api.get_tentacle_config(tentacles_config, cls)
         if constants.TRADING_MODE_REQUIRED_STRATEGIES in config:
             return config[constants.TRADING_MODE_REQUIRED_STRATEGIES], cls.get_required_strategies_count(config)
@@ -495,6 +506,21 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
         return await signals.cancel_order(
             self.exchange_manager, self.should_emit_trading_signal(), order,
             ignored_order=ignored_order
+        )
+
+    async def cancel_all_orders(
+        self,
+        symbol: str,
+        allow_single_order_cancel_fallback: bool,
+        wait_for_cancelling: bool = True,
+        cancelling_timeout: float = constants.INDIVIDUAL_ORDER_SYNC_TIMEOUT
+    ) -> bool:
+        # todo send signals when implementation will be necessary
+        return await self.exchange_manager.trader.cancel_all_orders(
+            symbol,
+            allow_single_order_cancel_fallback,
+            wait_for_cancelling=wait_for_cancelling,
+            cancelling_timeout=cancelling_timeout
         )
 
     async def edit_order(self, order,

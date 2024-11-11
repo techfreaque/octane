@@ -72,20 +72,6 @@ def create_tentacles_setup_config_with_tentacles(
     return setup_config
 
 
-def fill_with_installed_tentacles(
-    tentacles_setup_config: configuration.TentaclesSetupConfiguration,
-    tentacles_folder: str = constants.TENTACLES_PATH,
-    import_registered_tentacles: bool = False,
-):
-    available_tentacle = util.load_tentacle_with_metadata(tentacles_folder)
-    # fill overall tentacles setup config data
-    tentacles_setup_config.fill_tentacle_config(available_tentacle)
-    if import_registered_tentacles and path.isfile(tentacles_setup_config.config_path):
-        # reuse existing registered tentacles to avoid loosing their url
-        origin_tentacles_setup_config = get_tentacles_setup_config(tentacles_setup_config.config_path)
-        tentacles_setup_config.registered_tentacles = origin_tentacles_setup_config.registered_tentacles
-
-
 def is_tentacle_activated_in_tentacles_setup_config(tentacles_setup_config: configuration.TentaclesSetupConfiguration,
                                                     klass_name: str, default_value=False, raise_errors=False) -> bool:
     try:
@@ -94,6 +80,32 @@ def is_tentacle_activated_in_tentacles_setup_config(tentacles_setup_config: conf
         if raise_errors:
             raise e
         return default_value
+
+
+def fill_with_installed_tentacles(
+    tentacles_setup_config: configuration.TentaclesSetupConfiguration,
+    tentacles_folder: str = constants.TENTACLES_PATH,
+    import_registered_tentacles: bool = False,
+    use_reference_registered_tentacles: bool = False,
+):
+    available_tentacle = util.load_tentacle_with_metadata(tentacles_folder)
+    # fill overall tentacles setup config data
+    tentacles_setup_config.fill_tentacle_config(available_tentacle)
+    if import_registered_tentacles and path.isfile(tentacles_setup_config.config_path):
+        # reuse existing registered tentacles to avoid loosing their url
+        origin_tentacles_setup_config = get_tentacles_setup_config(tentacles_setup_config.config_path)
+        tentacles_setup_config.registered_tentacles = origin_tentacles_setup_config.registered_tentacles
+    elif use_reference_registered_tentacles:
+        _apply_reference_tentacles_config_registered_tentacles(tentacles_setup_config)
+
+
+def _apply_reference_tentacles_config_registered_tentacles(
+    tentacles_setup_config: configuration.TentaclesSetupConfiguration
+):
+    reference_tentacles_setup_config = get_tentacles_setup_config(
+        constants.USER_REFERENCE_TENTACLE_CONFIG_FILE_PATH
+    )
+    tentacles_setup_config.registered_tentacles = reference_tentacles_setup_config.registered_tentacles
 
 
 def get_class_from_name_with_activated_required_tentacles(name: str,

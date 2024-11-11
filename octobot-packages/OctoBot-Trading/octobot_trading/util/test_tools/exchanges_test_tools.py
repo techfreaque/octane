@@ -155,6 +155,35 @@ async def get_open_orders(
     return open_orders
 
 
+async def get_order(
+    exchange_manager,
+    exchange_order_id: str,
+    symbol: str,
+) -> typing.Optional[dict]:
+    return await exchange_manager.exchange.get_order(exchange_order_id, symbol=symbol)
+
+
+async def get_cancelled_orders(
+    exchange_manager,
+    exchange_data: exchange_data_import.ExchangeData,
+    symbols: list = None
+) -> list:
+    cancelled_orders = []
+
+    async def _get_orders(symbol):
+        orders = await exchange_manager.exchange.get_cancelled_orders(symbol=symbol)
+        cancelled_orders.extend(
+            personal_data.create_order_instance_from_raw(
+                exchange_manager.trader, order, force_open_or_pending_creation=False
+            ).to_dict()
+            for order in orders
+        )
+
+    symbols = symbols or [market.symbol for market in exchange_data.markets]
+    await asyncio.gather(*(_get_orders(symbol) for symbol in symbols))
+    return cancelled_orders
+
+
 async def get_trades(
     exchange_manager,
     exchange_data: exchange_data_import.ExchangeData,
@@ -224,5 +253,7 @@ async def wait_for_other_status(order: personal_data.Order, timeout) -> personal
             return personal_data.create_order_instance_from_raw(
                 order.trader, raw_order, force_open_or_pending_creation=False
             )
+        if time.time() - t0 + constants.CREATED_ORDER_FORCED_UPDATE_PERIOD >= timeout:
+            break
         await asyncio.sleep(constants.CREATED_ORDER_FORCED_UPDATE_PERIOD)
     raise TimeoutError(f"Order was not found with another status than {origin_status} within {timeout} seconds")

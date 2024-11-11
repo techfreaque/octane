@@ -218,6 +218,12 @@ def test_use_legacy_ids(binance_exchange):
 
 
 @pytest.mark.asyncio
+async def test_invalid_api_key(binance_exchange):
+    exchange = exchanges.Binance(binance_exchange)
+    await account_tests.check_invalid_account(exchange)
+
+
+@pytest.mark.asyncio
 async def test_invalid_api_key_get_api_key_rights(binance_exchange):
     exchange = exchanges.Binance(binance_exchange)
-    await account_tests.check_invalid_account_keys(exchange)
+    await account_tests.check_invalid_account_keys_rights(exchange)

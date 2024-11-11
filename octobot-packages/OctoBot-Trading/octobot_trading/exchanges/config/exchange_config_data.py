@@ -65,6 +65,12 @@ class ExchangeConfig(util.Initializable):
         # number of required historical candles
         self.required_historical_candles_count = constants.DEFAULT_IGNORED_VALUE
 
+        # periodic updaters that should always be started for this configuration
+        self.forced_updater_channels = set()
+
+        # When False, cancelled orders won't be saved in trades history
+        self.is_saving_cancelled_orders_as_trade = True
+
         self.backtesting_exchange_config = None
 
     async def initialize_impl(self):
@@ -140,6 +146,15 @@ class ExchangeConfig(util.Initializable):
     def get_relevant_time_frames(self):
         # If required timeframes: use those. Use traded timeframes otherwise
         return self.available_required_time_frames or self.traded_time_frames
+
+    def has_forced_updater(self, channel: str) -> bool:
+        return channel in self.forced_updater_channels
+
+    def add_forced_updater_channels(self, channel: set[str]):
+        self.forced_updater_channels.update(channel)
+
+    def set_is_saving_cancelled_orders_as_trade(self, value: bool):
+        self.is_saving_cancelled_orders_as_trade = value
 
     async def add_watched_symbols(self, symbols):
         new_valid_symbols = [

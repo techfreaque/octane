@@ -31,10 +31,12 @@ import octobot_trading.exchanges.connectors.ccxt.ccxt_clients_cache as ccxt_clie
 from octobot_commons.tests.test_config import load_test_config
 from octobot_trading.api.exchange import create_exchange_builder, cancel_ccxt_throttle_task
 from octobot_trading.exchanges.exchange_manager import ExchangeManager
+from octobot_trading.exchanges.exchanges import Exchanges
 from octobot_trading.exchanges.implementations.default_rest_exchange import DefaultRestExchange
 from octobot_trading.exchanges.connectors.ccxt.ccxt_connector import CCXTConnector
 from octobot_trading.exchanges.traders.trader_simulator import TraderSimulator
 import octobot_trading.personal_data as personal_data
+import octobot_trading.exchanges.connectors.ccxt.ccxt_client_util as ccxt_client_util
 from octobot_trading.enums import FeePropertyColumns, ExchangeConstantsMarketPropertyColumns, \
     ExchangeConstantsMarketPropertyColumns
 
@@ -62,10 +64,10 @@ class MockedCCXTConnector(CCXTConnector):
         return DEFAULT_EXCHANGE_NAME
 
     async def load_symbol_markets(self, reload=False, market_filter=None):
-        if forced_markets := mock_exchanges_data.MOCKED_EXCHANGE_SYMBOL_DETAILS.get(
+        if mock_exchanges_data.MOCKED_EXCHANGE_SYMBOL_DETAILS.get(
             self.exchange_manager.exchange_name, None
         ):
-            ccxt_clients_cache.set_exchange_parsed_markets(self.exchange_manager.exchange_name, forced_markets)
+            register_market_status_mocks(self.exchange_manager.exchange_name)
         await super().load_symbol_markets(
             reload=reload,
         )
@@ -92,11 +94,17 @@ class MockedAutoFillRestExchange(MockedRestExchange):
     _SUPPORTED_EXCHANGE_MOCK = []
     _EXCHANGE_DETAILS_MOCK = {}
 
-    def _fetch_details(self, config, exchange_manager):
+    def _apply_fetched_details(self, config, exchange_manager):
         pass
 
-    @staticmethod
-    def supported_autofill_exchanges(tentacle_config):
+    @classmethod
+    async def fetch_exchange_config(
+        cls, exchange_config_by_exchange, exchange_manager
+    ):
+        pass
+
+    @classmethod
+    def supported_autofill_exchanges(cls, tentacle_config):
         return MockedAutoFillRestExchange._SUPPORTED_EXCHANGE_MOCK
 
     @classmethod
@@ -122,7 +130,7 @@ async def exchange_manager():
     exchange_manager_instance = ExchangeManager(load_test_config(), DEFAULT_EXCHANGE_NAME)
     exchange_manager_instance.is_spot_only = True
     exchange_manager_instance.is_simulated = False
-    await exchange_manager_instance.initialize()
+    await exchange_manager_instance.initialize(exchange_config_by_exchange=None)
     try:
         yield exchange_manager_instance
     finally:
@@ -137,7 +145,7 @@ async def liquid_exchange_manager():
     exchange_manager_instance = ExchangeManager(_load_liquid_exchange_test_config(), DEFAULT_LIQUID_EXCHANGE_NAME)
     exchange_manager_instance.is_spot_only = True
     exchange_manager_instance.is_simulated = False
-    await exchange_manager_instance.initialize()
+    await exchange_manager_instance.initialize(exchange_config_by_exchange=None)
     try:
         yield exchange_manager_instance
     finally:
@@ -152,7 +160,7 @@ async def simulated_exchange_manager():
     exchange_manager_instance = ExchangeManager(load_test_config(), DEFAULT_EXCHANGE_NAME)
     exchange_manager_instance.is_spot_only = True
     exchange_manager_instance.is_simulated = True
-    await exchange_manager_instance.initialize()
+    await exchange_manager_instance.initialize(exchange_config_by_exchange=None)
     try:
         yield exchange_manager_instance
     finally:
@@ -167,7 +175,7 @@ async def margin_exchange_manager():
     exchange_manager_instance = ExchangeManager(load_test_config(), DEFAULT_EXCHANGE_NAME)
     exchange_manager_instance.is_spot_only = False
     exchange_manager_instance.is_margin = True
-    await exchange_manager_instance.initialize()
+    await exchange_manager_instance.initialize(exchange_config_by_exchange=None)
     try:
         yield exchange_manager_instance
     finally:
@@ -183,7 +191,7 @@ async def margin_simulated_exchange_manager():
     exchange_manager_instance.is_spot_only = False
     exchange_manager_instance.is_simulated = True
     exchange_manager_instance.is_margin = True
-    await exchange_manager_instance.initialize()
+    await exchange_manager_instance.initialize(exchange_config_by_exchange=None)
     try:
         yield exchange_manager_instance
     finally:
@@ -198,7 +206,7 @@ async def future_exchange_manager():
     exchange_manager_instance = ExchangeManager(load_test_config(), DEFAULT_FUTURE_EXCHANGE_NAME)
     exchange_manager_instance.is_spot_only = False
     exchange_manager_instance.is_future = True
-    await exchange_manager_instance.initialize()
+    await exchange_manager_instance.initialize(exchange_config_by_exchange=None)
     try:
         yield exchange_manager_instance
     finally:
@@ -214,7 +222,7 @@ async def future_simulated_exchange_manager():
     exchange_manager_instance.is_spot_only = False
     exchange_manager_instance.is_simulated = True
     exchange_manager_instance.is_future = True
-    await exchange_manager_instance.initialize()
+    await exchange_manager_instance.initialize(exchange_config_by_exchange=None)
     try:
         yield exchange_manager_instance
     finally:
@@ -286,7 +294,7 @@ async def backtesting_exchange_manager(request, backtesting_config, fake_backtes
     exchange_manager_instance.is_future = is_future
     exchange_manager_instance.backtesting = fake_backtesting
     exchange_manager_instance.backtesting.time_manager = backtesting_time.TimeManager(config)
-    await exchange_manager_instance.initialize()
+    await exchange_manager_instance.initialize(exchange_config_by_exchange=None)
     yield exchange_manager_instance
     await exchange_manager_instance.stop()
 
@@ -359,3 +367,25 @@ async def future_backtesting_trader(backtesting_config, backtesting_exchange_man
     trader_instance = TraderSimulator(backtesting_config, backtesting_exchange_manager)
     await trader_instance.initialize()
     return backtesting_config, backtesting_exchange_manager, trader_instance
+
+
+@contextlib.asynccontextmanager
+async def cached_markets_exchange_manager(config, exchange_name, exchange_only=False):
+    exchange_manager = None
+    try:
+        exchange_manager = ExchangeManager(config, exchange_name)
+        register_market_status_mocks(exchange_name)
+        exchange_manager.exchange_only = exchange_only
+        await exchange_manager.initialize(exchange_config_by_exchange=None)
+        Exchanges.instance().add_exchange(exchange_manager, "")
+        yield exchange_manager
+    finally:
+        if exchange_manager is not None:
+            await exchange_manager.stop()
+
+
+def register_market_status_mocks(exchange_name):
+    ccxt_clients_cache.set_exchange_parsed_markets(
+        ccxt_clients_cache.get_client_key(ccxt_client_util.ccxt_exchange_class_factory(exchange_name)()),
+        mock_exchanges_data.MOCKED_EXCHANGE_SYMBOL_DETAILS[exchange_name]
+    )

@@ -48,6 +48,24 @@ from octobot_commons.profiles.profile_sync import (
     stop_profile_synchronizer,
 )
 
+from octobot_commons.profiles import exchange_auth_data
+
+from octobot_commons.profiles.exchange_auth_data import (
+    ExchangeAuthData,
+)
+
+from octobot_commons.profiles import tentacles_profile_data_translator
+
+from octobot_commons.profiles.tentacles_profile_data_translator import (
+    TentaclesProfileDataTranslator,
+)
+
+from octobot_commons.profiles import tentacles_profile_data_adapter
+
+from octobot_commons.profiles.tentacles_profile_data_adapter import (
+    TentaclesProfileDataAdapter,
+)
+
 
 __all__ = [
     "Profile",
@@ -64,4 +82,7 @@ __all__ = [
     "OptionsData",
     "start_profile_synchronizer",
     "stop_profile_synchronizer",
+    "TentaclesProfileDataTranslator",
+    "TentaclesProfileDataAdapter",
+    "ExchangeAuthData",
 ]

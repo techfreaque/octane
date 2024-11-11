@@ -14,23 +14,25 @@
 #  You should have received a copy of the GNU General Public
 #  License along with OctoBot. If not, see <https://www.gnu.org/licenses/>.
 import asyncio
-import base64
 import datetime
-import json
 import time
 import typing
 import logging
-import httpx
-
+import uuid
+import json
+import contextlib
 import aiohttp
+
 import gotrue.errors
+import gotrue.types
 import postgrest
 import postgrest.types
-import supabase.lib.client_options
+import supabase
 
 import octobot_commons.authentication as authentication
 import octobot_commons.logging as commons_logging
 import octobot_commons.profiles as commons_profiles
+import octobot_commons.profiles.profile_data as commons_profile_data
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
 import octobot_trading.api as trading_api
@@ -53,36 +55,14 @@ commons_logging.set_logging_level(_INTERNAL_LOGGERS, logging.WARNING)
 HTTP_RETRY_COUNT = 5
 
 
-def _httpx_retrier(f):
-    async def httpx_retrier_wrapper(*args, **kwargs):
-        resp = None
-        for i in range(0, HTTP_RETRY_COUNT):
-            error = None
-            try:
-                resp: httpx.Response = await f(*args, **kwargs)
-                if resp.status_code == 502:
-                    # waking up, retry
-                    error = "bad gateway"
-                else:
-                    if i > 0:
-                        commons_logging.get_logger(__name__).debug(
-                            f"{f.__name__}(args={args[1:]}) succeeded after {i+1} attempts"
-                        )
-                    return resp
-            except httpx.ReadTimeout as err:
-                error = f"{err} ({err.__class__.__name__})"
-            # retry
-            commons_logging.get_logger(__name__).debug(
-                f"Error on {f.__name__}(args={args[1:]}) "
-                f"request, retrying now. Attempt {i+1} / {HTTP_RETRY_COUNT} ({error})."
-            )
-        # no more attempts
-        if resp:
-            resp.raise_for_status()
-            return resp
-        else:
-            raise errors.RequestError(f"Failed to execute {f.__name__}(args={args[1:]} kwargs={kwargs})")
-    return httpx_retrier_wrapper
+@contextlib.contextmanager
+def error_describer():
+    try:
+        yield
+    except postgrest.APIError as err:
+        if "jwt expired" in str(err).lower():
+            raise errors.SessionTokenExpiredError(err) from err
+        raise
 
 class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
     """
@@ -90,36 +70,41 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
     """
     MAX_PAGINATED_REQUESTS_COUNT = 100
     MAX_UUID_PER_COMMUNITY_REQUEST_FILTERS = 150
+    REQUEST_TIMEOUT = 30
 
     def __init__(
         self,
         supabase_url: str,
         supabase_key: str,
-        storage: configuration_storage.SyncConfigurationStorage,
-        options: supabase.lib.client_options.ClientOptions = supabase.lib.client_options.ClientOptions(),
+        storage: configuration_storage.ASyncConfigurationStorage,
+        options: supabase.AClientOptions = None,
     ):
+        options = options or supabase.AClientOptions()
         options.storage = storage   # use configuration storage
+        options.postgrest_client_timeout = self.REQUEST_TIMEOUT
         self.event_loop = None
         super().__init__(supabase_url, supabase_key, options=options)
         self.is_admin = False
         self.production_anon_client = None
+        self._authenticated = False
 
     async def sign_in(self, email: str, password: str) -> None:
         try:
             self.event_loop = asyncio.get_event_loop()
-            self.auth.sign_in_with_password({
+            await self.auth.sign_in_with_password({
                 "email": email,
                 "password": password,
             })
         except gotrue.errors.AuthApiError as err:
             if "email" in str(err).lower():
+                # AuthApiError('Email not confirmed')
                 raise errors.EmailValidationRequiredError(err) from err
-            raise authentication.FailedAuthentication(err) from err
+            raise authentication.FailedAuthentication(f"Community auth error: {err}") from err
 
     async def sign_up(self, email: str, password: str) -> None:
         try:
             self.event_loop = asyncio.get_event_loop()
-            self.auth.sign_up({
+            resp = await self.auth.sign_up({
                 "email": email,
                 "password": password,
                 "options": {
@@ -129,53 +114,68 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
                     }
                 }
             })
-        except gotrue.errors.AuthApiError as err:
-            raise authentication.AuthenticationError(err) from err
+            if self._requires_email_validation(resp.user):
+                raise errors.EmailValidationRequiredError()
+        except gotrue.errors.AuthError as err:
+            raise authentication.AuthenticationError(f"Community auth error: {err}") from err
 
-    def sign_out(self) -> None:
+    async def sign_out(self, options: gotrue.types.SignOutOptions) -> None:
         try:
-            self.auth.sign_out()
+            await self.auth.sign_out(options)
         except gotrue.errors.AuthApiError:
             pass
 
-    def restore_session(self):
+    def _requires_email_validation(self, user: gotrue.types.User) -> bool:
+        return user.app_metadata.get("provider") == "email" and user.confirmed_at is None
+
+    async def restore_session(self):
         self.event_loop = asyncio.get_event_loop()
-        self.auth.initialize_from_storage()
+        await self.auth.initialize_from_storage()
         if not self.is_signed_in():
-            raise authentication.FailedAuthentication()
+            raise authentication.FailedAuthentication(f"Community auth error: restoring session failed")
+
+    async def refresh_session(self, refresh_token: typing.Union[str, None] = None):
+        try:
+            await self.auth.refresh_session(refresh_token=refresh_token)
+        except gotrue.errors.AuthError as err:
+            raise authentication.AuthenticationError(f"Community auth error: {err}") from err
 
     async def sign_in_with_otp_token(self, token):
         self.event_loop = asyncio.get_event_loop()
         # restore saved session in case otp token fails
-        saved_session = self.auth._storage.get_item(self.auth._storage_key)
+        saved_session = await self.auth._storage.get_item(self.auth._storage_key)
         try:
             url = f"{self.auth_url}/verify?token={token}&type=magiclink"
             async with aiohttp.ClientSession() as client:
                 resp = await client.get(url, allow_redirects=False)
-                self.auth.initialize_from_url(
-                    resp.headers["Location"].replace("#access_token", "?access_token").replace("#error", "?error")
+                await self.auth.initialize_from_url(
+                    resp.headers["Location"]
+                    .replace("#access_token", "?access_token")
+                    .replace("#error", "?error")
                 )
         except gotrue.errors.AuthImplicitGrantRedirectError as err:
             if saved_session:
-                self.auth._storage.set_item(self.auth._storage_key, saved_session)
-            raise authentication.AuthenticationError(err) from err
+                await self.auth._storage.set_item(self.auth._storage_key, saved_session)
+            raise authentication.AuthenticationError(f"Community auth error: {err}") from err
 
     def is_signed_in(self) -> bool:
-        try:
-            return self.auth.get_session() is not None
-        except gotrue.errors.AuthApiError as err:
-            commons_logging.get_logger(self.__class__.__name__).info(f"Authentication error: {err}")
-            # remove invalid session from
-            self.remove_session_details()
-            return False
+        # is signed in when a user auth key is set
+        return self._get_auth_key() != self.supabase_key
 
-    def has_login_info(self) -> bool:
-        return bool(self.auth._storage.get_item(self.auth._storage_key))
+    def get_in_saved_session(self) -> typing.Union[gotrue.types.Session, None]:
+        return self.auth._get_valid_session(
+            self.auth._storage.sync_storage.get_item(self.auth._storage_key)
+        )
+
+    async def has_login_info(self) -> bool:
+        return bool(await self.auth._storage.get_item(self.auth._storage_key))
 
     async def update_metadata(self, metadata_update) -> dict:
-        return self.auth.update_user({
-            "data": metadata_update
-        }).user.model_dump()
+        return (
+            await self.auth.update_user({
+                "data": metadata_update
+            })
+        ).user.model_dump()
 
     async def get_user(self) -> dict:
         try:
@@ -184,10 +184,49 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
         except gotrue.errors.AuthApiError as err:
             if "missing" in str(err):
                 raise errors.EmailValidationRequiredError(err) from err
-            raise authentication.AuthenticationError("Please re-login to your OctoBot account") from err
+            raise authentication.AuthenticationError(f"Please re-login to your OctoBot account: {err}") from err
 
-    def sync_get_user(self) -> dict:
-        return self.auth.get_user().user.model_dump()
+    async def get_otp_with_auth_key(self, user_email: str, auth_key: str) -> str:
+        try:
+            resp = await self.functions.invoke(
+                "create-auth-token",
+                {
+                    "headers": {
+                        "User-Auth-Token": auth_key
+                    },
+                    "body": {
+                        "user_email": user_email
+                    },
+                }
+            )
+            return json.loads(resp)["token"]
+        except Exception:
+            raise authentication.AuthenticationError(f"Community auth error: invalid auth key authentication details")
+
+    async def fetch_extensions(self, mqtt_uuid: typing.Optional[str]) -> dict:
+        resp = await self.functions.invoke(
+            "os-paid-package-api",
+            {
+                "body": {
+                    "action": "get_extension_details",
+                    "mqtt_id": mqtt_uuid
+                },
+            }
+        )
+        return json.loads(json.loads(resp)["message"])
+
+    async def fetch_checkout_url(self, payment_method: str, redirect_url: str) -> dict:
+        resp = await self.functions.invoke(
+            "os-paid-package-api",
+            {
+                "body": {
+                    "action": "get_checkout_url",
+                    "payment_method": payment_method,
+                    "success_url": redirect_url,
+                },
+            }
+        )
+        return json.loads(json.loads(resp)["message"])
 
     async def fetch_bot(self, bot_id) -> dict:
         try:
@@ -262,9 +301,8 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
             raise errors.BotDeploymentURLNotFoundError(deployment_url_id)
 
     async def fetch_startup_info(self, bot_id) -> dict:
-        return json.loads(
-            (await self.postgres_functions().invoke("get_startup_info", {"body": {"bot_id": bot_id}}))["data"]
-        )[0]
+        resp = await self.rpc("get_startup_info", {"bot_id": bot_id}).execute()
+        return resp.data[0]
 
     async def fetch_products(self, category_types: list[str]) -> list:
         return (
@@ -282,9 +320,8 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
         ).data
 
     async def fetch_subscribed_products_urls(self) -> list:
-        return json.loads(
-            (await self.postgres_functions().invoke("get_subscribed_products_urls", {}))["data"]
-        ) or []
+        resp = await self.rpc("get_subscribed_products_urls").execute()
+        return resp.data or []
 
     async def fetch_bot_products_subscription(self, bot_deployment_id: str) -> dict:
         return (await self.table("bot_deployments").select(
@@ -317,6 +354,57 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
             bot_id, bot_update
         )
 
+    async def fetch_bot_tentacles_data_based_config(
+        self, bot_id: str, authenticator, auth_key: typing.Optional[str]
+    ) -> (commons_profiles.ProfileData, list[commons_profiles.ExchangeAuthData]):
+        if not bot_id:
+            raise errors.BotNotFoundError(f"bot_id is '{bot_id}'")
+        commons_logging.get_logger(__name__).debug(f"Fetching {bot_id} bot config")
+        try:
+            bot_config = (await self.table("bots").select(
+                "id,"
+                "name, "
+                "bot_config:bot_configs!current_config_id!inner("
+                    "id, "
+                    "options, "
+                    "exchanges, "
+                    "is_simulated"
+                ")"
+            ).eq(enums.BotKeys.ID.value, bot_id).execute()).data[0]
+        except IndexError:
+            raise errors.MissingBotConfigError(f"No bot config for bot with bot_id: '{bot_id}'")
+        bot_name = bot_config["name"]
+        # generic options
+        profile_data = commons_profiles.ProfileData(
+            commons_profile_data.ProfileDetailsData(
+                name=f"{bot_name}_fetched_config",
+                id=str(uuid.uuid4()),
+                bot_id=bot_id,
+            ),
+            [],
+            commons_profile_data.TradingData(commons_constants.USD_LIKE_COINS[0])
+        )
+        auth_data = []
+        # apply specific options
+        await self._apply_options_based_config(
+            profile_data, auth_data, bot_config["bot_config"], authenticator, auth_key
+        )
+        return profile_data, auth_data
+
+
+    async def _apply_options_based_config(
+        self, profile_data: commons_profiles.ProfileData,
+        auth_data: list[commons_profiles.ExchangeAuthData], bot_config: dict,
+        authenticator, auth_key: typing.Optional[str]
+    ):
+        if tentacles_data := [
+            commons_profile_data.TentaclesData.from_dict(td)
+            for td in bot_config[enums.BotConfigKeys.OPTIONS.value].get("tentacles", [])
+        ]:
+            await commons_profiles.TentaclesProfileDataTranslator(profile_data, auth_data).translate(
+                tentacles_data, bot_config, authenticator, auth_key
+            )
+
     async def fetch_bot_profile_data(self, bot_config_id: str) -> commons_profiles.ProfileData:
         if not bot_config_id:
             raise errors.MissingBotConfigError(f"bot_config_id is '{bot_config_id}'")
@@ -344,7 +432,7 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
             ].get("minimal_funds", [])
         ] if bot_config[enums.BotConfigKeys.EXCHANGES.value] else []
         profile_data.profile_details.version = bot_config["product_config"][enums.ProfileConfigKeys.VERSION.value]
-        profile_data.trader_simulator.enabled = bot_config.get("is_simulated", False)
+        profile_data.trader_simulator.enabled = bot_config.get(enums.BotConfigKeys.IS_SIMULATED.value, False)
         if profile_data.trader_simulator.enabled:
             portfolio = (bot_config.get(
                 enums.BotConfigKeys.OPTIONS.value
@@ -354,47 +442,111 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
             if trading_api.is_usd_like_coin(profile_data.trading.reference_market):
                 usd_like_asset = profile_data.trading.reference_market
             else:
-                usd_like_asset = "USDT"  # todo use dynamic value when exchange is not supporting USDT
+                usd_like_asset = commons_constants.USD_LIKE_COINS[0]   # todo use dynamic value when exchange is not supporting USDT
             profile_data.trader_simulator.starting_portfolio = formatters.get_adapted_portfolio(
                 usd_like_asset, portfolio
             )
-        if profile_data.trader_simulator.enabled:
-            # attempt 1: set exchange using exchange_id when set in bot_config
-            exchange_ids = [
-                config["exchange_id"]
-                for config in bot_config["exchanges"]
-                if config.get("exchange_id", None)
-            ]
-            if exchange_ids:
-                exchanges = await self.fetch_exchanges(exchange_ids)
-                exchanges_config = [
-                    {enums.ExchangeKeys.INTERNAL_NAME.value: exchange[enums.ExchangeKeys.INTERNAL_NAME.value]}
-                    for exchange in exchanges
-                ]
-            else:
-                # attempt 2: fallback to exchange_internal_name in product config
-                exchanges_config = bot_config["product_config"][enums.ProfileConfigKeys.CONFIG.value]["exchanges"]
-        else:
-            # real trading: use bot_config and its exchange_credential_id
-            exchanges_config = (
-                bot_config[enums.BotConfigKeys.EXCHANGES.value]
-                if bot_config[enums.BotConfigKeys.EXCHANGES.value]
-                else []
-            )
-        profile_data.exchanges = [
-            commons_profiles.ExchangeData.from_dict(exchange_data)
-            for exchange_data in exchanges_config
-        ]
+        profile_data.profile_details.id = bot_config_id
+
+        profile_data.exchanges = await self._fetch_full_exchange_configs(bot_config, profile_data)
         if options := bot_config.get(enums.BotConfigKeys.OPTIONS.value):
             profile_data.options = commons_profiles.OptionsData.from_dict(options)
-        profile_data.profile_details.id = bot_config_id
         return profile_data
 
-    async def fetch_exchanges(self, exchange_ids: list) -> list:
-        return (await self.table("exchanges").select(
+    async def _fetch_full_exchange_configs(
+        self, bot_config: dict, profile_data: commons_profiles.ProfileData
+    ) -> list[commons_profiles.ExchangeData]:
+
+        # ensure all required exchange info are available
+        # check 1: update exchange using exchange_id when set in bot_config
+        exchanges_configs = []
+        incomplete_exchange_config_by_id = {
+            config[enums.ExchangeKeys.EXCHANGE_ID.value]: config
+            for config in (bot_config.get(enums.BotConfigKeys.EXCHANGES.value) or [])
+            if (
+                config.get(enums.ExchangeKeys.EXCHANGE_ID.value, None)
+                and not config.get(enums.ExchangeKeys.INTERNAL_NAME.value, None)
+            )
+        }
+        if incomplete_exchange_config_by_id:
+            fetched_exchanges = await self.fetch_exchanges(list(incomplete_exchange_config_by_id))
+            exchanges_configs += [
+                {
+                    **incomplete_exchange_config_by_id[exchange[enums.ExchangeKeys.ID.value]],
+                    **{
+                        enums.ExchangeKeys.INTERNAL_NAME.value: exchange[enums.ExchangeKeys.INTERNAL_NAME.value],
+                    }
+                }
+                for exchange in fetched_exchanges
+            ]
+        # check 2: set exchange using credentials_id when set in bot_config
+        incomplete_exchange_config_by_credentials_id = {
+            config[enums.ExchangeKeys.EXCHANGE_CREDENTIAL_ID.value]: config
+            for config in (bot_config.get(enums.BotConfigKeys.EXCHANGES.value) or [])
+            if (
+                config.get(enums.ExchangeKeys.EXCHANGE_CREDENTIAL_ID.value, None)
+                and not config.get(enums.ExchangeKeys.EXCHANGE_ID.value, None)
+            )
+        }
+        if incomplete_exchange_config_by_credentials_id:
+            exchanges_by_credential_ids = await self.fetch_exchanges_by_credential_ids(
+                list(incomplete_exchange_config_by_credentials_id)
+            )
+            exchanges_configs += [
+                {
+                    **incomplete_exchange_config_by_credentials_id[credentials_id],
+                    **{
+                        enums.ExchangeKeys.EXCHANGE_ID.value: exchange[enums.ExchangeKeys.ID.value],
+                        enums.ExchangeKeys.INTERNAL_NAME.value: exchange[enums.ExchangeKeys.INTERNAL_NAME.value],
+                    }
+                }
+                for credentials_id, exchange in exchanges_by_credential_ids.items()
+            ]
+        if not exchanges_configs:
+            if profile_data.trader_simulator.enabled:
+                # last attempt (simulator only): use exchange details from product config
+                product_exchanges_configs = bot_config["product_config"][enums.ProfileConfigKeys.CONFIG.value][
+                    "exchanges"
+                ]
+                internal_names = [
+                    exchanges_config[enums.ExchangeKeys.INTERNAL_NAME.value]
+                    for exchanges_config in product_exchanges_configs
+                ]
+                fetched_exchanges = await self.fetch_exchanges([], internal_names=internal_names)
+                exchanges_configs += [
+                    {
+                        enums.ExchangeKeys.EXCHANGE_ID.value: exchange[enums.ExchangeKeys.ID.value],
+                        enums.ExchangeKeys.INTERNAL_NAME.value: exchange[enums.ExchangeKeys.INTERNAL_NAME.value],
+                    }
+                    for exchange in fetched_exchanges
+                ]
+            else:
+                commons_logging.get_logger(self.__class__.__name__).error(
+                    f"Impossible to fetch exchange details for profile with bot id: {profile_data.profile_details.id}"
+                )
+        return [
+            commons_profiles.ExchangeData.from_dict(exchange_data)
+            for exchange_data in exchanges_configs
+        ]
+
+    async def fetch_exchanges(self, exchange_ids: list, internal_names: typing.Optional[list] = None) -> list:
+        select = self.table("exchanges").select(
             f"{enums.ExchangeKeys.ID.value}, "
             f"{enums.ExchangeKeys.INTERNAL_NAME.value}"
-        ).in_(enums.ExchangeKeys.ID.value, exchange_ids).execute()).data
+        )
+        if internal_names:
+            return (await select.in_(enums.ExchangeKeys.INTERNAL_NAME.value, internal_names).execute()).data
+        return (await select.in_(enums.ExchangeKeys.ID.value, exchange_ids).execute()).data
+
+    async def fetch_exchanges_by_credential_ids(self, exchange_credential_ids: list) -> dict:
+        exchanges = (await self.table("exchange_credentials").select(
+            "id,"
+            "exchange:exchanges(id, internal_name)"
+        ).in_("id", exchange_credential_ids).execute()).data
+        return {
+            exchange["id"]: exchange["exchange"]
+            for exchange in exchanges
+        }
 
     async def fetch_product_config(self, product_id: str, product_slug: str = None) -> commons_profiles.ProfileData:
         if not product_id and not product_slug:
@@ -467,13 +619,13 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
             "symbol": symbol,
             "time_frame": time_frame.value,
         }
-        db_functions = self.production_anon_postgres_functions() if use_production_db else self.postgres_functions()
-        range_return = (await db_functions.invoke(
+        db_rpc = (await self.production_anon_rpc()) if use_production_db else self.rpc
+        range_return = (await db_rpc(
             "get_ohlcv_range",
-            {"body": params}
-        ))["data"]
+            params
+        ).execute()).data
         try:
-            min_max = json.loads(range_return)[0]
+            min_max = range_return[0]
             return (
                 self.get_parsed_time(min_max["min_value"]).timestamp() if min_max["min_value"] else None,
                 self.get_parsed_time(min_max["max_value"]).timestamp() if min_max["max_value"] else None,
@@ -548,13 +700,11 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
             )
         return self.production_anon_client
 
-    def _get_production_anon_auth_headers(self):
-        return self._get_anon_auth_headers(constants.COMMUNITY_PRODUCTION_BACKEND_KEY)
+    # def _get_production_anon_auth_headers(self):
+    #     return self._get_anon_auth_headers(constants.COMMUNITY_PRODUCTION_BACKEND_KEY)
 
-    def production_anon_postgres_functions(self):
-        return self.postgres_functions(
-            url=constants.COMMUNITY_PRODUCTION_BACKEND_URL, auth_headers=self._get_production_anon_auth_headers()
-        )
+    async def production_anon_rpc(self):
+        return (await self.get_production_anon_client()).rpc
 
     async def _paginated_fetch_historical_data(
         self, client, table_name: str, select: str, matcher: dict,
@@ -645,25 +795,45 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
             for ohlcv in ohlcvs
         ]
 
-    async def get_asset_id(self, bucket_id: str, asset_name: str) -> str:
-        """
-        Not implemented for authenticated users
-        """
-        async with self.other_postgres_client("storage") as client:
-            return (await client.from_("objects").select("*")
-                .eq(
-                    "bucket_id", bucket_id
-                ).eq(
-                    "name", asset_name
-                ).execute()
-            ).data[0]["id"]
+    # async def get_asset_id(self, bucket_id: str, asset_name: str) -> str:
+    #     """
+    #     Not implemented for authenticated users
+    #     """
+    #     # possible with new version ?
+    #     return (await self.storage.from_("objects").select("*")
+    #         .eq(
+    #             "bucket_id", bucket_id
+    #         ).eq(
+    #             "name", asset_name
+    #         ).execute()
+    #     ).data[0]["id"]
+    #     # async with self.other_postgres_client("storage") as client:
+    #     #     return (await client.from_("objects").select("*")
+    #     #         .eq(
+    #     #             "bucket_id", bucket_id
+    #     #         ).eq(
+    #     #             "name", asset_name
+    #     #         ).execute()
+    #     #     ).data[0]["id"]
 
     async def upload_asset(self, bucket_name: str, asset_name: str, content: typing.Union[str, bytes],) -> str:
         """
         Not implemented for authenticated users
         """
         result = await self.storage.from_(bucket_name).upload(asset_name, content)
-        return asset_name
+        return result.json()["Id"]
+
+    async def list_assets(self, bucket_name: str) -> list[dict[str, str]]:
+        """
+        Not implemented for authenticated users
+        """
+        return await self.storage.from_(bucket_name).list()
+
+    async def remove_asset(self, bucket_name: str, asset_name: str) -> None:
+        """
+        Not implemented for authenticated users
+        """
+        await self.storage.from_(bucket_name).remove(asset_name)
 
     async def send_signal(self, table, product_id: str, signal: str):
         return (await self.table(table).insert({
@@ -679,29 +849,12 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
         )
 
     def is_realtime_connected(self) -> bool:
-        return self.realtime.socket and self.realtime.socket.connected and not self.realtime.socket.closed
+        return self.realtime.is_connected
 
-    @_httpx_retrier
-    async def http_get(self, url: str, *args, params=None, headers=None, **kwargs) -> httpx.Response:
-        """
-        Perform http get using the current supabase auth token
-        """
-        params = params or {}
-        params["access_token"] = params.get("access_token", base64.b64encode(self._get_auth_key().encode()).decode())
-        return await self.postgrest.session.get(url, *args, params=params, headers=headers, **kwargs)
-
-    @_httpx_retrier
-    async def http_post(
-        self, url: str, *args, json=None, params=None, headers=None, **kwargs
-    ) -> httpx.Response:
-        """
-        Perform http get using the current supabase auth token
-        """
-        json_body = json or {}
-        json_body["access_token"] = json_body.get("access_token", self._get_auth_key())
-        return await self.postgrest.session.post(
-            url, *args, json=json_body, params=params, headers=headers, **kwargs
-        )
+    def _get_auth_key(self):
+        if session := self.get_in_saved_session():
+            return session.access_token
+        return self.supabase_key
 
     @staticmethod
     def get_formatted_time(timestamp: float) -> str:
@@ -728,10 +881,12 @@ class CommunitySupabaseClient(supabase_client.AuthenticatedAsyncSupabaseClient):
                     raise
 
     async def _get_user(self) -> gotrue.User:
-        return self.auth.get_user().user
+        if user := await self.auth.get_user():
+            return user.user
+        raise authentication.AuthenticationError("Please login to your OctoBot account")
 
-    async def close(self):
-        await super().close()
+    async def aclose(self):
+        await super().aclose()
         if self.production_anon_client is not None:
             try:
                 await self.production_anon_client.aclose()

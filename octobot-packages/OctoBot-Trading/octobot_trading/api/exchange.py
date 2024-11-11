@@ -78,7 +78,7 @@ def get_exchange_configuration_from_exchange_id(exchange_id: str) -> exchanges.E
 
 
 # prefer get_exchange_manager_from_exchange_name_and_id when possible
-def get_exchange_manager_from_exchange_id(exchange_id: str) -> object:
+def get_exchange_manager_from_exchange_id(exchange_id: str) -> exchanges.ExchangeManager:
     try:
         return get_exchange_configuration_from_exchange_id(exchange_id).exchange_manager
     except KeyError:
@@ -138,9 +138,8 @@ def get_matrix_id_from_exchange_id(exchange_name: str, exchange_id: str) -> str:
 
 def get_all_exchange_ids_from_matrix_id(matrix_id) -> list:
     return [
-        exchange_configuration.id
-        for exchange_configuration in exchanges.Exchanges.instance().get_all_exchanges()
-        if exchange_configuration.matrix_id == matrix_id
+        get_exchange_manager_id(exchange_manager)
+        for exchange_manager in exchanges.Exchanges.instance().get_exchanges_managers_with_matrix_id(matrix_id)
     ]
 
 
@@ -202,6 +201,13 @@ def get_has_websocket(exchange_manager) -> bool:
     return exchange_manager.has_websocket
 
 
+def get_has_reached_websocket_limit(exchange_manager) -> bool:
+    return (
+        exchange_manager.exchange_web_socket
+        and exchange_manager.exchange_web_socket.is_beyond_feed_exchange_limit
+    )
+
+
 def supports_websockets(exchange_name: str, tentacles_setup_config) -> bool:
     return exchanges.supports_websocket(exchange_name, tentacles_setup_config)
 
@@ -243,10 +249,14 @@ def get_fees(exchange_manager, symbol) -> dict:
 
 
 def get_max_handled_pair_with_time_frame(exchange_manager) -> int:
+    if get_has_reached_websocket_limit(exchange_manager):
+        return exchange_manager.exchange_web_socket.get_connector_max_handled_feeds()
     return exchange_manager.exchange.get_max_handled_pair_with_time_frame()
 
 
 def get_currently_handled_pair_with_time_frame(exchange_manager) -> int:
+    if get_has_reached_websocket_limit(exchange_manager):
+        return exchange_manager.exchange_web_socket.get_connector_feeds_count()
     return exchange_manager.get_currently_handled_pair_with_time_frame()
 
 
@@ -312,6 +322,10 @@ def get_enabled_exchanges_names(config) -> list:
 
 def get_auto_filled_exchange_names(tentacles_setup_config) -> list:
     return exchanges.get_auto_filled_exchange_names(tentacles_setup_config)
+
+
+def supports_custom_limit_order_book_fetch(exchange_manager) -> bool:
+    return exchange_manager.exchange.SUPPORTS_CUSTOM_LIMIT_ORDER_BOOK_FETCH
 
 
 async def get_exchange_details(

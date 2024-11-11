@@ -36,6 +36,8 @@ class CommunityUserAccount:
         self.owned_packages: list[str] = []
         self.has_pending_packages_to_install = False
 
+        self.last_email_address_confirm_code_email_content: typing.Optional[str] = None
+
         self._profile_raw_data = None
         self._selected_bot_raw_data = None
         self._all_user_bots_raw_data = []
@@ -73,6 +75,11 @@ class CommunityUserAccount:
         return self._get_bot_deployment(bot).get(
             backend_enums.BotDeploymentKeys.TYPE.value, backend_enums.DeploymentTypes.SELF_HOSTED.value
         ) == backend_enums.DeploymentTypes.SELF_HOSTED.value
+
+    def is_archived(self, bot):
+        return self._get_bot_deployment(bot).get(
+            backend_enums.BotDeploymentKeys.STATUS.value
+        ) == backend_enums.BotDeploymentStatus.ARCHIVED.value
 
     def get_selected_bot_deployment_id(self):
         return self.get_bot_deployment_value(backend_enums.BotDeploymentKeys.ID)

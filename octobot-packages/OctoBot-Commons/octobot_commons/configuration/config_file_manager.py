@@ -66,14 +66,12 @@ def load(config_file, should_raise=True, fill_missing_fields=False) -> dict:
 def dump(
     config_file,
     config,
-    temp_restore_config_file=commons_constants.TEMP_RESTORE_CONFIG_FILE,
     schema_file=None,
 ) -> None:
     """
     Save a json config
     :param config_file: the config file path
     :param config: the json config
-    :param temp_restore_config_file: the temporary config file
     :param schema_file: path to the json schema to validate the updated config
     """
     try:
@@ -87,7 +85,7 @@ def dump(
         )
         raise global_exception
 
-    json_util.safe_dump(config, config_file, restore_file=temp_restore_config_file)
+    json_util.safe_dump(config, config_file)
 
 
 def _check_config(content, schema_file) -> None:

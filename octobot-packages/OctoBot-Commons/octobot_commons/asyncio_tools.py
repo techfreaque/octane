@@ -39,7 +39,7 @@ def run_coroutine_in_asyncio_loop(
         return future.result(timeout)
     except (asyncio.TimeoutError, concurrent.futures.TimeoutError) as timeout_error:
         logger.error(
-            f"{coroutine} coroutine took too long to execute, cancelling the task. "
+            f"{coroutine.__name__} coroutine took too long to execute, cancelling the task. "
             f"(current task before starting this one: {current_task_before_start}, actual current "
             f"task before cancel: {asyncio.current_task(async_loop)})"
         )
@@ -50,7 +50,7 @@ def run_coroutine_in_asyncio_loop(
             logger.exception(
                 global_exception,
                 True,
-                f"{coroutine} coroutine raised an exception: {global_exception}",
+                f"{coroutine.__name__} coroutine raised an exception: {global_exception}",
             )
         raise global_exception
 

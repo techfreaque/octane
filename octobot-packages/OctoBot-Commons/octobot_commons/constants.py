@@ -38,7 +38,6 @@ CONFIG_TIME_FRAME = "time_frame"
 USER_FOLDER = "user"
 CONFIG_FOLDER = "config"
 CONFIG_FILE = "config.json"
-TEMP_RESTORE_CONFIG_FILE = "temp_config.json"
 SAFE_DUMP_SUFFIX = ".back"
 DEFAULT_CONFIG_FILE = "default_config.json"
 DEFAULT_CONFIG_FILE_PATH = f"{CONFIG_FOLDER}/{DEFAULT_CONFIG_FILE}"
@@ -93,6 +92,8 @@ CONFIG_EXCHANGES = "exchanges"
 CONFIG_EXCHANGE_KEY = "api-key"
 CONFIG_EXCHANGE_SECRET = "api-secret"
 CONFIG_EXCHANGE_PASSWORD = "api-password"
+CONFIG_EXCHANGE_UID = "api-uid"
+CONFIG_EXCHANGE_ACCESS_TOKEN = "access_token"
 CONFIG_EXCHANGE_TYPE = "exchange-type"
 CONFIG_CONTRACT_TYPE = "contract-type"
 CONFIG_REQUIRED_EXTRA_TIMEFRAMES = "required_extra_timeframes"
@@ -168,7 +169,9 @@ CONFIG_ACCEPTED_TERMS = "accepted_terms"
 CONFIG_METRICS = "metrics"
 CONFIG_METRICS_BOT_ID = "metrics-bot-id"
 TIMER_BEFORE_METRICS_REGISTRATION_SECONDS = 600
-TIMER_BETWEEN_METRICS_UPTIME_UPDATE = 3600 * 4
+TIMER_BETWEEN_METRICS_UPTIME_UPDATE = float(
+    os.getenv("TIMER_BETWEEN_METRICS_UPTIME_UPDATE", str(3600 * 4))
+)
 METRICS_URL = os.getenv("METRICS_OCTOBOT_ONLINE_URL", "https://metrics.octobot.online/")
 METRICS_ROUTE_GEN_BOT_ID = "gen-bot-id"
 METRICS_ROUTE = "metrics"
@@ -253,3 +256,4 @@ ENABLE_CERTIFI_SSL_CERTIFICATES = bool(
 KNOWN_POTENTIALLY_SSL_FAILED_REQUIRED_URL = (
     "https://tentacles.octobot.online/officials/packages/full/base/1.0.9/metadata.yaml"
 )
+IS_DEV_MODE_ENABLED = bool(os.getenv(CONFIG_DEBUG_OPTION, "False").lower() == "true")

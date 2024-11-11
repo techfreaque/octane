@@ -51,6 +51,9 @@ class TestCoinexRealExchangeTester(RealExchangeTester):
             TimeFrames.ONE_WEEK.value,
         ))
 
+    async def test_active_symbols(self):
+        await self.inner_test_active_symbols(1500, 1500)
+
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             self.ensure_required_market_status_values(market_status)
@@ -116,10 +119,15 @@ class TestCoinexRealExchangeTester(RealExchangeTester):
     async def test_get_order_book(self):
         # fetchOrderBook() limit argument must be None, 5/10/20/50. Default is 20
         order_book = await self.get_order_book(limit=10)
+        assert 0 < order_book[Ecobic.TIMESTAMP.value] < self._get_ref_order_book_timestamp()
         assert len(order_book[Ecobic.ASKS.value]) == 10
         assert len(order_book[Ecobic.ASKS.value][0]) == 2
         assert len(order_book[Ecobic.BIDS.value]) == 10
         assert len(order_book[Ecobic.BIDS.value][0]) == 2
+        
+    async def test_get_order_books(self):
+        # implement if necessary
+        pass
 
     async def test_get_recent_trades(self):
         recent_trades = await self.get_recent_trades()

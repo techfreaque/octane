@@ -13,18 +13,17 @@
 #
 #  You should have received a copy of the GNU General Public
 #  License along with OctoBot. If not, see <https://www.gnu.org/licenses/>.
-
-import packaging.version as packaging_version
-
 import argparse
 import os
 import sys
 import multiprocessing
 import asyncio
+import packaging.version as packaging_version
 
 import octobot_commons.os_util as os_util
 import octobot_commons.logging as logging
 import octobot_commons.configuration as configuration
+import octobot_commons.profiles as profiles
 import octobot_commons.authentication as authentication
 import octobot_commons.constants as common_constants
 import octobot_commons.errors as errors
@@ -46,6 +45,7 @@ import octobot.constants as constants
 import octobot.disclaimer as disclaimer
 import octobot.logger as octobot_logger
 import octobot.community as octobot_community
+import octobot.community.errors
 import octobot.limits as limits
 
 
@@ -147,6 +147,41 @@ async def _apply_community_startup_info_to_config(logger, config, community_auth
         logger.error(f"Error when fetching community startup info: {err}")
 
 
+async def _apply_db_bot_config(logger, config, community_auth) -> bool:
+    try:
+        # async loop may have changed if community_auth was already used before
+        await community_auth.ensure_async_loop()
+        profile_data, auth_data = await community_auth.fetch_bot_tentacles_data_based_config(
+            constants.COMMUNITY_BOT_ID,
+            constants.USER_AUTH_KEY,
+        )
+        profile = await profiles.import_profile_data_as_profile(
+            profile_data,
+            constants.PROFILE_FILE_SCHEMA,
+            None,
+            name=profile_data.profile_details.name,
+            auto_update=False,
+            force_simulator=False,
+        )
+        for auth_data_element in auth_data:
+            logger.info(f"Applying {auth_data_element.internal_name} exchange auth details")
+            auth_data_element.apply_to_exchange_config(config)
+
+        config.load_profiles()
+    except octobot.community.errors.BotNotFoundError:
+        raise errors.RemoteConfigError(
+            f"COMMUNITY_BOT_ID env variable is required to apply bot config. "
+            f"COMMUNITY_BOT_ID={constants.COMMUNITY_BOT_ID}"
+        )
+    except octobot.community.errors.MissingBotConfigError:
+        raise
+    except Exception as err:
+        raise errors.RemoteConfigError(
+            f"Error when fetching {constants.COMMUNITY_BOT_ID} bot configuration: {err} ({err.__class__.__name__})"
+        )
+    return commands.select_forced_profile_if_any(config, profile.profile_id, logger)
+
+
 def _apply_env_variables_to_config(logger, config):
     commands.download_and_select_profile(
         logger, config,
@@ -159,20 +194,32 @@ async def _get_authenticated_community_if_possible(config, logger):
     # switch environments if necessary
     octobot_community.IdentifiersProvider.use_environment_from_config(config)
     community_auth = octobot_community.CommunityAuthentication.create(config)
+    community_auth.clear_local_data_if_necessary()
     try:
         if not community_auth.is_initialized():
-            if constants.IS_CLOUD_ENV and constants.USER_ACCOUNT_EMAIL and constants.USER_PASSWORD_TOKEN:
+            if constants.IS_CLOUD_ENV:
+                authenticated = False
                 try:
-                    await community_auth.login(
-                        constants.USER_ACCOUNT_EMAIL, None, password_token=constants.USER_PASSWORD_TOKEN
-                    )
+                    logger.debug("Attempting auth key authentication")
+                    authenticated = await community_auth.auto_reauthenticate()
                 except authentication.AuthenticationError as err:
-                    logger.debug(f"Password token auth failure ({err}). Trying with saved session.")
+                    logger.info(f"Auth key auth failure ({err}). Trying other methods if available.")
+                if not authenticated and constants.USER_ACCOUNT_EMAIL and constants.USER_PASSWORD_TOKEN:
+                    try:
+                        logger.debug("Attempting password token authentication")
+                        await community_auth.login(
+                            constants.USER_ACCOUNT_EMAIL, None, password_token=constants.USER_PASSWORD_TOKEN
+                        )
+                    except authentication.AuthenticationError as err:
+                        logger.info(f"Password token auth failure ({err}). Trying with saved session.")
             if not community_auth.is_initialized():
                 # try with saved credentials if any
                 has_tentacles = tentacles_manager_api.is_tentacles_architecture_valid()
-                # When no tentacles, fetch private data. Otherwise fetch it later on in bot init
-                await community_auth.async_init_account(fetch_private_data=not has_tentacles)
+                # When no tentacles or in cloud, fetch private data. Otherwise fetch it later on in bot init
+                fetch_private_data = not has_tentacles or constants.IS_CLOUD_ENV
+                await community_auth.async_init_account(fetch_private_data=fetch_private_data)
+        if not community_auth.is_logged_in():
+            logger.info("No authenticated community account")
     except authentication.FailedAuthentication as err:
         logger.error(f"Failed authentication when initializing community authenticator: {err}")
     except Exception as err:
@@ -182,8 +229,15 @@ async def _get_authenticated_community_if_possible(config, logger):
 
 async def _async_load_community_data(community_auth, config, logger, is_first_startup):
     if constants.IS_CLOUD_ENV and is_first_startup:
+        if not community_auth.is_logged_in():
+            raise authentication.FailedAuthentication(
+                "Impossible to load community data without an authenticated user account"
+            )
         # auto config
-        await _apply_community_startup_info_to_config(logger, config, community_auth)
+        if constants.USE_FETCHED_BOT_CONFIG:
+            await _apply_db_bot_config(logger, config, community_auth)
+        else:
+            await _apply_community_startup_info_to_config(logger, config, community_auth)
 
 
 def _apply_forced_configs(community_auth, logger, config, is_first_startup):
@@ -255,6 +309,8 @@ def start_octobot(args):
         # Current running environment
         _log_environment(logger)
 
+        octobot_community.init_sentry_tracker()
+
         # load configuration
         config, is_first_startup = _create_startup_config(logger)
 
@@ -286,9 +342,6 @@ def start_octobot(args):
 
         # Can now perform config health check (some checks require a loaded profile)
         configuration_manager.config_health_check(config, args.backtesting)
-
-        # Keep track of errors if any
-        octobot_community.register_error_uploader(constants.ERRORS_POST_ENDPOINT, config)
 
         # Apply config limits if any
         startup_messages += limits.apply_config_limits(config)
@@ -323,12 +376,16 @@ def start_octobot(args):
         _disable_interface_from_param("web", args.no_web, logger)
 
         commands.run_bot(bot, logger)
+        force_error_exit = False
+    except errors.RemoteConfigError as err:
+        logger.exception(err)
+        force_error_exit = True
 
-    except errors.ConfigError as e:
+    except errors.ConfigError as err:
         logger.error("OctoBot can't start without a valid " + common_constants.CONFIG_FILE
-                     + " configuration file.\nError: " + str(e) + "\nYou can use " +
+                     + " configuration file.\nError: " + str(err) + "\nYou can use " +
                      constants.DEFAULT_CONFIG_FILE + " as an example to fix it.")
-        os._exit(-1)
+        force_error_exit = True
 
     except errors.NoProfileError:
         logger.error("Missing default profiles. OctoBot can't start without a valid default profile configuration. "
@@ -336,26 +393,29 @@ def start_octobot(args):
                      f"folder is accessible. To reinstall default profiles, delete the "
                      f"'{tentacles_manager_constants.TENTACLES_PATH}' "
                      f"folder or start OctoBot with the following arguments: tentacles --install --all")
-        os._exit(-1)
+        force_error_exit = True
 
-    except ModuleNotFoundError as e:
-        if 'tentacles' in str(e):
+    except ModuleNotFoundError as err:
+        if 'tentacles' in str(err):
             logger.error("Impossible to start OctoBot, tentacles are missing.\nTo install tentacles, "
                          "please use the following command:\nstart.py tentacles --install --all")
         else:
-            logger.exception(e)
-        os._exit(-1)
+            logger.exception(err)
+        force_error_exit = True
 
     except errors.ConfigEvaluatorError:
         logger.error("OctoBot can't start without a valid  configuration file.\n"
                      "This file is generated on tentacle "
                      "installation using the following command:\nstart.py tentacles --install --all")
-        os._exit(-1)
+        force_error_exit = True
 
     except errors.ConfigTradingError:
         logger.error("OctoBot can't start without a valid configuration file.\n"
                      "This file is generated on tentacle "
                      "installation using the following command:\nstart.py tentacles --install --all")
+        force_error_exit = True
+    if force_error_exit:
+        octobot_community.flush_tracker()
         os._exit(-1)
 
 

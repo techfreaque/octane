@@ -319,17 +319,6 @@ class StrategyEvaluator(evaluator.AbstractEvaluator):
                 time_frame: value
             }
 
-    def _get_exchange_current_time(self, exchange_name, matrix_id):
-        try:
-            import octobot_trading.api as exchange_api
-            exchange_manager = exchange_api.get_exchange_manager_from_exchange_name_and_id(
-                exchange_name,
-                exchange_api.get_exchange_id_from_matrix_id(exchange_name, matrix_id)
-            )
-            return exchange_api.get_exchange_current_time(exchange_manager)
-        except ImportError:
-            self.logger.error("Strategy requires OctoBot-Trading package installed")
-
     def _init_exchange_allowed_time_delta(self, exchange_name, matrix_id):
         try:
             import octobot_trading.api as exchange_api

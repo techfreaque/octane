@@ -38,6 +38,12 @@ async def test_broker_id(kucoin_exchange):
 
 
 @pytest.mark.asyncio
+async def test_invalid_api_key(kucoin_exchange):
+    exchange = exchanges.Kucoin(kucoin_exchange)
+    await account_tests.check_invalid_account(exchange)
+
+
+@pytest.mark.asyncio
 async def test_invalid_api_key_get_api_key_rights(kucoin_exchange):
     exchange = exchanges.Kucoin(kucoin_exchange)
-    await account_tests.check_invalid_account_keys(exchange)
+    await account_tests.check_invalid_account_keys_rights(exchange)

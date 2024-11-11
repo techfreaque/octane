@@ -54,6 +54,9 @@ class TestKucoinFuturesRealExchangeTester(RealFuturesExchangeTester):
             TimeFrames.ONE_WEEK.value
         ))
 
+    async def test_active_symbols(self):
+        await self.inner_test_active_symbols(300, 300)
+
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             self.ensure_required_market_status_values(market_status)
@@ -127,10 +130,15 @@ class TestKucoinFuturesRealExchangeTester(RealFuturesExchangeTester):
     async def test_get_order_book(self):
         # kucoin requires a limit of None, 20 or 100 in order book
         order_book = await self.get_order_book(limit=20)
+        assert 0 < order_book[Ecobic.TIMESTAMP.value] < self._get_ref_order_book_timestamp()
         assert len(order_book[Ecobic.ASKS.value]) == 20
         assert len(order_book[Ecobic.ASKS.value][0]) == 2
         assert len(order_book[Ecobic.BIDS.value]) == 20
         assert len(order_book[Ecobic.BIDS.value][0]) == 2
+        
+    async def test_get_order_books(self):
+        # implement if necessary
+        pass
 
     async def test_get_recent_trades(self):
         # note: on ccxt kucoin recent trades are received in reverse order from exchange and therefore should never be

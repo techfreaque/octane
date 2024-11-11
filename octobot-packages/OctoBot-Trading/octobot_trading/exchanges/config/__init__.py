@@ -23,8 +23,13 @@ from octobot_trading.exchanges.config import backtesting_exchange_config
 from octobot_trading.exchanges.config.backtesting_exchange_config import (
     BacktestingExchangeConfig,
 )
+from octobot_trading.exchanges.config import proxy_config
+from octobot_trading.exchanges.config.proxy_config import (
+    ProxyConfig,
+)
 
 __all__ = [
     "ExchangeConfig",
     "BacktestingExchangeConfig",
+    "ProxyConfig",
 ]

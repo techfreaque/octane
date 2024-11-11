@@ -107,6 +107,8 @@ class Binance(exchanges.Exchange):
             if not details.get("ifNewUser", False):
                 return False, "Binance requires accounts that were created after july 1st 2021, " \
                               "this account is too old."
+        except ValueError as err:
+            raise ccxt.AuthenticationError(f"Invalid key format ({err})")
         except AttributeError:
             if isinstance(details, aiohttp.streams.StreamReader):
                 return False, "Error when fetching exchange data (unreadable response)"

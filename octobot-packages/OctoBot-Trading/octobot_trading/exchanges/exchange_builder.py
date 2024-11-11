@@ -17,6 +17,7 @@
 import typing
 import octobot_commons.logging as logging
 import octobot_commons.constants as commons_constants
+import octobot_commons.authentication as commons_authentication
 
 import octobot_trading.errors as errors
 import octobot_trading.modes as modes
@@ -36,6 +37,7 @@ class ExchangeBuilder:
         self._is_using_trading_modes: bool = True
         self._matrix_id: str = None
         self.trading_config_by_trading_mode: dict = None
+        self.exchange_config_by_exchange: dict = None
         self.auto_start_trading_modes: bool = True
 
     async def build(self):
@@ -60,10 +62,12 @@ class ExchangeBuilder:
             if self._is_using_trading_modes:
                 trading_mode_class = modes.get_activated_trading_mode(self.exchange_manager.tentacles_setup_config)
                 # handle exchange related requirements if the activated trading mode has any
-                self._register_trading_modes_requirements(trading_mode_class, self.exchange_manager.tentacles_setup_config)
+                self._register_trading_modes_requirements(
+                    trading_mode_class, self.exchange_manager.tentacles_setup_config
+                )
 
             self._ensure_exchange_compatibility()
-            await self.exchange_manager.initialize()
+            await self.exchange_manager.initialize(exchange_config_by_exchange=self.exchange_config_by_exchange)
             # add exchange to be able to use it
             exchanges.Exchanges.instance().add_exchange(self.exchange_manager, self._matrix_id)
 
@@ -98,12 +102,24 @@ class ExchangeBuilder:
             raise e
 
     def _register_trading_modes_requirements(self, trading_mode_class, tentacles_setup_config):
-        self.exchange_manager.is_trading = trading_mode_class.get_is_trading_on_exchange(self.exchange_name,
-                                                                                         tentacles_setup_config)
+        self.exchange_manager.is_trading = trading_mode_class.get_is_trading_on_exchange(
+            self.exchange_name, tentacles_setup_config
+        )
+        if not self.exchange_manager.is_trading:
+            self.logger.info(
+                f"{self.exchange_manager.exchange_name} exchange is configured not to apply any trading strategy."
+            )
         # take trading modes candles requirements into account if any
         self.config[commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT] = max(
             self.config[commons_constants.CONFIG_TENTACLES_REQUIRED_CANDLES_COUNT],
             modes.get_required_candles_count(trading_mode_class, tentacles_setup_config)
+        )
+        # register forced updaters if any
+        self.exchange_manager.exchange_config.add_forced_updater_channels(
+            trading_mode_class.get_forced_updater_channels()
+        )
+        self.exchange_manager.exchange_config.set_is_saving_cancelled_orders_as_trade(
+            not trading_mode_class.is_ignoring_cancelled_orders_trades()
         )
 
     async def _build_trading_modes_if_required(self, trading_mode_class):
@@ -120,6 +136,9 @@ class ExchangeBuilder:
 
     async def build_trading_modes(self, trading_mode_class):
         try:
+            # ensure authenticated data are fetched before starting trading modes
+            if not self.exchange_manager.is_backtesting:
+                await commons_authentication.Authenticator.wait_and_check_has_open_source_package()
             self._ensure_trading_mode_compatibility(trading_mode_class)
             return await modes.create_trading_modes(
                 self.config,
@@ -250,6 +269,10 @@ class ExchangeBuilder:
         self.exchange_manager.bot_id = bot_id
         return self
 
+    def set_proxy_config(self, proxy_config):
+        self.exchange_manager.proxy_config = proxy_config
+        return self
+
     def disable_trading_mode(self):
         self._is_using_trading_modes = False
         return self
@@ -260,6 +283,10 @@ class ExchangeBuilder:
 
     def use_trading_config_by_trading_mode(self, trading_config_by_trading_mode):
         self.trading_config_by_trading_mode = trading_config_by_trading_mode
+        return self
+
+    def use_exchange_config_by_exchange(self, exchange_config_by_exchange: typing.Optional[dict[str, dict]]):
+        self.exchange_config_by_exchange = exchange_config_by_exchange
         return self
 
     def set_auto_start_trading_modes(self, auto_start_trading_modes):

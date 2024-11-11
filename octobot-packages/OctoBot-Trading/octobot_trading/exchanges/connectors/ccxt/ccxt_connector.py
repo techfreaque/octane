@@ -21,6 +21,7 @@ import typing
 import inspect
 
 import octobot_commons.enums
+import octobot_commons.logging
 import octobot_commons.symbols as commons_symbols
 
 import octobot_trading
@@ -37,6 +38,30 @@ import octobot_trading.personal_data as personal_data
 from octobot_trading.enums import ExchangeConstantsOrderColumns as ecoc
 
 
+def _retried_failed_network_request(func):
+    async def _retried_failed_network_request_wrapper(*args, raise_errors=False, **kwargs):
+        for i in range(constants.FAILED_NETWORK_REQUEST_RETRY_ATTEMPTS):
+            try:
+                resp = await func(*args, **kwargs)
+                if i > 0:
+                    octobot_commons.logging.get_logger(f"_retried_failed_network_request").info(
+                        f"{func.__name__} succeeded after {i+1} attempts."
+                    )
+                return resp
+            except ccxt.RequestTimeout as err:
+                octobot_commons.logging.get_logger(f"_retried_failed_network_request").warning(
+                    f"{func.__name__} raised {err} ({err.__class__.__name__}) "
+                    f"[attempts {i+1}/{constants.FAILED_NETWORK_REQUEST_RETRY_ATTEMPTS}]."
+                )
+                if i < constants.FAILED_NETWORK_REQUEST_RETRY_ATTEMPTS - 1:
+                    # can happen: retry
+                    pass
+                else:
+                    raise
+        # raise any other error
+    return _retried_failed_network_request_wrapper
+
+
 class CCXTConnector(abstract_exchange.AbstractExchange):
     """
     CCXT library connector. Everything ccxt related should be in this connector.
@@ -50,7 +75,7 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
     def __init__(
         self, config, exchange_manager, adapter_class=None, additional_config=None, rest_name=None, force_auth=False
     ):
-        super().__init__(config, exchange_manager)
+        super().__init__(config, exchange_manager, None)
         self.client = None
         self.exchange_type = None
         self.adapter = self.get_adapter_class(adapter_class)(self)
@@ -102,8 +127,6 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
 
         except (ccxt.ExchangeNotAvailable, ccxt.RequestTimeout) as e:
             raise octobot_trading.errors.UnreachableExchange(e) from e
-        except ccxt.AuthenticationError:
-            raise ccxt.AuthenticationError
 
     def get_adapter_class(self, adapter_class):
         return adapter_class or ccxt_adapter.CCXTAdapter
@@ -120,6 +143,7 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
         await client.load_markets(reload=reload)
 
     @ccxt_client_util.converted_ccxt_common_errors
+    @_retried_failed_network_request
     async def load_symbol_markets(
         self,
         reload=False,
@@ -176,7 +200,7 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
 
     def _create_exchange_type(self):
         if self.is_supporting_exchange(self.rest_name):
-            self.exchange_type = getattr(ccxt, self.rest_name)
+            self.exchange_type = ccxt_client_util.ccxt_exchange_class_factory(self.rest_name)
         else:
             self.exchange_type = self.rest_name
 
@@ -202,7 +226,7 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
     async def _ensure_auth(self):
         try:
             await self.get_balance()
-        except ccxt.AuthenticationError as e:
+        except (octobot_trading.errors.AuthenticationError, ccxt.AuthenticationError) as e:
             await self.client.close()
             self.unauthenticated_exchange_fallback(e)
         except Exception as e:
@@ -232,7 +256,8 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
             self.handle_token_error(err)
         return ccxt_client_util.get_unauthenticated_exchange(
             self.exchange_type,
-            self.options, self.headers, self.additional_config
+            self.options, self.headers, self.additional_config,
+            self.exchange_manager.proxy_config
         )
 
     def get_market_status(self, symbol, price_example=None, with_fixer=True):
@@ -254,13 +279,10 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
         """
         if not kwargs:
             kwargs = {}
-        try:
-            with self.error_describer():
-                return self.adapter.adapt_balance(
-                    await self.client.fetch_balance(params=kwargs)
-                )
-        except ccxt.NotSupported:
-            raise octobot_trading.errors.NotSupported
+        with self.error_describer():
+            return self.adapter.adapt_balance(
+                await self.client.fetch_balance(params=kwargs)
+            )
 
     @ccxt_client_util.converted_ccxt_common_errors
     async def get_symbol_prices(self,
@@ -310,6 +332,28 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
             raise octobot_trading.errors.NotSupported
         except ccxt.BaseError as e:
             raise octobot_trading.errors.FailedRequest(f"Failed to get_order_book {e}")
+
+    # return bidasks on each side of the order book stack for each given symbol
+    @ccxt_client_util.converted_ccxt_common_errors
+    async def get_order_books(
+        self, symbols: typing.Optional[list[str]], limit: int = 5, **kwargs: dict
+    ) -> typing.Optional[dict]:
+        """
+        WARNING: not always supported by exchanges.
+        Raises octobot_trading.errors.NotSupported when not supported
+        :return: a dict of order book by symbol
+        """
+        try:
+            with self.error_describer():
+                book_by_symbol = await self.client.fetch_order_books(symbols=symbols, limit=limit, params=kwargs)
+                return {
+                    symbol: self.adapter.adapt_order_book(book)
+                    for symbol, book in book_by_symbol.items()
+                }
+        except ccxt.NotSupported:
+            raise octobot_trading.errors.NotSupported
+        except ccxt.BaseError as e:
+            raise octobot_trading.errors.FailedRequest(f"Failed to get_order_books {e}")
 
     @ccxt_client_util.converted_ccxt_common_errors
     async def get_recent_trades(self, symbol: str, limit: int = 50, **kwargs: dict) -> typing.Optional[list]:
@@ -420,6 +464,23 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
             )
 
     @ccxt_client_util.converted_ccxt_common_errors
+    async def get_cancelled_orders(self, symbol: str = None, since: int = None,
+                                   limit: int = None, **kwargs: dict) -> list:
+        with self.error_describer():
+            method = self.client.fetch_canceled_orders if self.client.has['fetchCanceledOrders'] \
+                else (self.client.fetch_closed_orders if self.client.has['fetchClosedOrders'] else None)
+            if method is None:
+                raise octobot_trading.errors.NotSupported(
+                    f"Neither of fetchCanceledOrders and fetchClosedOrders are supported: get_cancelled_orders "
+                    f"is not supported"
+                )
+            return self.adapter.adapt_orders(
+                await method(symbol=symbol, since=since, limit=limit, params=kwargs),
+                symbol=symbol,
+                cancelled_only=True
+            )
+
+    @ccxt_client_util.converted_ccxt_common_errors
     async def get_my_recent_trades(self, symbol: str = None, since: int = None,
                                    limit: int = None, **kwargs: dict) -> list:
         if self.client.has['fetchMyTrades'] or self.client.has['fetchTrades']:
@@ -476,18 +537,30 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
 
     @ccxt_client_util.converted_ccxt_common_errors
     async def create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
-        if self.client.has.get("createStopMarketOrder"):
+        if self.client.has.get("createStopMarketOrder") or self.client.has.get("createStopOrder"):
             try:
-                return self.adapter.adapt_order(
-                    await self.client.createStopMarketOrder(
-                        symbol,
-                        side=side,
-                        amount=quantity,
-                        stopPrice=price,
-                        params=params,
-                    ),
-                    symbol=symbol, quantity=quantity
-                )
+                if self.client.has.get("createStopMarketOrder"):
+                    return self.adapter.adapt_order(
+                        await self.client.createStopMarketOrder(
+                            symbol,
+                            side=side,
+                            amount=quantity,
+                            stopPrice=price,
+                            params=params,
+                        ),
+                        symbol=symbol, quantity=quantity
+                    )
+                elif self.client.has.get("createStopOrder"):
+                    return self.adapter.adapt_order(
+                        await self.client.createStopOrder(
+                            symbol,
+                            side=side,
+                            amount=quantity,
+                            stopPrice=price,
+                            params=params,
+                        ),
+                        symbol=symbol, quantity=quantity
+                    )
             except ccxt.OrderImmediatelyFillable:
                 # make sure stop always stops
                 created_order = await self.exchange_manager.exchange.create_order(
@@ -559,6 +632,19 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
         )
 
     @ccxt_client_util.converted_ccxt_common_errors
+    async def cancel_all_orders(self, symbol: str = None, **kwargs: dict) -> None:
+        try:
+            with self.error_describer():
+                await self.client.cancel_all_orders(symbol=symbol, params=kwargs)
+        except (ccxt.NotSupported, octobot_trading.errors.NotSupported) as e:
+            raise octobot_trading.errors.NotSupported(e) from e
+        except Exception as e:
+            self.logger.exception(
+                e, True, f"Unexpected error when cancelling all {symbol} orders | {e} ({e.__class__.__name__})"
+            )
+            raise e
+
+    @ccxt_client_util.converted_ccxt_common_errors
     async def cancel_order(
         self, exchange_order_id: str, symbol: str, order_type: enums.TraderOrderType, **kwargs: dict
     ) -> enums.OrderStatus:
@@ -585,8 +671,11 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
                 # get a cancelled order).
                 return enums.OrderStatus.CANCELED
         except ccxt.OrderNotFound as e:
-            self.logger.debug(f"Trying to cancel order with id {exchange_order_id} but order was not found")
-            raise octobot_trading.errors.OrderCancelError(e) from e
+            self.logger.debug(
+                f"Trying to cancel order with id {exchange_order_id} but order was not found. It might have "
+                f"already been cancelled or be filled."
+            )
+            raise octobot_trading.errors.OrderNotFoundOnCancelError(e) from e
         except (ccxt.NotSupported, octobot_trading.errors.NotSupported) as e:
             raise octobot_trading.errors.NotSupported(e) from e
         except Exception as e:
@@ -899,3 +988,11 @@ class CCXTConnector(abstract_exchange.AbstractExchange):
             raise octobot_trading.errors.FailedRequest(err) from err
         except ccxt.RequestTimeout as e:
             raise octobot_trading.errors.FailedRequest(f"Request timeout: {e}") from e
+        except ccxt.AuthenticationError as err:
+            raise octobot_trading.errors.AuthenticationError(err) from err
+        except ccxt.ExchangeError as err:
+            if self.exchange_manager.exchange.is_authentication_error(err):
+                # ensure this is not an unhandled authentication error
+                raise octobot_trading.errors.AuthenticationError(err) from err
+            # otherwise just forward exception
+            raise
