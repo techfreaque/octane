@@ -1,6 +1,7 @@
 {% import 'macros/trading_state.html' as m_trading_state %}
 {% import 'components/modals/trading_state_modal.html' as m_trading_state_modal %}
 {% import 'components/modals/generic_modal.html' as m_generic_modal %}
+{% import 'components/community/user_details.html' as m_user_details %}
 <!doctype html>
 <html lang="en" data-mdb-theme="{{get_color_mode()}}">
     {% set active_page = active_page|default('home') -%}
@@ -38,7 +39,8 @@
         <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/7.3.2/mdb.min.css" integrity="kj1RBJ7aqGUnavWQDbYyovF5HQGHlvNf6SZ2CfaCNkoBJBEux2JXFCXqGZTAYENh" rel="stylesheet" crossorigin="anonymous">
 
         <!-- Datatables -->
-        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.css" integrity="sha384-IDaX67uymf7bFJTnGqJdas2mKfz+0XonrvcR/ZLiQBW4NCINz7BMJYwX+6tlg9y0" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css" integrity="sha384-zUxWDVAcow8yNu+q4VFsyZA3qWsKKGdWPW0SVjaR12LQze4SY8Nr75US6VDhbWkf" crossorigin="anonymous">
+
         <!-- Select -->
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/css/bootstrap-select.min.css" integrity="sha384-2SvkxRa9G/GlZMyFexHk+WN9p0n2T+r38dvBmw5l2/J3gjUcxs9R1GwKs0seeSh3" crossorigin="anonymous">
 
@@ -56,6 +58,14 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', u=LAST_UPDATED_STATIC_FILES) }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css', u=LAST_UPDATED_STATIC_FILES) }}">
 
+        {% if IS_DEMO or IS_CLOUD or IS_ALLOWING_TRACKING%}
+        <script>
+            !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+            posthog.init('{{PH_TRACKING_ID}}',{api_host:'https://eu.i.posthog.com', person_profiles: 'always'
+                })
+        </script>
+        {% endif %}
+
         {% block additional_style %}
         {% endblock additional_style %}
     </head>
@@ -72,7 +82,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha384-GP2+CwBlakZSDJUr+E4JvbxpM75i1i8+RKkieQxzuyDZLG+5105E1OfHIjzcXyWH" crossorigin="anonymous"></script>
         <script src="https://cdn.plot.ly/plotly-2.20.0.min.js" integrity="sha384-lqNbLAc8irUVsiXijo8d5LY0Ecc43bEe85kyAJgdi+CAvmBPO/L1SWp6EUxChKM/" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/@json-editor/json-editor@2.9.1/dist/jsoneditor.min.js" integrity="sha384-dD6cprB8r+EJi9stkRzdAs5tfIzdCeXU+ztMGBgC3U2KIQBzSYTv7rqJQp1fJmMs" crossorigin="anonymous"></script>
-        <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js" integrity="sha384-edQnMujp90eoACbp4sS9zj/0dMW+mjTJFxCNeW0hM7rVy4OutMVBq6ec4axiLP9U" crossorigin="anonymous"></script>
+        <script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js" integrity="sha384-nJy9D0UBD2LV93ED7IXSsdWfa9PumZvn70zRSR/oFw5Zq0x6gWwWdpLeGsbVATVg" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js" integrity="sha384-SfMwgGnc3UiUUZF50PsPetXLqH2HSl/FmkMW/Ja3N2WaJ/fHLbCHPUsXzzrM6aet"  crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" integrity="sha384-d3UHjPdzJkZuk5H3qKYMLRyWLAQBJbby2yr2Q58hXXtAGF8RSNO9jpLDlKKPv5v3" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/intro.js@7.0.1/intro.min.js" integrity="sha384-Du1qtHnjTA8tiFynVHiYYcUtxaykXTAU+GJCsSDTkZLHC+yYQHSIBDMUbtefOu1M" crossorigin="anonymous"></script>
@@ -87,7 +97,8 @@
         <script src="{{ url_for('static', filename='js/common/required.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/tutorial.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
         <script src="{{ url_for('static', filename='js/common/feedback.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
-        {% if IS_DEMO or IS_CLOUD or IS_ALLOWING_TRACKING%}
+        <script src="{{ url_for('static', filename='js/common/tracking.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+       {% if IS_DEMO or IS_CLOUD or IS_ALLOWING_TRACKING%}
         <script type="text/javascript">
             (function(c,l,a,r,i,t,y){
                 c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
@@ -268,5 +279,15 @@
         {% block additional_scripts %}
         {% endblock additional_scripts %}
         <script src="{{ url_for('static', filename='js/common/on_load.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+        {{ m_user_details.user_details(
+            IS_ALLOWING_TRACKING,
+            USER_EMAIL,
+            USER_SELECTED_BOT_ID,
+            has_open_source_package,
+            PROFILE_NAME,
+            TRADING_MODE_NAME,
+            EXCHANGE_NAMES,
+            IS_REAL_TRADING
+        ) }}
     </body>
 </html>

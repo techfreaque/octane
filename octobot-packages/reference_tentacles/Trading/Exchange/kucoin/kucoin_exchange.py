@@ -39,8 +39,9 @@ def _kucoin_retrier(f):
             except (octobot_trading.errors.FailedRequest, ccxt.ExchangeError) as err:
                 last_error = err
                 rest_exchange = args[0]  # self
-                if rest_exchange.connector.client.last_http_response and \
-                        Kucoin.INSTANT_RETRY_ERROR_CODE in rest_exchange.connector.client.last_http_response:
+                if (rest_exchange.connector is not None) and \
+                    rest_exchange.connector.client.last_http_response and \
+                    Kucoin.INSTANT_RETRY_ERROR_CODE in rest_exchange.connector.client.last_http_response:
                     # should retry instantly, error on kucoin side
                     # see https://github.com/Drakkar-Software/OctoBot/issues/2000
                     logging.get_logger(Kucoin.get_name()).debug(
@@ -72,6 +73,10 @@ class Kucoin(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
     REMOVE_MARKET_STATUS_PRICE_LIMITS = True
     ADAPT_MARKET_STATUS_FOR_CONTRACT_SIZE = True
+    # Set True when get_open_order() can return outdated orders (cancelled or not yet created)
+    CAN_HAVE_DELAYED_OPEN_ORDERS = True
+    # Set True when get_cancelled_order() can return outdated open orders
+    CAN_HAVE_DELAYED_CANCELLED_ORDERS = True
     DEFAULT_CONNECTOR_CLASS = KucoinConnector
 
     FAKE_DDOS_ERROR_INSTANT_RETRY_COUNT = 5
@@ -235,16 +240,10 @@ class Kucoin(exchanges.RestExchange):
         # filtered by limit before reversing (or most recent trades are lost)
         recent_trades = await super().get_recent_trades(symbol, limit=None, **kwargs)
         return recent_trades[::-1][:limit] if recent_trades else []
-
     @_kucoin_retrier
     async def get_order_book(self, symbol, limit=20, **kwargs):
         # override default limit to be kucoin complient
-        return super().get_order_book(symbol, limit=limit, **kwargs)
-
-    @_kucoin_retrier
-    async def get_order_book(self, symbol, limit=20, **kwargs):
-        # override default limit to be kucoin complient
-        return super().get_order_book(symbol, limit=limit, **kwargs)
+        return await super().get_order_book(symbol, limit=limit, **kwargs)
 
     @_kucoin_retrier
     async def get_price_ticker(self, symbol: str, **kwargs: dict) -> typing.Optional[dict]:
@@ -452,7 +451,7 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
 
     def fix_order(self, raw, symbol=None, **kwargs):
         raw_order_info = raw[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
-        fixed = super().fix_order(raw, **kwargs)
+        fixed = super().fix_order(raw, symbol=symbol, **kwargs)
         self._ensure_fees(fixed)
         if self.connector.exchange_manager.is_future and \
                 fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] is not None:

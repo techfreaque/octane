@@ -37,6 +37,8 @@ class Binance(exchanges.RestExchange):
     SUPPORTS_SET_MARGIN_TYPE_ON_OPEN_POSITIONS = False  # set False when the exchange refuses to change margin type
     # when an associated position is open
     # binance {"code":-4048,"msg":"Margin type cannot be changed if there exists position."}
+    # Set True when the "limit" param when fetching order books is taken into account
+    SUPPORTS_CUSTOM_LIMIT_ORDER_BOOK_FETCH = True
 
     # should be overridden locally to match exchange support
     SUPPORTED_ELEMENTS = {
@@ -85,9 +87,12 @@ class Binance(exchanges.RestExchange):
     INVERSE_TYPE = "inverse"
     LINEAR_TYPE = "linear"
 
-    def __init__(self, config, exchange_manager, connector_class=None):
+    def __init__(
+        self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]],
+        connector_class=None
+    ):
         self._futures_account_types = self._infer_account_types(exchange_manager)
-        super().__init__(config, exchange_manager, connector_class=connector_class)
+        super().__init__(config, exchange_manager, exchange_config_by_exchange, connector_class=connector_class)
 
     @classmethod
     def get_name(cls):
@@ -202,6 +207,8 @@ class Binance(exchanges.RestExchange):
 
     async def get_positions(self, symbols=None, **kwargs: dict) -> list:
         positions = []
+        if "useV2" not in kwargs:
+            kwargs["useV2"] = True  #V2 api is required to fetch empty positions (not retured in V3)
         if "subType" in kwargs:
             return _filter_positions(await super().get_positions(symbols=symbols, **kwargs))
         for account_type in self._futures_account_types:
@@ -241,7 +248,7 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
     BINANCE_DEFAULT_FUNDING_TIME = 8 * commons_constants.HOURS_TO_SECONDS
 
     def fix_order(self, raw, symbol=None, **kwargs):
-        fixed = super().fix_order(raw, **kwargs)
+        fixed = super().fix_order(raw, symbol=symbol, **kwargs)
         self._adapt_order_type(fixed)
         if fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value, None) == "PENDING_NEW":
             # PENDING_NEW order are old orders on binance and should be considered as open
@@ -286,8 +293,6 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
             return None
 
     def parse_leverage(self, fixed, **kwargs):
-        # WARNING no CCXT standard leverage parsing logic
-        # HAS TO BE IMPLEMENTED IN EACH EXCHANGE IMPLEMENTATION
         parsed = super().parse_leverage(fixed, **kwargs)
         # on binance fixed is a parsed position
         parsed[trading_enums.ExchangeConstantsLeveragePropertyColumns.LEVERAGE.value] = \

@@ -20,7 +20,9 @@ const mardownConverter = new showdown.Converter();
 const currentURL = `${window.location.protocol}//${window.location.host}`;
 
 function markdown_to_html(text) {
-    return mardownConverter.makeHtml(text?.trim().replaceAll("<br><br>", "\n\n"))
+    return mardownConverter.makeHtml(
+        text?.trim().replaceAll("<br><br>", "\n\n")
+    )
 }
 
 function fetch_images() {
@@ -178,10 +180,18 @@ function handleDefaultImages(){
     displayImages(true);
 }
 
+function handle_copy_to_clipboard() {
+    $("[data-role=\"copy-to-clipboard\"]").on("click", (event) => {
+        const element = $(event.currentTarget);
+        copyToClipBoard(element.data("name"), element.data("value"));
+    })
+}
+
 
 $(document).ready(function() {
     // register error listeners as soon as possible
     handleDefaultImages();
+    handle_copy_to_clipboard();
     $(".markdown-content").each(function () {
         const element = $(this);
         element.html(markdown_to_html(element.text()));

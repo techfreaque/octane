@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import ccxt
+import typing
 
 import octobot_commons.enums as commons_enums
 import octobot_trading.enums as trading_enums
@@ -30,11 +31,15 @@ class hollaex(exchanges.RestExchange):
     REST_KEY = "rest"
     HAS_WEBSOCKETS_KEY = "has_websockets"
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
+    SUPPORT_FETCHING_CANCELLED_ORDERS = False
 
     DEFAULT_MAX_LIMIT = 500
 
-    def __init__(self, config, exchange_manager):
-        super().__init__(config, exchange_manager)
+    def __init__(
+        self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]],
+        connector_class=None
+    ):
+        super().__init__(config, exchange_manager, exchange_config_by_exchange, connector_class=connector_class)
         self.exchange_manager.rest_only = self.exchange_manager.rest_only \
             or not self.tentacle_config.get(
                 self.HAS_WEBSOCKETS_KEY, not self.exchange_manager.rest_only
@@ -80,6 +85,10 @@ class hollaex(exchanges.RestExchange):
     def is_configurable(cls):
         return True
 
+    async def get_account_id(self, **kwargs: dict) -> str:
+        user_info = await self.connector.client.private_get_user()
+        return user_info["id"]
+
     async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
         # ohlcv without limit is not supported, replaced by a default max limit
         if limit is None:
@@ -102,7 +111,13 @@ class HollaexCCXTAdapter(exchanges.CCXTAdapter):
     def fix_order(self, raw, symbol=None, **kwargs):
         raw_order_info = raw[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
         # average is not supported by ccxt
-        fixed = super().fix_order(raw, **kwargs)
+        fixed = super().fix_order(raw, symbol=symbol, **kwargs)
         if not fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] and "average" in raw_order_info:
             fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = raw_order_info.get("average", 0)
+        return fixed
+
+    def fix_ticker(self, raw, **kwargs):
+        fixed = super().fix_ticker(raw, **kwargs)
+        fixed[trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value] = \
+            fixed.get(trading_enums.ExchangeConstantsTickersColumns.TIMESTAMP.value) or self.connector.client.seconds()
         return fixed

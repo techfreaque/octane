@@ -65,12 +65,15 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
     def _client_factory(self, force_unauth, keys_adapter=None) -> tuple:
         return super()._client_factory(force_unauth, keys_adapter=self._keys_adapter)
 
-    def _keys_adapter(self, key, secret, password):
+    def _keys_adapter(self, key, secret, password, uid, auth_token):
+        if auth_token:
+            # when auth token is provided, force invalid keys
+            return "ANY_KEY", "ANY_SECRET", password, uid, auth_token, "Bearer "
         # CCXT pem key reader is not expecting users to under keys pasted as text from the coinbase UI
         # convert \\n to \n to make this format compatible as well
         if secret and "\\n" in secret:
             secret = secret.replace("\\n", "\n")
-        return key, secret, password
+        return key, secret, password, uid, None, None
 
     @_coinbase_retrier
     async def _load_markets(self, client, reload: bool):
@@ -109,6 +112,9 @@ class Coinbase(exchanges.RestExchange):
         # ex when trading WBTC/USDC with and account that can't trade it:
         # ccxt.base.errors.BadRequest: target is not enabled for trading
         ("target is not enabled for trading", ),
+        # ccxt.base.errors.PermissionDenied: coinbase {"error":"PERMISSION_DENIED","error_details":
+        # "User is not allowed to convert crypto","message":"User is not allowed to convert crypto"}
+        ("user is not allowed to convert crypto", ),
     ]
 
     @classmethod
@@ -290,6 +296,8 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
             fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = order_type
         if fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] == "PENDING":
             fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] = trading_enums.OrderStatus.PENDING_CREATION.value
+        if fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] == "CANCEL_QUEUED":
+            fixed[ccxt_enums.ExchangeOrderCCXTColumns.STATUS.value] = trading_enums.OrderStatus.PENDING_CANCEL.value
         # sometimes amount is not set
         if not fixed[ccxt_enums.ExchangeOrderCCXTColumns.AMOUNT.value] \
                 and fixed[ccxt_enums.ExchangeOrderCCXTColumns.FILLED.value]:
@@ -305,7 +313,7 @@ class CoinbaseCCXTAdapter(exchanges.CCXTAdapter):
                 if trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] is None and \
                         trade[trading_enums.ExchangeConstantsOrderColumns.COST.value] and \
                         trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]:
-                    # convert amount to have the same units as evert other exchange: use FILLED for accuracy
+                    # convert amount to have the same units as every other exchange
                     trade[trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value] = (
                             trade[trading_enums.ExchangeConstantsOrderColumns.COST.value] /
                             trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]
