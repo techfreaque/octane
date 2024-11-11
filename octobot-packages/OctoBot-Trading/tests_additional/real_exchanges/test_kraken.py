@@ -47,6 +47,9 @@ class TestKrakenRealExchangeTester(RealExchangeTester):
             TimeFrames.ONE_WEEK.value
         ))
 
+    async def test_active_symbols(self):
+        await self.inner_test_active_symbols(700, 700)
+
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             self.ensure_required_market_status_values(market_status)
@@ -121,12 +124,17 @@ class TestKrakenRealExchangeTester(RealExchangeTester):
     async def test_get_order_book(self):
         # We should prefer using fetch_l2_order_book (from https://github.com/ccxt/ccxt/issues/8135)
         order_book = await self.get_order_book()
+        assert 0 < order_book[Ecobic.TIMESTAMP.value] < self._get_ref_order_book_timestamp()
         assert len(order_book[Ecobic.ASKS.value]) == 5
         # [price, amount, time] instead of [price, amount]
         assert len(order_book[Ecobic.ASKS.value][0]) == 3
         assert len(order_book[Ecobic.BIDS.value]) == 5
         # [price, amount, time] instead of [price, amount]
         assert len(order_book[Ecobic.BIDS.value][0]) == 3
+        
+    async def test_get_order_books(self):
+        # implement if necessary
+        pass
 
     async def test_get_recent_trades(self):
         # https://github.com/ccxt/ccxt/issues/5698

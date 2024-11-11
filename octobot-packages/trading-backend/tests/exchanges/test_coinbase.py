@@ -39,6 +39,12 @@ async def test_inner_is_valid_account(coinbase_exchange):
 
 
 @pytest.mark.asyncio
+async def test_invalid_api_key(coinbase_exchange):
+    # _inner_is_valid_account is not implemented on coinbase
+    pass
+
+
+@pytest.mark.asyncio
 async def test_invalid_api_key_get_api_key_rights(coinbase_exchange):
     # API keys used as a base for these tests are deleted from Coinbase
     exchange = exchanges.Coinbase(coinbase_exchange)

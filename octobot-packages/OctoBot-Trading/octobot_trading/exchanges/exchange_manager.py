@@ -58,6 +58,7 @@ class ExchangeManager(util.Initializable):
         self.without_auth: bool = False
         self.check_credentials: bool = True
         self.enable_storage: bool = True
+        self.proxy_config: exchanges.ProxyConfig = exchanges.ProxyConfig.default_env_var_config()
 
         # exchange_only is True when exchange channels are not required (therefore not created)
         self.exchange_only: bool = False
@@ -85,8 +86,8 @@ class ExchangeManager(util.Initializable):
 
         self.debug_info = {}
 
-    async def initialize_impl(self):
-        await exchanges.create_exchanges(self)
+    async def initialize_impl(self, exchange_config_by_exchange: typing.Optional[dict[str, dict]]):
+        await exchanges.create_exchanges(self, exchange_config_by_exchange)
         if self.is_storage_enabled():
             await self.storage_manager.initialize()
 
@@ -107,10 +108,11 @@ class ExchangeManager(util.Initializable):
                 await self.exchange_web_socket.close_sockets()
             except Exception as err:
                 self.logger.exception(err, True, f"Error when stopping exchange websocket: {err}")
-            self.exchange_web_socket.clear()
-            self.exchange_web_socket = None
             if enable_logs:
                 self.logger.debug("Stopped websocket")
+        if self.exchange_web_socket:
+            self.exchange_web_socket.clear()
+            self.exchange_web_socket = None
 
         # stop trading modes
         if enable_logs:
@@ -301,18 +303,23 @@ class ExchangeManager(util.Initializable):
 
     def get_exchange_credentials(self, exchange_name):
         if self.ignore_config or not self.should_decrypt_token() or self.without_auth:
-            return "", "", ""
+            return "", "", "", "", ""
         config_exchange = self.config[common_constants.CONFIG_EXCHANGES][exchange_name]
+        key = configuration.decrypt_element_if_possible(
+            common_constants.CONFIG_EXCHANGE_KEY, config_exchange, None
+        )
+        secret = configuration.decrypt_element_if_possible(
+            common_constants.CONFIG_EXCHANGE_SECRET, config_exchange, None
+        )
         return (
-            configuration.decrypt_element_if_possible(
-                common_constants.CONFIG_EXCHANGE_KEY, config_exchange, None
-            ).strip(" "),   # remove leading and trailing whitespaces if any
-            configuration.decrypt_element_if_possible(
-                common_constants.CONFIG_EXCHANGE_SECRET, config_exchange, None
-            ).strip(" "),   # remove leading and trailing whitespaces if any
+            # remove leading and trailing ", ' and whitespaces if any
+            key.strip(' "').strip("'") if key else key,
+            secret.strip(' "').strip("'") if secret else secret,
             configuration.decrypt_element_if_possible(
                 common_constants.CONFIG_EXCHANGE_PASSWORD, config_exchange, None
-            )
+            ),
+            config_exchange.get(common_constants.CONFIG_EXCHANGE_UID, ""),
+            config_exchange.get(common_constants.CONFIG_EXCHANGE_ACCESS_TOKEN, "")
         )
 
     def get_exchange_sub_account_id(self, exchange_name):

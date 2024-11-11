@@ -285,7 +285,8 @@ class Trader(util.Initializable):
 
         await updated_order.initialize()
         if is_pending_creation and wait_for_creation \
-                and updated_order.state is not None and updated_order.state.is_pending():
+                and updated_order.state is not None and updated_order.state.is_pending()\
+                and self.exchange_manager.exchange_personal_data.orders_manager.enable_order_auto_synchronization:
             await updated_order.state.wait_for_terminate(creation_timeout)
         return updated_order
 
@@ -320,6 +321,7 @@ class Trader(util.Initializable):
             order, chained_order.order_type
         )
         if is_bundled:
+            # warning: doesn't work for multiple stop loss / take profits
             if chained_order.order_type is enums.TraderOrderType.STOP_LOSS:
                 params.update(self.exchange_manager.exchange.get_bundled_order_parameters(
                     order,
@@ -368,8 +370,9 @@ class Trader(util.Initializable):
                                                          wait_for_cancelling, cancelling_timeout)
         return False
 
-    async def _handle_order_cancellation(self, order, ignored_order,
-                                         wait_for_cancelling: bool, cancelling_timeout: float) -> bool:
+    async def _handle_order_cancellation(
+        self, order, ignored_order, wait_for_cancelling: bool, cancelling_timeout: float
+    ) -> bool:
         success = True
         if order.is_waiting_for_chained_trigger:
             # order will just never get created
@@ -385,17 +388,19 @@ class Trader(util.Initializable):
                         )
                     except errors.NotSupported:
                         raise
-                    except (errors.OrderCancelError, Exception) as err:
+                    except (errors.OrderCancelError, Exception) as inner_err:
                         # retry to cancel order
-                        self.logger.debug(f"Failed to cancel order ({err} {err.__class__.__name__}), retrying")
+                        self.logger.info(
+                            f"Failed to cancel order ({inner_err} {inner_err.__class__.__name__}), retrying"
+                        )
                         order_status = await self.exchange_manager.exchange.cancel_order(
                             order.exchange_order_id, order.symbol, order.order_type
                         )
             except errors.OrderCancelError as err:
                 if await self._handle_order_cancel_error(order, err, wait_for_cancelling, cancelling_timeout):
                     return True
-            except Exception as e:
-                self.logger.exception(e, True, f"Failed to cancel order {order}")
+            except Exception as err:
+                self.logger.exception(err, True, f"Failed to cancel order {order}")
                 return False
             if order_status is enums.OrderStatus.CANCELED:
                 order.status = octobot_trading.enums.OrderStatus.CANCELED
@@ -445,6 +450,11 @@ class Trader(util.Initializable):
                 await self._wait_for_order_cancel(order, cancelling_timeout)
             return True
         elif order.is_open():
+            if isinstance(err, errors.OrderNotFoundOnCancelError):
+                raise errors.OrderNotFoundOnCancelError(
+                    f"Tried to cancel an order that can't be found, it might be cancelled or filled already ({err}). "
+                    f"Order: {order}"
+                ) from err
             raise errors.OpenOrderError(
                 f"Order is open, but can't be cancelled. This is unexpected. Order: {order}"
             ) from err
@@ -457,6 +467,58 @@ class Trader(util.Initializable):
             raise errors.OrderCancelError(
                 f"Can't cancel order and unknown post sync order state for order: {order}."
             ) from err
+
+    async def cancel_all_orders(
+        self,
+        symbol: str,
+        allow_single_order_cancel_fallback: bool,
+        wait_for_cancelling: bool = True,
+        cancelling_timeout: float = octobot_trading.constants.INDIVIDUAL_ORDER_SYNC_TIMEOUT
+    ) -> bool:
+        orders_to_cancel = self.exchange_manager.exchange_personal_data.orders_manager.get_all_orders(symbol)
+        success = True
+        if orders_to_cancel:
+            self.logger.info(f"Cancelling all {len(orders_to_cancel)} {symbol} orders")
+        else:
+            return success
+        try:
+            cancel_on_exchange = False
+            for order in orders_to_cancel:
+                await order.lock.acquire()
+                if self.simulate or order.is_self_managed():
+                    order.status = octobot_trading.enums.OrderStatus.CANCELED
+                else:
+                    cancel_on_exchange = True
+            if cancel_on_exchange:
+                try:
+                    success = False
+                    await self.exchange_manager.exchange.cancel_all_orders(symbol)
+                    success = True
+                except errors.NotSupported:
+                    if allow_single_order_cancel_fallback:
+                        self.logger.debug(
+                            f"cancel_all_orders is not supported on {self.exchange_manager.exchange_name}. Falling "
+                            f"back to one by one cancel"
+                        )
+                        for order in orders_to_cancel:
+                            if not await self.cancel_order(
+                                order.symbol,
+                                wait_for_cancelling=wait_for_cancelling,
+                                cancelling_timeout=cancelling_timeout
+                            ):
+                                success = False
+                    else:
+                        # not supported and no fallback allowed: re-raise errors.NotSupported
+                        raise
+            for order in orders_to_cancel:
+                await order.on_cancel(force_cancel=True, is_from_exchange_data=False)
+                if wait_for_cancelling and order.state is not None and order.state.is_pending():
+                    await self._wait_for_order_cancel(order, cancelling_timeout)
+        finally:
+            for order in orders_to_cancel:
+                order.lock.release()
+        self.logger.info(f"Cancelling of all {len(orders_to_cancel)} {symbol} orders complete")
+        return success
 
     async def _wait_for_order_cancel(self, order, cancelling_timeout):
         self.logger.debug(f"Waiting for order cancelling, order: {order}")

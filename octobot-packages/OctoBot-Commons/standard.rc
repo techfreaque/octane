@@ -67,7 +67,8 @@ disable=too-few-public-methods,
         consider-using-from-import,
         use-maxsplit-arg,
         unspecified-encoding,
-        consider-using-f-string
+        consider-using-f-string,
+        too-many-positional-arguments
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

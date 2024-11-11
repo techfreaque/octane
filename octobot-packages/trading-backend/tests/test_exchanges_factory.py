@@ -81,5 +81,5 @@ def test_get_exchanges():
         for exchange_class in exchanges_by_name.values()
         for exchange in exchange_class.__subclasses__()
     })
-    assert len(exchanges_by_name) == 18
+    assert len(exchanges_by_name) == 20
     assert trading_backend.exchange_factory._get_exchanges() == exchanges_by_name

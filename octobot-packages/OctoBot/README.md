@@ -1,25 +1,16 @@
-# OctoBot [2.0.0](https://octobot.click/gh-changelog)
-[![PyPI](https://img.shields.io/pypi/v/OctoBot.svg?logo=pypi)](https://octobot.click/gh-pypi)
+# OctoBot [2.0.7](https://github.com/Drakkar-Software/OctoBot/blob/master/CHANGELOG.md)
+[![PyPI](https://img.shields.io/pypi/v/OctoBot.svg?logo=pypi)](https://pypi.org/project/OctoBot)
 [![Downloads](https://pepy.tech/badge/octobot/month)](https://pepy.tech/project/octobot)
-[![Dockerhub](https://img.shields.io/docker/pulls/drakkarsoftware/octobot.svg?logo=docker)](https://octobot.click/gh-dockerhub)
+[![Dockerhub](https://img.shields.io/docker/pulls/drakkarsoftware/octobot.svg?logo=docker)](https://hub.docker.com/r/drakkarsoftware/octobot)
 [![OctoBot-CI](https://github.com/Drakkar-Software/OctoBot/workflows/OctoBot-CI/badge.svg)](https://github.com/Drakkar-Software/OctoBot/actions)
 
 #### Octobot Community
-[![OctoBot](https://img.shields.io/badge/dynamic/json.svg?&url=https://dev.octobot.cloud/api/community/stats&query=$.total_bots&color=blue&label=Installed%20OctoBots)]()
-[![Telegram Chat](https://img.shields.io/badge/telegram-chat-green.svg?logo=telegram&label=Telegram)](https://octobot.click/gh-telegram)
-[![Discord](https://img.shields.io/discord/530629985661222912.svg?logo=discord&label=Discord)](https://octobot.click/gh-discord)
+[![OctoBot](https://img.shields.io/badge/dynamic/json.svg?&url=https://octobot.cloud/api/community/stats&query=$.total_bots&color=blue&label=Installed%20OctoBots)]()
+[![Telegram Chat](https://img.shields.io/badge/telegram-chat-green.svg?logo=telegram&label=Telegram)](https://t.me/octobot_trading)
+[![Discord](https://img.shields.io/discord/530629985661222912.svg?logo=discord&label=Discord)](https://discord.com/invite/vHkcb8W)
 [![Telegram News](https://img.shields.io/badge/telegram-news-blue.svg?logo=telegram&label=Telegram)](https://t.me/OctoBot_Project)
-[![Twitter](https://img.shields.io/twitter/follow/DrakkarsOctobot.svg?label=twitter&style=social)](https://octobot.click/gh-twitter)
-[![YouTube](https://img.shields.io/youtube/channel/views/UC2YAaBeWY8y_Olqs79b_X8A?label=youtube&style=social)](https://octobot.click/gh-youtube)
-
-## 🎉 OctoBot is launching on Product Hunt on July 10th
-
-<p align="center">
-    <a href="https://www.producthunt.com/posts/octobot-open-source?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-octobot&#0045;open&#0045;source" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=463219&theme=light" alt="OctoBot&#0032;open&#0032;source - Your&#0032;open&#0032;source&#0032;investment&#0032;strategy&#0032;builder | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
-</p>
-<p align="center">
-    👆 Follow the launch to get your exclusive discount!
-</p>
+[![Twitter](https://img.shields.io/twitter/follow/DrakkarsOctobot.svg?label=twitter&style=social)](https://x.com/DrakkarsOctoBot)
+[![YouTube](https://img.shields.io/youtube/channel/views/UC2YAaBeWY8y_Olqs79b_X8A?label=youtube&style=social)](https://www.youtube.com/@octobot1134)
 
 <p align="center">
   <img src="../assets/illustration.png" alt="Octobot automating trades of its user while the user is relaxing on his couch">
@@ -30,26 +21,18 @@
 </p>
 
 ## What is Octobot  ?
-<p align="middle">
-  <a href="https://www.octobot.cloud/en/guides/octobot-interfaces/web?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=readme_what_is_octobot_web">
-    <img src="../assets/dashboard.png" height="414" alt="Follow your profits using OctoBot directly from its web interface">
-  </a>  
-  &nbsp;&nbsp;&nbsp;&nbsp;    
-  <a href="https://www.octobot.cloud/en/guides/octobot-interfaces/telegram?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=readme_what_is_octobot_telegram">
-    <img src="../assets/telegram-interface.png" height="414" alt="Follow each trade and profits of your OctoBot and send it commands from telegram">
-  </a>  
-</p>
+
+[![OctoBot - Open Source Crypto Trading Bot Video](https://raw.githubusercontent.com/Drakkar-Software/OctoBot/assets/meet_octobot_preview.png)](https://www.youtube.com/watch?v=TJUU62e1jR8)
 
 [Octobot](https://www.octobot.cloud/trading-bot?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=readme_what_is_octobot) is a powerful open-source cryptocurrency trading robot.
 
 OctoBot is highly customizable using its configuration and tentacles system.  
-You can build your own bot using the infinite [configuration](https://www.octobot.cloud/en/guides/octobot-configuration/profile-configuration?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=configuration) possibilities such as  **technical analysis**, **social media processing** or even **external statistics management** like google trends.  
-  
-  
+You can build your own bot using the infinite [configuration](https://www.octobot.cloud/en/guides/octobot-configuration/profile-configuration?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=configuration) possibilities such as  **technical analysis**, **social media processing** or even **external statistics management** like google trends.
+
 Octobot's main feature is **evolution**, you can : 
 - Create, backtest and optimize your unique trading strategy from scratch or using the existing [strategy bases](https://www.octobot.cloud/en/guides/octobot-trading-modes/trading-modes?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=strategy-bases).
-- Use Technical indicator (TA), artificial intelligence, [ChatGPT predictions](https://www.octobot.cloud/en/blog/trading-using-chat-gpt?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=chatgpt), [TradingView automations](https://www.octobot.cloud/en/guides/octobot-interfaces/tradingview?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=trading-view) to automate your strategies.
-- Trade any crypto on SPOT and Futures markets on more than [12 supported exchanges](https://www.octobot.cloud/en/guides/exchanges?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=exchanges).
+- Use Technical indicator (TA), artificial intelligence, [ChatGPT predictions](https://www.octobot.cloud/en/blog/trading-using-chat-gpt?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=chatgpt), [TradingView automations](https://www.octobot.cloud/en/guides/octobot-interfaces/tradingview?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=trading-view) or [crypto baskets](https://octobot.cloud/features/crypto-basket?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=crypto-baskets) to automate your strategies.
+- Trade any crypto on SPOT and Futures markets on more than [15 supported exchanges](https://www.octobot.cloud/en/guides/exchanges?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=exchanges).
 - [Install](https://www.octobot.cloud/en/guides/octobot-advanced-usage/tentacle-manager?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=install_tentacles), [modify](https://www.octobot.cloud/en/guides/octobot-tentacles-development/create-a-tentacle?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=modify_tentacles) and even [create](https://www.octobot.cloud/en/guides/octobot-tentacles-development/create-a-tentacle?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=create_tentacles) new tentacles to build your ideal cryptocurrency trading robot.
 - [Contribute](https://www.octobot.cloud/en/guides/octobot-developers-environment/setup-your-environment?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=contribute) to improve OctoBot core repositories and tentacles.
 
@@ -75,15 +58,7 @@ To install OctoBot, you can either:
     Your OctoBot will be accessible on [http://localhost](http://localhost).
 
 ## Exchanges
-[![Binance supported exchange partnership](../assets/binance-logo.png)](https://www.octobot.cloud/en/guides/octobot-partner-exchanges/binance?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=binance)
-[![Okx supported exchange partnership](../assets/okex-logo.png)](https://www.octobot.cloud/en/guides/octobot-partner-exchanges/okx?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=okx)
-[![Kucoin supported exchange partnership](../assets/kucoin-logo.png)](https://www.octobot.cloud/en/guides/octobot-partner-exchanges/kucoin?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=kucoin)
-[![Crypto.com supported exchange partnership](../assets/cryptocom-logo.png)](https://www.octobot.cloud/en/guides/octobot-partner-exchanges/crypto-com?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=crypto-com)
-[![Huobi supported exchange partnership](../assets/huobi-logo.png)](https://www.octobot.cloud/en/guides/octobot-partner-exchanges/huobi?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=huobi)
-[![Hollaex supported exchange partnership](../assets/hollaex-logo.png)](https://www.octobot.cloud/en/guides/octobot-partner-exchanges/hollaex?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=hollaex)
-[![Coinbase supported exchange](../assets/coinbasepro-logo.png)](https://www.octobot.cloud/en/guides/octobot-supported-exchanges/coinbase?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=coinbase)
-[![GateIO supported exchange partnership](../assets/gateio-logo.png)](https://www.octobot.cloud/en/guides/octobot-partner-exchanges/gateio?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=gateio)
-[![Ascendex supported exchange partnership](../assets/ascendex-logo.png)](https://www.octobot.cloud/en/guides/octobot-partner-exchanges/ascendex?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=ascendex)
+[![All OctoBot supported exchanges](../assets/exchange_logo.png)](https://www.octobot.cloud/en/guides/exchanges?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=binance)
 
 Octobot supports many [exchanges](https://www.octobot.cloud/en/guides/exchanges?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=exchanges) thanks to the [ccxt library](https://github.com/ccxt/ccxt). 
 To activate trading on an exchange, just configure OctoBot with your API keys as described [on the exchange setup guides](https://www.octobot.cloud/en/guides/octobot-configuration/exchanges?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=exchanges_setup_guides).
@@ -102,7 +77,8 @@ To use your real exchange account with OctoBot, enter your exchange API keys as 
 You can follow your OctoBots portfolio, orders, trades and historical performance from your phone with our [Android application](https://play.google.com/store/apps/details?id=com.drakkarsoftware.octobotapp&utm_source=octobot-github&utm_media=readme&utm_content=mobile-app-link). You can also install the [web application](https://mobile.octobot.cloud/?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=follow_your_investments) to have the same experience on any smartphone or computer.
 
 <p align="middle">
-<a href='https://play.google.com/store/apps/details?id=com.drakkarsoftware.octobotapp&utm_source=octobot-github&utm_media=readme&utm_content=mobile-app-img'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png' height="50px"/></a>
+    <a href='https://apps.apple.com/us/app/octobot-crypto-investment/id6502774175?utm_source=octobot-github&utm_media=readme&utm_content=mobile-app-img'><img alt='Get it on the Apple Play Store' src='../assets/apple_store.png' height="50px"/></a>
+    <a href='https://play.google.com/store/apps/details?id=com.drakkarsoftware.octobotapp&utm_source=octobot-github&utm_media=readme&utm_content=mobile-app-img'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png' height="50px"/></a>
 </p>
 
 <p align="middle">

@@ -42,7 +42,7 @@ class OrderCreationNotification(_OrderNotification):
     def __init__(self, evaluator_notification: notifications.Notification, dict_order: dict, exchange_name: str):
         self.dict_order = dict_order
         self.exchange_name = exchange_name.capitalize()
-        super().__init__("Order creation", evaluator_notification)
+        super().__init__("Order created", evaluator_notification)
 
     def _build_text(self):
         self.text = ""
@@ -87,9 +87,9 @@ class OrderEndNotification(_OrderNotification):
 
         if self.trade_profitability is not None and self.add_profitability:
             self.text += f"\nTrade profitability : {'+' if self.trade_profitability >= 0 else ''}" \
-                         f"{round(self.trade_profitability * 100, 4)}%"
+                         f"{round(self.trade_profitability, 4)}%"
             self.markdown_text += f"\nTrade profitability : *{'+' if self.trade_profitability >= 0 else ''}" \
-                                  f"{round(self.trade_profitability * 100, 4)}%*"
+                                  f"{round(self.trade_profitability, 4)}%*"
 
         if self.portfolio_profitability is not None and self.add_profitability:
             self.text += f"\nPortfolio profitability : {round(self.portfolio_profitability, 4)}% " \

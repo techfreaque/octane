@@ -72,7 +72,7 @@ class AbstractExchange(tentacles_management.AbstractTentacle):
     }
     ACCOUNTS = {}
 
-    def __init__(self, config, exchange_manager):
+    def __init__(self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]]):
         super().__init__()
         self.config = config
         self.exchange_manager = exchange_manager
@@ -95,8 +95,10 @@ class AbstractExchange(tentacles_management.AbstractTentacle):
 
         self.is_unreachable = False
 
-        self._creating_exchange_order_ids = set()
+        self._creating_exchange_order_descriptions = set()
 
+        if exchange_config_by_exchange and self.get_name() in exchange_config_by_exchange:
+            self.tentacle_config = exchange_config_by_exchange[self.get_name()]
         if self.exchange_manager.tentacles_setup_config is not None:
             self.load_user_inputs_from_class(self.exchange_manager.tentacles_setup_config, self.tentacle_config)
 
@@ -298,6 +300,17 @@ class AbstractExchange(tentacles_management.AbstractTentacle):
         """
         raise NotImplementedError("get_closed_orders is not implemented")
 
+    async def get_cancelled_orders(self, symbol: str = None, since: int = None,
+                                   limit: int = None, **kwargs: dict) -> list:
+        """
+        Get the user closed order list
+        :param symbol: the order symbol
+        :param since: the starting timestamp
+        :param limit: the list limit size
+        :return: the user closed order list
+        """
+        raise NotImplementedError("get_cancelled_orders is not implemented")
+
     async def get_my_recent_trades(self, symbol: str = None, since: int = None,
                                    limit: int = None, **kwargs: dict) -> list:
         """
@@ -315,6 +328,13 @@ class AbstractExchange(tentacles_management.AbstractTentacle):
         :return: the current leverage tiers by symbols
         """
         raise NotImplementedError("get_leverage_tiers is not implemented")
+
+    async def cancel_all_orders(self, symbol: str = None, **kwargs: dict) -> None:
+        """
+        Cancel all orders on the exchange
+        :param symbol: the orders symbol
+        """
+        raise NotImplementedError("cancel_all_orders is not implemented")
 
     async def cancel_order(
             self, exchange_order_id: str, symbol: str, order_type: enums.TraderOrderType, **kwargs: dict
@@ -709,17 +729,36 @@ class AbstractExchange(tentacles_management.AbstractTentacle):
                           f"({error.__class__.__name__}: {error})")
 
     @contextlib.contextmanager
-    def creating_order(self, creating_order: dict):
-        exchange_order_id = creating_order.get(
-            enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value
-        ) if creating_order else None
+    def creating_order(
+        self, side: enums.TradeOrderSide, symbol: str, quantity: decimal.Decimal, price: decimal.Decimal
+    ):
+        desc = self._get_order_description(side, symbol, quantity, price)
         try:
-            self._creating_exchange_order_ids.add(exchange_order_id)
+            self._creating_exchange_order_descriptions.add(desc)
             yield
         finally:
-            self._creating_exchange_order_ids.remove(exchange_order_id)
+            self._creating_exchange_order_descriptions.remove(desc)
 
-    def is_creating_order(self, exchange_order_id):
-        if exchange_order_id is None:
-            return False
-        return exchange_order_id in self._creating_exchange_order_ids
+    def is_creating_order(
+        self, order: dict, symbol: str
+    ) -> bool:
+        try:
+            quantity = decimal.Decimal(str(order[enums.ExchangeConstantsOrderColumns.AMOUNT.value] or 0))
+        except decimal.DecimalException:
+            quantity = octobot_trading.constants.ZERO
+        try:
+            price = decimal.Decimal(str(order[enums.ExchangeConstantsOrderColumns.PRICE.value] or 0))
+        except decimal.DecimalException:
+            price = octobot_trading.constants.ZERO
+        side = enums.TradeOrderSide(
+            str(order[enums.ExchangeConstantsOrderColumns.SIDE.value]) or enums.TradeOrderSide.BUY.value
+        )
+        return self._get_order_description(side, symbol, quantity, price) in self._creating_exchange_order_descriptions
+
+    def _get_order_description(
+        self, side: enums.TradeOrderSide, symbol: str, quantity: decimal.Decimal, price: decimal.Decimal
+    ) -> str:
+        return (
+            f"{side.value if side else None}-{symbol}-"
+            f"{float(quantity) if quantity else None}-{float(price) if price else None}"
+        )

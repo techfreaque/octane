@@ -53,7 +53,7 @@ DEFAULT_LOCALE = "en"
 
 OCTOBOT_DONATION_URL = "https://forms.gle/Bagagc7dyjJGDT1t9"
 OCTOBOT_FEEDBACK_FORM_URL = "https://goo.gl/forms/vspraniXPY7rvtKN2"
-OCTOBOT_BETA_PROGRAM_FORM_URL = "https://octobot.click/docs-join-beta"
+OCTOBOT_BETA_PROGRAM_FORM_URL = "https://click.octobot.cloud/docs-join-beta"
 AUTOMATION_FEEDBACK_FORM_ID = "n9NKMV"
 WELCOME_FEEDBACK_FORM_ID = os.getenv("WELCOME_FEEDBACK_FORM_ID", None)
 OCTOBOT_EXTENSION_PACKAGE_1_NAME = "Premium OctoBot extension"
@@ -66,13 +66,7 @@ COMMUNITY_FEED_URL = os.getenv("COMMUNITY_FEED_URL", "iot.fr-par.scw.cloud")
 COMMUNITY_TRADINGVIEW_WEBHOOK_BASE_URL = os.getenv(
     "COMMUNITY_TRADINGVIEW_WEBHOOK_BASE_URL", "https://webhook.octobot.cloud/tradingview"
 )
-COMMUNITY_EXTENSIONS_IDENTIFIER = "scaleway"
-COMMUNITY_EXTENSIONS_CHECK_ENDPOINT = os.getenv(
-    "COMMUNITY_EXTENSIONS_CHECK_ENDPOINT", "https://premium.octobot.cloud"
-)
-COMMUNITY_EXTENSIONS_CHECK_ENDPOINT_KEY = os.getenv(
-    "COMMUNITY_EXTENSIONS_CHECK_ENDPOINT_KEY", "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBsaWNhdGlvbl9jbGFpbSI6W3sibmFtZXNwYWNlX2lkIjoiIiwiYXBwbGljYXRpb25faWQiOiI5YTEzMTg2Mi1iMmY2LTRlOWUtYjU1OC0yOTU4MWFjYjM0ZjUifV0sInZlcnNpb24iOjIsImF1ZCI6ImZ1bmN0aW9ucyIsImp0aSI6IjJkMTM5OWQxLTRkNjMtNGVmNi1hNTI3LWNhMDQxMDdiNmUwYSIsImlhdCI6MTcyMDEyNjc1OSwiaXNzIjoiU0NBTEVXQVkiLCJuYmYiOjE3MjAxMjY3NTksInN1YiI6InRva2VuIn0.S2StO0Jey_BGotVdIYOa1hUNyF1m-BTLr-5oy24tiIXoh6nysMn_wBx0EzTDjQ_rG9yyUWbEYENjVlUzRJukiUf-5jjmIY0sgp6gYwtn6tu5Va1HyLOHpTNLYmSFcj7S-DcJXfd0uIGJcNRSAvYftnt-SVqjray0g5SfQEoB6UDSQolfECs4Avj7O0_Wtny1LHoIX_BEqlGWetODNklNNrBJuFUtSxoGfGarVGejOyvCdk10tFXpGJQr9dKPhnNSChs6N3qk4ApH5ET6JjOUENVF6x-KZ8Ed82KFU0gdGXICMVIiCUJz-b-QU88-HG6QG2-fD8dtvRUSCt_PsZPPZ_7IDWWuA-LEdNlKCyatVz0Yx3mCDusHN7Tt3ae-dJg9wpC4VCxqy8-MHOg9uf9GREkkc8Al-Nfn04tLWrl-OY_lrJ_jJ5_6N_XTwzNGmEdN3EVAeedwfyfpiuiXJMy84WQpfmJWn1zKEUrsBmx8xrTPz1pmZBB6uRKcdjUNWV2MpiAgxFxQI8Mo_zUJvagydfylcijjen8wP1ML0y8ywF8KSUmNprBv2SUwY8AXywtP5qIusnUEv-WxtoFdOU7Rgu3bCsdlktVEo2n2S-j6R9bki43gIgAmyxCveE-lwcNYoc_MahHMrjRW2uoO5deDo_yq90OJmnvnl35cLgVbkoA"
-)
+DISABLE_COMMUNITY_EXTENSIONS_CHECK = os_util.parse_boolean_environment_var("DISABLE_COMMUNITY_EXTENSIONS_CHECK", "false")
 COMMUNITY_EXTENSIONS_PACKAGES_IDENTIFIER = ".cloud"
 COMMUNITY_FETCH_TIMEOUT = 30
 
@@ -97,19 +91,27 @@ STAGING_COMMUNITY_BACKEND_KEY = os.getenv("COMMUNITY_BACKEND_KEY", "eyJhbGciOiJI
 COMMUNITY_PRODUCTION_BACKEND_URL = os.getenv("COMMUNITY_PRODUCTION_BACKEND_URL", COMMUNITY_BACKEND_URL)
 COMMUNITY_PRODUCTION_BACKEND_KEY = os.getenv("COMMUNITY_PRODUCTION_BACKEND_KEY", COMMUNITY_BACKEND_KEY)
 
+ERROR_TRACKER_DSN = os.getenv("ERROR_TRACKER_DSN")
+
 CONFIG_COMMUNITY = "community"
 CONFIG_COMMUNITY_BOT_ID = "bot_id"
 CONFIG_COMMUNITY_MQTT_UUID = "mqtt_uuid"
+CONFIG_COMMUNITY_TRADINGVIEW_EMAIL = "tradingview_email"
+CONFIG_COMMUNITY_TRADINGVIEW_EMAIL_CONFIRMED = "tradingview_email_confirmed"
 CONFIG_COMMUNITY_PACKAGE_URLS = "package_urls"
 CONFIG_COMMUNITY_ENVIRONMENT = "environment"
+CONFIG_COMMUNITY_LOCAL_DATA_IDENTIFIER = "local_data_identifier"
 USE_BETA_EARLY_ACCESS = os_util.parse_boolean_environment_var("USE_BETA_EARLY_ACCESS", "false")
 USER_ACCOUNT_EMAIL = os.getenv("USER_ACCOUNT_EMAIL", "")
 USER_PASSWORD_TOKEN = os.getenv("USER_PASSWORD_TOKEN", None)
+USER_AUTH_KEY = os.getenv("USER_AUTH_KEY", None)
 COMMUNITY_BOT_ID = os.getenv("COMMUNITY_BOT_ID", "")
 IS_DEMO = os_util.parse_boolean_environment_var("IS_DEMO", "False")
 IS_CLOUD_ENV = os_util.parse_boolean_environment_var("IS_CLOUD_ENV", "false")
+USE_FETCHED_BOT_CONFIG = os_util.parse_boolean_environment_var("USE_FETCHED_BOT_CONFIG", "false")
 CAN_INSTALL_TENTACLES = os_util.parse_boolean_environment_var("CAN_INSTALL_TENTACLES", str(not IS_CLOUD_ENV))
 TRACKING_ID = os.getenv("TRACKING_ID", "eoe1stwyun" if IS_DEMO else "eoe06soct7" if IS_CLOUD_ENV else "f726lk9q59")
+PH_TRACKING_ID = os.getenv("PH_TRACKING_ID", "phc_VydQbPkMXoNhgd0xJde4hUgbWGlEJ3aaLrSu5sudFdJ")
 # Profiles download urls to import at startup if missing, split by ","
 TO_DOWNLOAD_PROFILES = os.getenv("TO_DOWNLOAD_PROFILES", None)
 # Profiles to force select at startup, identified by profile id, download url or name
@@ -158,11 +160,13 @@ DEFAULT_TENTACLES_PACKAGE_NAME = "OctoBot-Default-Tentacles"
 
 # logs
 LOGS_FOLDER = "logs"
+FORCED_LOG_LEVEL = os.getenv("FORCED_LOG_LEVEL", "")
 ENV_TRADING_ENABLE_DEBUG_LOGS = os_util.parse_boolean_environment_var("ENV_TRADING_ENABLE_DEBUG_LOGS", "False")
 
 # system
 ENABLE_CLOCK_SYNCH = os_util.parse_boolean_environment_var("ENABLE_CLOCK_SYNCH", "True")
 ENABLE_SYSTEM_WATCHER = os_util.parse_boolean_environment_var("ENABLE_SYSTEM_WATCHER", "True")
+WATCH_RAM = os_util.parse_boolean_environment_var("WATCH_RAM", "False")
 DUMP_USED_RESOURCES = os_util.parse_boolean_environment_var("DUMP_USED_RESOURCES", "False")
 USED_RESOURCES_OUTPUT = os.getenv("USED_RESOURCES_OUTPUT", "system_resources.csv")
 
@@ -171,6 +175,9 @@ ERRORS_URL = os.getenv("ERRORS_OCTOBOT_ONLINE_URL", "https://errors.octobot.onli
 ERRORS_POST_ENDPOINT = f"{ERRORS_URL}errors"
 UPLOAD_ERRORS = os_util.parse_boolean_environment_var("UPLOAD_ERRORS", "False")
 DEFAULT_METRICS_ID = "UNSET"
+CLOUD_FIRST_METRICS_UPDATE_TIME = float(
+    os.getenv("CLOUD_FIRST_METRICS_UPDATE_TIME", 5)
+)
 
 # config types keys
 CONFIG_KEY = "config"

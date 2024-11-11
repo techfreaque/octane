@@ -18,4 +18,10 @@ pur
 
 pylint
 
-ccxt==4.3.56   # use to run test using a specific version of ccxt
+ccxt==4.3.85   # use to run test using a specific version of ccxt
+
+# async http requests
+aiohttp==3.10.4
+# updating to aiodns==3.2.0 is incompatible (and failing CI)
+# raises RuntimeError: aiodns needs a SelectorEventLoop on Windows. See more: https://github.com/saghul/aiodns/issues/86
+aiodns==3.1.1   # used by aiohttp

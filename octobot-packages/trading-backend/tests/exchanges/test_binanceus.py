@@ -37,6 +37,12 @@ async def test_inner_is_valid_account(binanceus_exchange):
 
 
 @pytest.mark.asyncio
+async def test_invalid_api_key(binanceus_exchange):
+    # _inner_is_valid_account is not implemented on binanceus
+    pass
+
+
+@pytest.mark.asyncio
 async def test_invalid_api_key_get_api_key_rights(binanceus_exchange):
     exchange = exchanges.BinanceUS(binanceus_exchange)
-    await account_tests.check_invalid_account_keys(exchange)
+    await account_tests.check_invalid_account_keys_rights(exchange)

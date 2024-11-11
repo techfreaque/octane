@@ -14,13 +14,16 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import contextlib
+import time
+import typing
 
-import ccxt.async_support
+import pytest
 from ccxt import Exchange
 
 import octobot_commons.constants as constants
 import octobot_commons.enums as commons_enums
 import octobot_trading.enums as trading_enums
+import octobot_trading.errors as trading_errors
 import octobot_trading.exchanges.connectors.ccxt.ccxt_client_util as ccxt_client_util
 import octobot_trading.exchanges.util as exchanges_util
 from octobot_trading.enums import ExchangeConstantsTickersColumns as Ectc, \
@@ -44,6 +47,7 @@ class RealExchangeTester:
     REQUIRES_AUTH = False  # set True when even normally public apis require authentication
     MARKET_STATUS_TYPE = trading_enums.ExchangeTypes.SPOT.value
     HISTORICAL_CANDLES_TO_FETCH_COUNT = 650
+    DEFAULT_CUSTOM_BOOK_LIMIT = 50
 
     # Public methods: to be implemented as tests
     # Use await self._[method_name] to get the test request result
@@ -66,6 +70,15 @@ class RealExchangeTester:
         pass
 
     async def test_get_order_book(self):
+        pass
+
+        
+    async def test_get_order_books(self):
+        # implement if necessary
+        pass
+        
+    async def test_get_order_books(self):
+        # implement if necessary
         pass
 
     async def test_get_recent_trades(self):
@@ -139,6 +152,113 @@ class RealExchangeTester:
             }
         }
 
+    def _get_ref_order_book_timestamp(self):
+        return time.time() + 30 # allow 30s desync
+
+    async def inner_test_unsupported_get_order_books(self):
+        async with (self.get_exchange_manager() as exchange_manager):
+            with pytest.raises(trading_errors.NotSupported):
+                # with symbols filter
+                symbols = [self.SYMBOL, self.SYMBOL_2, self.SYMBOL_3]
+                await exchange_manager.exchange.get_order_books(symbols=symbols)
+
+            with pytest.raises(trading_errors.NotSupported):
+                # without symbols filter
+                await exchange_manager.exchange.get_order_books(symbols=None)
+
+    async def inner_test_get_order_books(
+        self,
+        expected_symbol_filter: bool,
+        expected_missing_symbol_filter_books_min_count: int,
+        expected_max_orders_by_side: int,
+        min_book_orders_count: int,
+        supports_custom_limit: bool,
+        custom_limit: typing.Optional[int],
+        max_empty_book_sides: int,
+    ):
+        async with (self.get_exchange_manager() as exchange_manager):
+            # with symbols filter
+            symbols = [self.SYMBOL, self.SYMBOL_2, self.SYMBOL_3]
+            books_by_symbol = await exchange_manager.exchange.get_order_books(symbols=symbols)
+            ref_time = self._get_ref_order_book_timestamp()
+            empty_book_sides = []
+            if expected_symbol_filter:
+                assert len(books_by_symbol) == len(symbols)
+            else:
+                assert len(books_by_symbol) >= expected_missing_symbol_filter_books_min_count
+            for symbol, book in books_by_symbol.items():
+                assert 0 < book[trading_enums.ExchangeConstantsOrderBookInfoColumns.TIMESTAMP.value] < ref_time, (
+                    f"Invalid {symbol} book timestamp value: "
+                    f"{book[trading_enums.ExchangeConstantsOrderBookInfoColumns.TIMESTAMP.value]}, {ref_time=}"
+                )
+                for side in [
+                    trading_enums.ExchangeConstantsOrderBookInfoColumns.BIDS,
+                    trading_enums.ExchangeConstantsOrderBookInfoColumns.ASKS
+                ]:
+                    if len(book[side.value]) == 0:
+                        empty_book_sides.append((symbol, side))
+                    else:
+                        assert min_book_orders_count < len(book[side.value]) <= expected_max_orders_by_side, (
+                            f"Unexpected {symbol} {side.value} orders count: {len(book[side.value])}. Expected: "
+                            f"[{min_book_orders_count}: {expected_max_orders_by_side}]"
+                        )
+            if len(empty_book_sides) > max_empty_book_sides:
+                raise AssertionError(
+                    f"More empty book sides than expected: {max_empty_book_sides=} {empty_book_sides=}"
+                )
+            # without symbols filter
+            books_by_symbol = await exchange_manager.exchange.get_order_books(symbols=None)
+            empty_book_sides = []
+            assert len(books_by_symbol) >= expected_missing_symbol_filter_books_min_count, (
+                f"{len(books_by_symbol)=} NOT >= {expected_missing_symbol_filter_books_min_count=}"
+            )
+            for symbol, book in books_by_symbol.items():
+                assert 0 < book[trading_enums.ExchangeConstantsOrderBookInfoColumns.TIMESTAMP.value] < ref_time, (
+                    f"Invalid {symbol} book timestamp value: "
+                    f"{book[trading_enums.ExchangeConstantsOrderBookInfoColumns.TIMESTAMP.value]}, {ref_time=}"
+                )
+                for side in [
+                    trading_enums.ExchangeConstantsOrderBookInfoColumns.BIDS,
+                    trading_enums.ExchangeConstantsOrderBookInfoColumns.ASKS
+                ]:
+                    if len(book[side.value]) == 0:
+                        empty_book_sides.append((symbol, side))
+                    else:
+                        assert min_book_orders_count < len(book[side.value]) <= expected_max_orders_by_side, (
+                            f"Unexpected {symbol} {side.value} orders count: {len(book[side.value])}. Expected: "
+                            f"[{min_book_orders_count}: {expected_max_orders_by_side}]"
+                        )
+            if len(empty_book_sides) > max_empty_book_sides:
+                raise AssertionError(
+                    f"More empty book sides than expected: {max_empty_book_sides=} {empty_book_sides=}"
+                )
+            # with custom limit
+            books_by_symbol = await exchange_manager.exchange.get_order_books(symbols=None, limit=custom_limit)
+            self._ensure_book_custom_limit(
+                books_by_symbol, supports_custom_limit, expected_max_orders_by_side, custom_limit
+            )
+
+    def _ensure_book_custom_limit(
+        self,
+        books_by_symbol: dict,
+        supports_custom_limit: bool,
+        no_limit_default_size: int,
+        custom_limit: typing.Optional[int],
+    ):
+        has_taken_limit_into_account = False
+        custom_limit = custom_limit or self.DEFAULT_CUSTOM_BOOK_LIMIT
+        for symbol, book in books_by_symbol.items():
+            for side in [
+                trading_enums.ExchangeConstantsOrderBookInfoColumns.BIDS,
+                trading_enums.ExchangeConstantsOrderBookInfoColumns.ASKS
+            ]:
+                if no_limit_default_size < len(book[side.value]) <= custom_limit:
+                    has_taken_limit_into_account = True
+        if supports_custom_limit:
+            assert has_taken_limit_into_account
+        else:
+            assert not supports_custom_limit
+
     @contextlib.asynccontextmanager
     async def get_exchange_manager(self, market_filter=None):
         async with get_exchange_manager(
@@ -151,6 +271,19 @@ class RealExchangeTester:
         async with self.get_exchange_manager() as exchange_manager:
             return exchange_manager.exchange.time_frames
 
+    async def test_active_symbols(self):
+        raise NotImplementedError("test_active_symbols is not implemented")
+
+    async def inner_test_active_symbols(self, expected_active_symbols_count: int, expected_total_symbols_count: int):
+        async with self.get_exchange_manager() as exchange_manager:
+            # ensure active symbols are correctly parsed by ccxt
+            active_symbols = exchange_manager.exchange.connector.get_client_symbols(active_only=True)
+            assert expected_active_symbols_count <= len(active_symbols) <= expected_active_symbols_count * 1.5, \
+                f"{len(active_symbols)=}, {expected_active_symbols_count=}"
+            all_symbols = exchange_manager.exchange.connector.get_client_symbols(active_only=False)
+            assert expected_total_symbols_count <= len(all_symbols) <= expected_total_symbols_count * 1.5, \
+                f"{len(all_symbols)=}, {expected_total_symbols_count=}"
+
     async def get_market_statuses(self):
         # return 2 different market status with different traded pairs to reduce possible
         # side effects using only one pair.
@@ -161,7 +294,7 @@ class RealExchangeTester:
                 exchange_manager.exchange.get_market_status(self.SYMBOL_3)
 
     def _ensure_market_status_cachability(self, exchange_manager):
-        client_using_cached_markets = getattr(ccxt.async_support, self.EXCHANGE_NAME)()
+        client_using_cached_markets = ccxt_client_util.ccxt_exchange_class_factory(self.EXCHANGE_NAME)()
         ccxt_client_util.load_markets_from_cache(client_using_cached_markets)
         assert exchange_manager.exchange.connector.client.markets == client_using_cached_markets.markets
 
@@ -203,6 +336,10 @@ class RealExchangeTester:
             return await exchange_manager.exchange.get_price_ticker(self.SYMBOL)
 
     async def get_all_currencies_price_ticker(self, market_filter=None, **kwargs):
+        if market_filter is not None:
+            async with self.get_exchange_manager(market_filter=market_filter) as exchange_manager:
+                # create 2 exchange manager to force applying market_filter (avoid single test call side effect)
+                await exchange_manager.exchange.connector.load_symbol_markets()
         async with self.get_exchange_manager(market_filter=market_filter) as exchange_manager:
             return await exchange_manager.exchange.get_all_currencies_price_ticker(**kwargs)
 

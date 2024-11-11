@@ -21,6 +21,7 @@ import octobot_commons.evaluators_util as evaluators_util
 import octobot_commons.logging as logging
 
 import octobot_evaluators.enums as enums
+import octobot_evaluators.constants as constants
 import octobot_evaluators.errors as errors
 import octobot_evaluators.matrix as matrix
 
@@ -312,7 +313,9 @@ def get_available_symbols(matrix_id,
         return []
 
 
-def is_tentacle_value_valid(matrix_id, tentacle_path, timestamp=0, delta=10) -> bool:
+def is_tentacle_value_valid(
+    matrix_id, tentacle_path, timestamp=0, delta=constants.EVALUATION_ALLOWED_TIME_DELTA
+) -> bool:
     """
     Check if the node is ready to be used
     WARNING: This method only works with complete default tentacle path
@@ -328,14 +331,36 @@ def is_tentacle_value_valid(matrix_id, tentacle_path, timestamp=0, delta=10) -> 
         node = get_tentacle_node(matrix_id, tentacle_path)
         if node is None:
             raise KeyError(f"No node at {tentacle_path}")
-        return timestamp - (node.node_value_time +
-                            common_enums.TimeFramesMinutes[common_enums.TimeFrames(tentacle_path[-1])]
-                            * common_constants.MINUTE_TO_SECONDS + delta) < 0
+        return is_evaluation_valid_in_time(
+            timestamp,
+            node.node_value_time,
+            common_enums.TimeFrames(tentacle_path[-1]),
+            delta,
+        )
     except (IndexError, ValueError):
         return False
 
 
-def is_tentacles_values_valid(matrix_id, tentacle_path_list, timestamp=0, delta=10) -> bool:
+def is_evaluation_valid_in_time(
+    current_time: float, evaluation_time: float, time_frame: common_enums.TimeFrames,
+    allowed_delta=constants.EVALUATION_ALLOWED_TIME_DELTA
+):
+    """
+    :param current_time: the reference current time
+    :param evaluation_time: the evaluation time to check
+    :param time_frame: the evaluation time frame
+    :param allowed_delta: the authorized delta to be valid (in seconds)
+    :return: True if the time is valid else False
+    """
+    return current_time - (
+        evaluation_time + common_enums.TimeFramesMinutes[time_frame] * common_constants.MINUTE_TO_SECONDS
+        + allowed_delta
+    ) < 0
+
+
+def is_tentacles_values_valid(
+    matrix_id, tentacle_path_list, timestamp=0, delta=constants.EVALUATION_ALLOWED_TIME_DELTA
+) -> bool:
     """
     Check if each of the tentacle path value is valid
     :param matrix_id: the matrix id

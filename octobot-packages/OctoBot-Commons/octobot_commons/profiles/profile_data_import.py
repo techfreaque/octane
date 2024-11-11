@@ -47,10 +47,11 @@ async def convert_profile_data_to_profile_directory(
     profile_data: profile_data_import.ProfileData,
     output_path: str,
     description: str = None,
-    risk: enums.ProfileRisk = None,
+    risk: enums.ProfileRisk = enums.ProfileRisk.MODERATE,
     auto_update: bool = False,
     slug: str = None,
     avatar_url: str = None,
+    force_simulator: bool = False,
     aiohttp_session=None,
     profile_to_update: profile_import.Profile = None,
     changed: bool = False,
@@ -64,6 +65,7 @@ async def convert_profile_data_to_profile_directory(
     :param auto_update: True if the profile should be kept up-to-date
     :param avatar_url: profile avatar_url
     :param output_path: profile folder path
+    :param force_simulator: True if trader simulator should be forced in config
     :param aiohttp_session: session to use
     :param profile_to_update: profile to update instead of creating a new one
     :param changed: if True, profile will be saved even if no change are identified
@@ -72,7 +74,13 @@ async def convert_profile_data_to_profile_directory(
         profile_to_update
         if profile_to_update
         else _get_profile(
-            profile_data, description, risk, output_path, auto_update, slug
+            profile_data,
+            description,
+            risk,
+            output_path,
+            auto_update,
+            slug,
+            force_simulator,
         )
     )
     # when updating profile, keep existing registered tentacles
@@ -109,11 +117,14 @@ def _get_profile(
     output_path: str,
     auto_update: bool,
     slug: str,
+    force_simulator: bool,
 ):
     profile = profile_data.to_profile(output_path)
-    # use trading simulator by default
-    profile.config[constants.CONFIG_TRADER][constants.CONFIG_ENABLED_OPTION] = False
-    profile.config[constants.CONFIG_SIMULATOR][constants.CONFIG_ENABLED_OPTION] = True
+    if force_simulator:
+        profile.config[constants.CONFIG_TRADER][constants.CONFIG_ENABLED_OPTION] = False
+        profile.config[constants.CONFIG_SIMULATOR][
+            constants.CONFIG_ENABLED_OPTION
+        ] = True
     profile.description = description
     profile.risk = risk
     profile.auto_update = auto_update
@@ -188,9 +199,13 @@ def _get_tentacles_setup_config(
                 *classes, config_path=config_path
             )
         )
+        use_reference_registered_tentacles = (
+            not tentacles_setup_config.registered_tentacles
+        )
         octobot_tentacles_manager.api.fill_with_installed_tentacles(
             tentacles_setup_config,
             import_registered_tentacles=import_registered_tentacles,
+            use_reference_registered_tentacles=use_reference_registered_tentacles,
         )
         return tentacles_setup_config
     except ImportError:

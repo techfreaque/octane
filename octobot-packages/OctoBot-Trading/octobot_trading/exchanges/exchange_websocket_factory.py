@@ -34,14 +34,16 @@ def is_channel_managed_by_websocket(exchange_manager, channel):
 def is_channel_fully_managed_by_websocket(exchange_manager, channel):
     return (
         not any([
+            # no associated feed is related to a time frame
             exchange_manager.exchange_web_socket.is_time_frame_related_feed(feed)
             for feed in octobot_trading.constants.WEBSOCKET_FEEDS_TO_TRADING_CHANNELS[channel]
         ])
         or all([
+            # all required time frames are supported
             exchange_manager.exchange_web_socket.is_time_frame_supported(time_frame)
             for time_frame in exchange_manager.exchange_config.available_time_frames
         ])
-    )
+    ) and not exchange_manager.exchange_config.has_forced_updater(channel)
 
 
 def is_websocket_feed_requiring_init(exchange_manager, channel):
@@ -59,8 +61,12 @@ async def _create_websocket(exchange_manager, websocket_class_name, ws_exchange_
     try:
         exchange_manager.exchange_web_socket = ws_exchange_class(exchange_manager.config, exchange_manager)
         await _init_websocket(exchange_manager)
-        exchange_manager.logger.info(f"{ws_exchange_class.get_name()} connecting to "
-                                     f"{exchange_manager.exchange.name.capitalize()}")
+        if exchange_manager.exchange_web_socket.is_websocket_running:
+            exchange_manager.logger.info(
+                f"{ws_exchange_class.get_name()} connecting to {exchange_manager.exchange.name.capitalize()}"
+            )
+        else:
+            exchange_manager.has_websocket = False
     except Exception as e:
         exchange_manager.logger.error(f"Fail to init websocket for {websocket_class_name} "
                                       f"({exchange_manager.exchange.name}): {e}")

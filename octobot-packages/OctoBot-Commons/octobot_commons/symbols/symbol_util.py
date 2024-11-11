@@ -15,8 +15,10 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import functools
+import collections
 
 import octobot_commons
+import octobot_commons.constants as constants
 import octobot_commons.symbols.symbol
 
 
@@ -96,3 +98,28 @@ def convert_symbol(
     if should_lowercase:
         return symbol.replace(symbol_separator, new_symbol_separator).lower()
     return symbol.replace(symbol_separator, new_symbol_separator)
+
+
+def is_usd_like_coin(coin: str) -> bool:
+    """
+    :return: True if the given coin is a USD-like coin
+    """
+    return coin in constants.USD_LIKE_COINS
+
+
+def get_most_common_usd_like_symbol(pairs: list[str]):
+    """
+    :return: The most common USD like symbol from the given pairs
+    """
+    if not pairs:
+        raise ValueError("Pairs cannot be empty")
+    symbols = []
+    for pair in pairs:
+        parsed = octobot_commons.symbols.symbol.Symbol(pair)
+        symbols.append(parsed.quote)
+        symbols.append(parsed.base)
+    counter = collections.Counter(symbols)
+    for symbol, _ in counter.most_common():
+        if is_usd_like_coin(symbol):
+            return symbol
+    raise ValueError("Pairs cannot be empty")

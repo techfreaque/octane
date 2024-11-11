@@ -81,30 +81,28 @@ def read_file(
     return on_error_value
 
 
-def safe_dump(content: dict, save_path: str, restore_file: str = None) -> None:
+def safe_dump(content: dict, save_path: str) -> None:
     """
     Safely dump content into save_path restoring the previous content if writing fails
     """
-    restore_file = (
-        restore_file or f"{save_path}{octobot_commons.constants.SAFE_DUMP_SUFFIX}"
-    )
+    restore_file = f"{save_path}{octobot_commons.constants.SAFE_DUMP_SUFFIX}"
+    has_restore_file = False
     try:
-        has_initial_content = os.path.exists(save_path)
-        if has_initial_content:
+        if os.path.exists(save_path):
             if os.path.exists(restore_file):
                 os.remove(restore_file)
             # prepare a restoration file
             shutil.copy(save_path, restore_file)
+            has_restore_file = True
     except Exception as err:
         # when failing to create restore file
         error_details = (
-            f"Failed to create the {restore_file} backup file. Is the associated folder  "
-            f"folder accessible ? : {err} ({err.__class__.__name__})"
+            f"Failed to create {restore_file} backup file. Is the associated "
+            f"folder accessible ? : {err} ({err.__class__.__name__}) Continuing anyway."
         )
         octobot_commons.logging.get_logger(LOGGER_NAME).exception(
             err, True, error_details
         )
-        raise err.__class__(error_details) from err
     try:
         # create config content as str before opening file not to clear it on json dump exception
         str_content = dump_formatted_json(content)
@@ -115,14 +113,11 @@ def safe_dump(content: dict, save_path: str, restore_file: str = None) -> None:
         # when failing to save the new file config
         octobot_commons.logging.get_logger(LOGGER_NAME).error(
             f"File save failed : {global_exception}. "
-            f"{'restoring previous value' if has_initial_content else 'no previous value to restore'}"
+            f"{'restoring previous content' if has_restore_file else 'no previous content to restore'}"
         )
-        if has_initial_content:
+        if has_restore_file:
             # restore file with previous content
             shutil.copy(restore_file, save_path)
-        elif os.path.exists(save_path):
-            # no previous content: ensure no potentially created file is left
-            os.remove(save_path)
         raise global_exception
     finally:
         # remove temporary restore file if any

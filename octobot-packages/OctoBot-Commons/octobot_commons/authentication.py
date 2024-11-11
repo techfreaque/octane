@@ -138,7 +138,7 @@ class Authenticator(singleton.Singleton):
         """
         raise NotImplementedError
 
-    async def update_orders(self, orders: list, exchange_name: str):
+    async def update_orders(self, orders_by_exchange: dict[str, list]):
         """
         Updates authenticated account orders
         """
@@ -159,6 +159,30 @@ class Authenticator(singleton.Singleton):
         Updates authenticated account portfolio
         """
         raise NotImplementedError
+
+    async def wait_for_private_data_fetch_if_processing(self):
+        """
+        Returns for private data to be fetched
+        """
+
+    def has_open_source_package(self) -> bool:
+        """
+        :return: True when open source package is available
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    async def wait_and_check_has_open_source_package(raise_on_timeout=False) -> bool:
+        """
+        Returns for private data to be fetched and return True if package is available
+        """
+        authenticator = Authenticator.instance()
+        try:
+            await authenticator.wait_for_private_data_fetch_if_processing()
+        except asyncio.TimeoutError:
+            if raise_on_timeout:
+                raise
+        return authenticator.has_open_source_package()
 
 
 class FailedAuthentication(Exception):

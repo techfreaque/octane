@@ -41,6 +41,7 @@ from octobot_evaluators.matrix.matrix_manager import (
     get_available_time_frames,
     get_available_symbols,
     is_tentacle_value_valid,
+    is_evaluation_valid_in_time,
     is_tentacles_values_valid,
 )
 from octobot_evaluators.matrix.matrices import (
@@ -71,6 +72,7 @@ __all__ = [
     "get_available_time_frames",
     "get_available_symbols",
     "is_tentacle_value_valid",
+    "is_evaluation_valid_in_time",
     "is_tentacles_values_valid",
     "Matrices",
     "Matrix",

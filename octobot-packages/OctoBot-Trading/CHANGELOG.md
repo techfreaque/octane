@@ -4,6 +4,152 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.120] - 2024-11-05
+### Fixed
+[Exchanges] Authorization header
+
+## [2.4.119] - 2024-10-30
+### Updated
+[Exchanges] fix orders and portfolio update spam
+
+## [2.4.118] - 2024-10-27
+### Updated
+[Exchanges] market status cache time
+
+## [2.4.117] - 2024-10-24
+### Fixed
+[Exchanges] cache key conflict
+
+## [2.4.116] - 2024-10-23
+### Added
+[Exchanges] handle proxy config
+[Exchanges] handle access token auth
+
+## [2.4.115] - 2024-10-21
+### Added
+[Orders] add get_valid_split_orders
+
+## [2.4.114] - 2024-10-02
+### Updated
+[Exchanges] handle creds with " or ' leading/trailing chars 
+
+## [2.4.113] - 2024-10-02
+### Added
+[Orders] improve canceled & filled order error recovery 
+
+## [2.4.112] - 2024-09-18
+### Added
+[API] compute_base_and_quote_volume
+
+## [2.4.111] - 2024-09-16
+### Updated
+[MarkPrice] trigger manual mark price update when missing
+## Fixed
+[Exchanges] now retry on market status fetch timeout
+
+## [2.4.110] - 2024-09-05
+### Updated
+[TradingModes] handle NEUTRAL trigger checks
+## Fixed
+[Exchanges] fix order descriptor
+
+## [2.4.109] - 2024-09-01
+### Added
+[Exchanges] is_authentication_error
+
+## [2.4.108] - 2024-08-28
+### Added
+- [CCXT] cache size env variables
+### Fixed
+- [OrderState] cleared order issue
+
+## [2.4.107] - 2024-08-27
+### Fixed
+- [OrderStorage] non-trading exchanges issues
+
+## [2.4.106] - 2024-08-27
+### Fixed
+- [PortfolioStorage] non-trading exchanges issues
+
+## [2.4.105] - 2024-08-27
+### Fixed
+- [PortfolioStorage] ZeroDivisionError
+
+## [2.4.104] - 2024-08-26
+### Updated
+- [Exchange] handle ccxt.PermissionDenied
+
+## [2.4.103] - 2024-08-25
+### Added
+- [API] add supports_custom_limit_order_book_fetch
+
+## [2.4.102] - 2024-08-24
+### Added
+- [Exchanges] add get_order_books
+- [API] add get_daily_base_and_quote_volume_from_ticker
+
+## [2.4.101] - 2024-08-22
+### Added
+- [Leverage] add ccxt leverage
+
+## [2.4.100] - 2024-08-21
+### Added
+- [TradingModes] allow starting bot without enabled trading mode
+- [Tests] add active markets count tests
+### Updated
+- [Exchanges] use classmethods for autofilled exchanges
+- [Portfolio] add time window in history select
+
+## [2.4.99] - 2024-08-19
+### Updated
+- [CCXT] updated to ccxt 4.3.85
+
+## [2.4.98] - 2024-08-16
+### Added
+- [Exchanges] exchange_config_by_exchange in init
+- [Trades] option to ignore cancelled orders  
+
+## [2.4.97] - 2024-08-14
+### Added
+- [Exchanges] cancel_all_orders
+- [Exchanges] forced ticker setting 
+- [API] get_daily_base_and_quote_volume
+### Fixed
+- [Exchanges] ticker volumes
+
+## [2.4.96] - 2024-08-13
+### Added
+- [Exchanges] BitMart tests
+- [API] get_usd_like_symbols_from_symbols
+
+## [2.4.95] - 2024-08-03
+### Fixed
+- [Exchanges] reduce market status cache time
+
+## [2.4.94] - 2024-07-28
+### Fixed
+- [OrderStates] enable_associated_orders_creation param
+
+## [2.4.93] - 2024-07-23
+### Added
+- [Trades] get_trade_pnl API
+- [Orders] allow disabled_order_auto_synchronization 
+### Fixed
+- [Exchanges] Websocket limit issues
+### Updated
+- [Trades] Increase default max trades history to 6000 
+- [Orders] Add logs on auto-refresh 
+
+## [2.4.92] - 2024-07-15
+### Fixed
+- [Trades] optimize trade storage RAM
+
+## [2.4.91] - 2024-07-12
+### Added
+- [Exchanges] add get_cancelled_orders
+### Fixed
+- [Portfolio] remove portfolio reset flush delay
+
 ## [2.4.90] - 2024-07-05
 ### Updated
 - [CCXT] update to ccxt 4.3.56

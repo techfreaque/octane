@@ -17,9 +17,9 @@ import trading_backend.exchanges as exchanges
 
 
 class GateIO(exchanges.Exchange):
-    SPOT_ID = "Octobot"
-    MARGIN_ID = "Octobot"
-    FUTURE_ID = "Octobot"
+    SPOT_ID = "octobotclo"  # previous: "Octobot"
+    MARGIN_ID = "octobotclo"    # previous: "Octobot"
+    FUTURE_ID = "octobotclo"    # previous: "Octobot"
     IS_SPONSORING = True
     HEADER_KEY = "X-Gate-Channel-Id"
 

@@ -114,17 +114,19 @@ class AbstractNotifier(abstract_service_user.AbstractServiceUser, util.ExchangeW
                 order_status is trading_enums.OrderStatus.CANCELED or \
                     (order_status is trading_enums.OrderStatus.CLOSED
                      and dict_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value] == 0):
-                notification = notifications.OrderEndNotification(linked_notification, None, exchange, [dict_order],
-                                                                  None, None, None, False, is_simulated)
+                notification = notifications.OrderEndNotification(
+                    linked_notification, None, exchange, [dict_order], None, None, None, False, is_simulated
+                )
             elif order_status in (trading_enums.OrderStatus.CLOSED, trading_enums.OrderStatus.FILLED):
-                _, profitability_percent, profitability_diff, _, _ = \
-                    trading_api.get_profitability_stats(exchange_manager)
-                order_profitability = trading_api.get_order_profitability(
-                    exchange_manager, dict_order[trading_enums.ExchangeConstantsOrderColumns.ID.value])
-                notification = notifications.OrderEndNotification(linked_notification, dict_order,
-                                                                  exchange, [], order_profitability,
-                                                                  profitability_percent, profitability_diff, True,
-                                                                  is_simulated)
+                trade_pnl = trading_api.get_trade_pnl(
+                    exchange_manager, order_id=dict_order[trading_enums.ExchangeConstantsOrderColumns.ID.value]
+                )
+                pnl_percent = None
+                if trade_pnl:
+                    _, pnl_percent = trade_pnl.get_profits()
+                notification = notifications.OrderEndNotification(
+                    linked_notification, dict_order, exchange, [], pnl_percent, None, None, True, is_simulated
+                )
             # remove order from previous_notifications_by_identifier: no more notification from it to be received
             if order_identifier in self.previous_notifications_by_identifier:
                 self.previous_notifications_by_identifier.pop(order_identifier)

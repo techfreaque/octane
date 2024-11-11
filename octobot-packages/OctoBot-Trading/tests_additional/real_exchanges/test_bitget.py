@@ -55,6 +55,9 @@ class TestBitgetRealExchangeTester(RealExchangeTester):
             # TimeFrames.ONE_MONTH.value
         ))
 
+    async def test_active_symbols(self):
+        await self.inner_test_active_symbols(1000, 1200)
+
     async def test_get_market_status(self):
         for market_status in await self.get_market_statuses():
             self.ensure_required_market_status_values(market_status)
@@ -70,8 +73,8 @@ class TestBitgetRealExchangeTester(RealExchangeTester):
             for val in (Ecmsc.LIMITS_PRICE_MIN.value, Ecmsc.LIMITS_PRICE_MAX.value):
                 assert market_status[Ecmsc.LIMITS.value][Ecmsc.LIMITS_PRICE.value][val] is None
             # wtf value, to fix in tentacle
-            for val in (Ecmsc.LIMITS_COST_MIN.value, Ecmsc.LIMITS_COST_MAX.value):
-                assert market_status[Ecmsc.LIMITS.value][Ecmsc.LIMITS_COST.value][val] in (None, 0, 5)
+            assert market_status[Ecmsc.LIMITS.value][Ecmsc.LIMITS_COST.value][Ecmsc.LIMITS_COST_MIN.value] in (0, 1, 5)
+            assert market_status[Ecmsc.LIMITS.value][Ecmsc.LIMITS_COST.value][Ecmsc.LIMITS_COST_MAX.value] is None
             # can't use normal checker
             # self.check_market_status_limits(market_status, expect_invalid_price_limit_values=True)
 
@@ -123,10 +126,15 @@ class TestBitgetRealExchangeTester(RealExchangeTester):
 
     async def test_get_order_book(self):
         order_book = await self.get_order_book()
+        assert 0 < order_book[Ecobic.TIMESTAMP.value] < self._get_ref_order_book_timestamp()
         assert len(order_book[Ecobic.ASKS.value]) == 150
         assert len(order_book[Ecobic.ASKS.value][0]) == 2
         assert len(order_book[Ecobic.BIDS.value]) == 150
         assert len(order_book[Ecobic.BIDS.value][0]) == 2
+        
+    async def test_get_order_books(self):
+        # implement if necessary
+        pass
 
     async def test_get_recent_trades(self):
         recent_trades = await self.get_recent_trades()

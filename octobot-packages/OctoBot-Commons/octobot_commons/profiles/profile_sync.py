@@ -59,9 +59,9 @@ class ProfileSynchronizer(singleton.Singleton):
             )
 
     async def _should_sync_profiles(self):
-        authenticator = authentication.Authenticator.instance()
-        await authenticator.wait_for_private_data_fetch_if_processing()
-        return authenticator.has_open_source_package()
+        return (
+            await authentication.Authenticator.wait_and_check_has_open_source_package()
+        )
 
     async def start(self) -> bool:
         """

@@ -69,8 +69,8 @@ def gateio_exchange():
 
 
 @pytest.fixture
-def bybit_exchange():
-    return ExchangeWrapper(ccxt.async_support.bybit())
+def hollaex_exchange():
+    return ExchangeWrapper(ccxt.async_support.hollaex())
 
 
 @pytest.fixture
@@ -106,6 +106,11 @@ def bingx_exchange():
 @pytest.fixture
 def coinex_exchange():
     return ExchangeWrapper(ccxt.async_support.coinex())
+
+
+@pytest.fixture
+def bitmart_exchange():
+    return ExchangeWrapper(ccxt.async_support.bitmart())
 
 
 @pytest.fixture

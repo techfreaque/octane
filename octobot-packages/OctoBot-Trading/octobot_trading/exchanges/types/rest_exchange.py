@@ -91,6 +91,14 @@ class RestExchange(abstract_exchange.AbstractExchange):
     # Set when order cost is not (yet) accurately computed for a given exchange
     MAX_INCREASED_POSITION_QUANTITY_MULTIPLIER = constants.ONE
 
+    SUPPORT_FETCHING_CANCELLED_ORDERS = True
+    # Set True when get_open_order() can return outdated orders (cancelled or not yet created)
+    CAN_HAVE_DELAYED_OPEN_ORDERS = False
+    # Set True when get_cancelled_order() can return outdated open orders
+    CAN_HAVE_DELAYED_CANCELLED_ORDERS = False
+    # Set True when the "limit" param when fetching order books is taken into account
+    SUPPORTS_CUSTOM_LIMIT_ORDER_BOOK_FETCH = False
+
     # text content of errors due to orders not found errors
     EXCHANGE_ORDER_NOT_FOUND_ERRORS: typing.List[typing.Iterable[str]] = []
     # when ccxt is raising ccxt.ExchangeError instead of ccxt.AuthenticationError on api key permissions issue
@@ -101,13 +109,18 @@ class RestExchange(abstract_exchange.AbstractExchange):
     # text content of errors due to exchange local account permissions (ex: accounts from X country can't trade XYZ)
     # text content of errors due to traded assets for account
     EXCHANGE_ACCOUNT_TRADED_SYMBOL_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = []
+    # text content of errors due to unhandled authentication issues
+    EXCHANGE_AUTHENTICATION_ERRORS: typing.List[typing.Iterable[str]] = []
 
     DEFAULT_CONNECTOR_CLASS = ccxt_connector.CCXTConnector
 
-    def __init__(self, config, exchange_manager, connector_class=None):
-        super().__init__(config, exchange_manager)
+    def __init__(
+        self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]],
+        connector_class=None
+    ):
+        super().__init__(config, exchange_manager, exchange_config_by_exchange)
         if self.HAS_FETCHED_DETAILS:
-            self._fetch_details(config, exchange_manager)
+            self._apply_fetched_details(config, exchange_manager)
         self.connector = self._create_connector(config, exchange_manager, connector_class)
         self.pair_contracts = {}
 
@@ -160,12 +173,12 @@ class RestExchange(abstract_exchange.AbstractExchange):
                            side: enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
                            reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
         async with self._order_operation(order_type, symbol, quantity, price, stop_price):
-            created_order = await self._create_order_with_retry(
-                order_type=order_type, symbol=symbol, quantity=quantity, price=price,
-                stop_price=stop_price, side=side, current_price=current_price,
-                reduce_only=reduce_only, params=params)
-            self.logger.debug(f"Created order: {created_order}")
-            with self.creating_order(created_order):
+            with self.creating_order(side, symbol, quantity, price):
+                created_order = await self._create_order_with_retry(
+                    order_type=order_type, symbol=symbol, quantity=quantity, price=price,
+                    stop_price=stop_price, side=side, current_price=current_price,
+                    reduce_only=reduce_only, params=params)
+                self.logger.debug(f"Created order: {created_order}")
                 return await self._verify_order(created_order, order_type, symbol, price, side)
         return None
 
@@ -256,13 +269,14 @@ class RestExchange(abstract_exchange.AbstractExchange):
             raise errors.MissingFunds(e) from e
         except ccxt.NotSupported as err:
             raise errors.NotSupported from err
-        except ccxt.AuthenticationError as err:
+        except (errors.AuthenticationError, ccxt.AuthenticationError) as err:
             # invalid api key or missing trading rights
             raise errors.AuthenticationError(
                 f"Error when handling order {err}. Please make sure that trading permissions are on for this API key."
             ) from err
         except ccxt.DDoSProtection as e:
-            # raised upon rate limit issues, last response data might have details on what is happening
+            # ccxt.DDoSProtection: raised upon rate limit issues,
+            # last response data might have details on what is happening
             # ensure this is not a permission error (can happen on binance)
             if self.is_api_permission_error(e):
                 # invalid api key or missing trading rights
@@ -323,15 +337,23 @@ class RestExchange(abstract_exchange.AbstractExchange):
         return created_order
 
     async def _create_order_with_retry(self, order_type, symbol, quantity: decimal.Decimal,
-                                       price: decimal.Decimal, stop_price: decimal.Decimal, 
+                                       price: decimal.Decimal, stop_price: decimal.Decimal,
                                        side: enums.TradeOrderSide,
-                                       current_price: decimal.Decimal, 
+                                       current_price: decimal.Decimal,
                                        reduce_only: bool, params) -> dict:
         try:
             return await self._create_specific_order(order_type, symbol, quantity, price=price,
                                                      stop_price=stop_price, side=side,
-                                                     current_price=current_price, 
+                                                     current_price=current_price,
                                                      reduce_only=reduce_only, params=params)
+        except ccxt.PermissionDenied as err:
+            if self.is_exchange_account_traded_symbol_permission_error(err):
+                # exchange won't let this order create: raise
+                raise errors.ExchangeAccountSymbolPermissionError(
+                    f"Error when creating {symbol} {order_type} order on {self.exchange_manager.exchange_name}: {err}"
+                ) from err
+            # otherwise propagate exception: this is not a situation to retry
+            raise
         except (ccxt.InvalidOrder, ccxt.BadRequest) as err:
             if self.is_exchange_account_traded_symbol_permission_error(err):
                 # exchange won't let this order create: raise
@@ -343,9 +365,9 @@ class RestExchange(abstract_exchange.AbstractExchange):
                               f"This might be due to an update on {self.name} market rules. Fetching updated rules.")
             await self.connector.load_symbol_markets(reload=True, market_filter=self.exchange_manager.market_filter)
             # retry order creation with updated markets (ccxt will use the updated market values)
-            return await self._create_specific_order(order_type, symbol, quantity, price=price, 
+            return await self._create_specific_order(order_type, symbol, quantity, price=price,
                                                      stop_price=stop_price, side=side,
-                                                     current_price=current_price, reduce_only=reduce_only, 
+                                                     current_price=current_price, reduce_only=reduce_only,
                                                      params=params)
 
     def _ensure_order_details_completeness(self, order, order_required_fields=None, order_non_empty_fields=None):
@@ -358,7 +380,7 @@ class RestExchange(abstract_exchange.AbstractExchange):
             all(order[key] for key in order_non_empty_fields)
 
     async def _create_specific_order(self, order_type, symbol, quantity: decimal.Decimal, price: decimal.Decimal = None,
-                                     side: enums.TradeOrderSide = None, current_price: decimal.Decimal = None, 
+                                     side: enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
                                      stop_price: decimal.Decimal = None, reduce_only: bool = False, params=None) -> dict:
         created_order = None
         float_quantity = float(quantity)
@@ -445,7 +467,7 @@ class RestExchange(abstract_exchange.AbstractExchange):
         raise NotImplementedError("_create_market_trailing_stop_order is not implemented")
 
     async def _create_limit_trailing_stop_order(
-        
+
         self, symbol, quantity, price=None, side=None,
         reduce_only: bool = False, params=None) -> dict:
         raise NotImplementedError("_create_limit_trailing_stop_order is not implemented")
@@ -524,10 +546,7 @@ class RestExchange(abstract_exchange.AbstractExchange):
         raise NotImplementedError(f"get_account_id is not implemented on {self.exchange_manager.exchange_name}")
 
     async def get_balance(self, **kwargs: dict):
-        try:
-            return await self.connector.get_balance(**kwargs)
-        except ccxt.AuthenticationError as err:
-            raise errors.AuthenticationError(err) from err
+        return await self.connector.get_balance(**kwargs)
 
     async def get_symbol_prices(self, symbol: str, time_frame: commons_enums.TimeFrames, limit: int = None,
                                 **kwargs: dict) -> typing.Optional[list]:
@@ -544,6 +563,11 @@ class RestExchange(abstract_exchange.AbstractExchange):
 
     async def get_order_book(self, symbol: str, limit: int = 5, **kwargs: dict) -> typing.Optional[dict]:
         return await self.connector.get_order_book(symbol=symbol, limit=limit, **kwargs)
+
+    async def get_order_books(
+        self, symbols: typing.Optional[list[str]], limit: int = 5, **kwargs: dict
+    ) -> typing.Optional[dict]:
+        return await self.connector.get_order_books(symbols=symbols, limit=limit, **kwargs)
 
     async def get_recent_trades(self, symbol: str, limit: int = 50, **kwargs: dict) -> typing.Optional[list]:
         return await self.connector.get_recent_trades(symbol=symbol, limit=limit, **kwargs)
@@ -603,6 +627,16 @@ class RestExchange(abstract_exchange.AbstractExchange):
                 )
             raise
 
+    async def get_cancelled_orders(
+        self, symbol: str = None, since: int = None, limit: int = None, **kwargs: dict
+    ) -> list:
+        if not self.SUPPORT_FETCHING_CANCELLED_ORDERS:
+            raise errors.NotSupported(f"get_cancelled_orders is not supported")
+        return await self._ensure_orders_completeness(
+            await self.connector.get_cancelled_orders(symbol=symbol, since=since, limit=limit, **kwargs),
+            symbol, since=since, limit=limit, **kwargs
+        )
+
     async def _get_closed_orders_from_my_recent_trades(
         self, symbol: str = None, since: int = None, limit: int = None, **kwargs: dict
     ) -> list:
@@ -656,8 +690,11 @@ class RestExchange(abstract_exchange.AbstractExchange):
     async def get_my_recent_trades(self, symbol: str = None, since: int = None, limit: int = None, **kwargs: dict) -> list:
         return await self.connector.get_my_recent_trades(symbol=symbol, since=since, limit=limit, **kwargs)
 
+    async def cancel_all_orders(self, symbol: str = None, **kwargs: dict) -> None:
+        return await self.connector.cancel_all_orders(symbol=symbol, **kwargs)
+
     async def cancel_order(
-            self, exchange_order_id: str, symbol: str, order_type: enums.TraderOrderType, **kwargs: dict
+        self, exchange_order_id: str, symbol: str, order_type: enums.TraderOrderType, **kwargs: dict
     ) -> enums.OrderStatus:
         return await self.connector.cancel_order(exchange_order_id, symbol, order_type, **kwargs)
 
@@ -698,7 +735,7 @@ class RestExchange(abstract_exchange.AbstractExchange):
 
     async def switch_to_account(self, account_type: enums.AccountTypes):
         return await self.connector.switch_to_account(account_type=account_type)
-    
+
     # Futures
     async def load_pair_future_contract(self, pair: str):
         """
@@ -998,14 +1035,25 @@ class RestExchange(abstract_exchange.AbstractExchange):
             return exchanges_util.is_error_on_this_type(error, self.EXCHANGE_ACCOUNT_TRADED_SYMBOL_PERMISSION_ERRORS)
         return False
 
+    def is_authentication_error(self, error: BaseException) -> bool:
+        if self.EXCHANGE_AUTHENTICATION_ERRORS:
+            return exchanges_util.is_error_on_this_type(error, self.EXCHANGE_AUTHENTICATION_ERRORS)
+        return False
+
     """
     Auto fetched and filled exchanges
     """
-    def _fetch_details(self, config, exchange_manager):
-        raise NotImplementedError("_fetch_details is not implemented")
+    def _apply_fetched_details(self, config, exchange_manager):
+        raise NotImplementedError("_apply_fetched_details is not implemented")
 
-    @staticmethod
-    def supported_autofill_exchanges(tentacle_config):
+    @classmethod
+    async def fetch_exchange_config(
+        cls, exchange_config_by_exchange: typing.Optional[dict[str, dict]], exchange_manager
+    ):
+        raise NotImplementedError("fetch_exchange_config")
+
+    @classmethod
+    def supported_autofill_exchanges(cls, tentacle_config):
         raise NotImplementedError("supported_autofill_exchanges is not implemented")
 
     @classmethod

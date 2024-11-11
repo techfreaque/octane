@@ -19,6 +19,7 @@ MatrixValueType = typing.NewType('MatrixValueType', typing.Union[str, int, float
 
 START_EVAL_PERTINENCE = 1
 MAX_TA_EVAL_TIME_SECONDS = 0.1
+EVALUATION_ALLOWED_TIME_DELTA = 10
 EVALUATOR_EVAL_DEFAULT_TYPE = float
 STRATEGIES_REQUIRED_TIME_FRAME = "required_time_frames"
 STRATEGIES_REQUIRED_EVALUATORS = "required_evaluators"

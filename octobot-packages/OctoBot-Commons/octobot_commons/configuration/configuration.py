@@ -18,6 +18,7 @@ import os
 import functools
 import copy
 import shutil
+
 import octobot_commons.logging as logging
 import octobot_commons.errors as errors
 import octobot_commons.constants as commons_constants
@@ -126,7 +127,6 @@ class Configuration:
 
     def save(
         self,
-        temp_restore_config_file=commons_constants.TEMP_RESTORE_CONFIG_FILE,
         schema_file=None,
         sync_all_profiles=False,
     ) -> None:
@@ -139,7 +139,6 @@ class Configuration:
         config_file_manager.dump(
             self.config_path,
             config_to_save,
-            temp_restore_config_file=temp_restore_config_file,
             schema_file=schema_file,
         )
         if self.profile is not None:
@@ -329,7 +328,6 @@ class Configuration:
         Check if DEV_MODE is enabled
         :return: bool
         """
-        return os.getenv(
-            commons_constants.CONFIG_DEBUG_OPTION,
-            self.config.get(commons_constants.CONFIG_DEBUG_OPTION, False),
+        return commons_constants.IS_DEV_MODE_ENABLED or self.config.get(
+            commons_constants.CONFIG_DEBUG_OPTION, False
         )
