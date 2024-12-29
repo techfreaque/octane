@@ -41,6 +41,7 @@ async def cancel_orders(
             since=since,
             until=until,
             tag=tag,
+            contains_tag=contains_tag,
         )
         if basic_keywords.is_emitting_trading_signals(ctx):
             for order in orders:
