@@ -20,6 +20,7 @@
 
 import asyncio
 
+import octobot_commons.logging as logging
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums as matrix_enums
 from octobot_services.interfaces.util.util import run_in_bot_main_loop
 import octobot_trading.enums as trading_enums
@@ -234,10 +235,11 @@ async def retry_recreate_entry_order(
             ping_pong_single_data=ping_pong_single_data,
             next_entry_data=next_entry_data,
         )
-    raise RuntimeError(
+
+    logging.get_logger("PingPongDaemon").error(
         "Failed to recreate entry order, when take profit got filled. "
-        f"Recreated entry order: {next_entry_data}"
-    ) from error
+        f"Recreated entry order: {next_entry_data}",
+    )
 
 
 class PingPongRecreatedEntryOrderNotFilledError(Exception):
