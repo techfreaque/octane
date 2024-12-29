@@ -1,6 +1,11 @@
 {
-  "version": "1.5.1",
+  "version": "0.9.51",
   "origin_package": "Octane-Default-Tentacles",
-  "tentacles": ["LorentzianClassificationMode"],
-  "tentacles-requirements": ["TimeFrameStrategyEvaluator", "basic_tentacles"]
+  "tentacles": [
+    "LorentzianClassificationMode"
+  ],
+  "tentacles-requirements": [
+    "TimeFrameStrategyEvaluator",
+    "basic_tentacles"
+  ]
 }
