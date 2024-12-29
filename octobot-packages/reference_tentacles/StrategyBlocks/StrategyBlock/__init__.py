@@ -1,7 +1,7 @@
 from octobot_tentacles_manager.api.inspector import check_tentacle_version
 from octobot_commons.logging.logging_util import get_logger
 
-if check_tentacle_version('1.0.0', 'candle_strategy', 'Matrix-Strategy-Blocks'):
+if check_tentacle_version('0.9.51', 'candle_strategy', 'Matrix-Strategy-Blocks'):
     try:
         from .candle_strategy import *
     except Exception as e:
@@ -10,7 +10,7 @@ if check_tentacle_version('1.0.0', 'candle_strategy', 'Matrix-Strategy-Blocks'):
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.0.0', 'trading_view_webhook_strategy', 'Matrix-Strategy-Blocks'):
+if check_tentacle_version('0.9.51', 'trading_view_webhook_strategy', 'Matrix-Strategy-Blocks'):
     try:
         from .trading_view_webhook_strategy import *
     except Exception as e:
@@ -19,7 +19,7 @@ if check_tentacle_version('1.0.0', 'trading_view_webhook_strategy', 'Matrix-Stra
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.0.0', 'real_time_strategy', 'Octane-Default-Tentacles'):
+if check_tentacle_version('0.9.51', 'real_time_strategy', 'Octane-Default-Tentacles'):
     try:
         from .real_time_strategy import *
     except Exception as e:
