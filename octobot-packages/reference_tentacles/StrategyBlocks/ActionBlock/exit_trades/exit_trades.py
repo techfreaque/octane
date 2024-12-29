@@ -31,6 +31,10 @@ from tentacles.Meta.Keywords.scripting_library.orders.order_types import market_
 CLOSE_LONG_TRADE = "Close Long Trade"
 CLOSE_SHORT_TRADE = "Close Short Trade"
 
+ENTRY_ORDER = "Entry orders"
+STOP_LOSS_ORDER = "Stop loss orders"
+TAKE_PROFIT_ORDER = "Take profit orders"
+
 
 class ExitTradesAction(abstract_exit_order_block.ExitSignalsOrderBlock):
     NAME = "exit_trades"
@@ -61,38 +65,8 @@ class ExitTradesAction(abstract_exit_order_block.ExitSignalsOrderBlock):
 
 
 async def exit_short_trade(ctx: context_management.Context):
-    await cancelling.cancel_orders(
-        ctx,
-        side=TradeOrderSide.BUY,
-        tag=f"{matrix_enums.TAKE_PROFIT}{matrix_enums.TAG_SEPERATOR}",
-    )
-    await cancelling.cancel_orders(
-        ctx,
-        side=TradeOrderSide.BUY,
-        tag=f"{matrix_enums.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}",
-    )
-    await cancelling.cancel_orders(
-        ctx,
-        side=TradeOrderSide.SELL,
-        tag=f"{matrix_enums.ENTRY}{matrix_enums.TAG_SEPERATOR}",
-    )
     await market_order.market(ctx, side="buy", amount="100a%", reduce_only=True)
 
 
 async def exit_long_trade(ctx: context_management.Context):
-    await cancelling.cancel_orders(
-        ctx,
-        side=TradeOrderSide.SELL,
-        tag=f"{matrix_enums.TAKE_PROFIT}{matrix_enums.TAG_SEPERATOR}",
-    )
-    await cancelling.cancel_orders(
-        ctx,
-        side=TradeOrderSide.SELL,
-        tag=f"{matrix_enums.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}",
-    )
-    await cancelling.cancel_orders(
-        ctx,
-        side=TradeOrderSide.BUY,
-        tag=f"{matrix_enums.ENTRY}{matrix_enums.TAG_SEPERATOR}",
-    )
     await market_order.market(ctx, side="sell", amount="100a%", reduce_only=True)
