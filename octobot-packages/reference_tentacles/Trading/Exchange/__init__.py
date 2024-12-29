@@ -334,7 +334,7 @@ if check_tentacle_version('1.2.0', 'poloniex', 'OctoBot-Default-Tentacles'):
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.2.0', 'yahoo_finance_autofilled', 'OctoBot-Default-Tentacles'):
+if check_tentacle_version('1.2.0', 'yahoo_finance_autofilled', 'Octane-Default-Tentacles'):
     try:
         from .yahoo_finance_autofilled import *
     except Exception as e:
