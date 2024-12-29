@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "origin_package": "Matrix-Pro-Tentacles",
+  "version": "0.9.51",
+  "origin_package": "Octane-Default-Tentacles",
   "tentacles": [
     "RealTimeStrategyEvaluator"
   ],
