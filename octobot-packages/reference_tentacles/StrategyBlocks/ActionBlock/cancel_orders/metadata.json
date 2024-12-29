@@ -2,7 +2,7 @@
   "version": "0.9.51",
   "origin_package": "Octane-Default-Tentacles",
   "tentacles": [
-    "cancel_orders"
+    "send_alert"
   ],
   "tentacles-requirements": [
     "block_factory"

@@ -71,6 +71,11 @@ async def exit_short_trade(ctx: context_management.Context):
         side=TradeOrderSide.BUY,
         tag=f"{matrix_enums.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}",
     )
+    await cancelling.cancel_orders(
+        ctx,
+        side=TradeOrderSide.SELL,
+        tag=f"{matrix_enums.ENTRY}{matrix_enums.TAG_SEPERATOR}",
+    )
     await market_order.market(ctx, side="buy", amount="100a%", reduce_only=True)
 
 
@@ -84,5 +89,10 @@ async def exit_long_trade(ctx: context_management.Context):
         ctx,
         side=TradeOrderSide.SELL,
         tag=f"{matrix_enums.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}",
+    )
+    await cancelling.cancel_orders(
+        ctx,
+        side=TradeOrderSide.BUY,
+        tag=f"{matrix_enums.ENTRY}{matrix_enums.TAG_SEPERATOR}",
     )
     await market_order.market(ctx, side="sell", amount="100a%", reduce_only=True)
