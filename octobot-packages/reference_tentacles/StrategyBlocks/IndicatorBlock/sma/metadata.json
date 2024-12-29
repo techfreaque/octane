@@ -1,0 +1,10 @@
+{
+  "version": "0.9.51",
+  "origin_package": "Octane-Default-Tentacles",
+  "tentacles": [
+    "sma"
+  ],
+  "tentacles-requirements": [
+    "block_factory"
+  ]
+}
