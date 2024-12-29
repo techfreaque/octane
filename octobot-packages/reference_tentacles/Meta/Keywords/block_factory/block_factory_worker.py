@@ -167,7 +167,8 @@ class BlockFactory:
                     True,
                     f"Failed to run strategy block {block.TITLE} ({_block_id})",
                 )
-
+        if self.plot_orders:
+            await plot_orders(ctx)
         if ctx.exchange_manager.is_backtesting:
             if not trading_mode_producer.trading_mode.get_initialized_trading_pair_by_bot_id(
                 ctx.symbol, ctx.time_frame
@@ -196,8 +197,7 @@ class BlockFactory:
                             set(self.whitelist_timestamps + first_timestamps_from_pairs)
                         )
                     )
-        if self.plot_orders:
-            await plot_orders(ctx)
+
 
     async def get_candles(
         self,

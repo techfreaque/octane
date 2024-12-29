@@ -28,7 +28,6 @@ from octobot_trading.modes.script_keywords.context_management import Context
 
 
 async def plot_orders_if_enabled(ctx: Context, parent_input):
-    # plot orders
     activate_plot_orders = await user_inputs.user_input(
         ctx,
         "Plot orders",
@@ -45,7 +44,6 @@ async def plot_orders_if_enabled(ctx: Context, parent_input):
 async def plot_orders(
     ctx: Context,
 ):
-    # plot orders
     _open_orders = (
         ctx.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(
             symbol=ctx.symbol
@@ -54,20 +52,15 @@ async def plot_orders(
     long_tp_list = []
     long_sl_list = []
     long_limit_list = []
-    # long_entry_list = []
     short_tp_list = []
     short_sl_list = []
     short_limit_list = []
-    # short_entry_list = []
     for order in _open_orders:
         if order.exchange_order_type.name == "STOP_LOSS":
             if order.side == TradeOrderSide.BUY:
                 short_sl_list.append(float(order.origin_price))
             else:
                 long_sl_list.append(float(order.origin_price))
-
-            # todo change based on trades
-            # entry_list.append(float(order.created_last_price))
         elif order.reduce_only is True:
             if order.side == TradeOrderSide.BUY:
                 short_tp_list.append(float(order.origin_price))
@@ -83,96 +76,6 @@ async def plot_orders(
                 else:
                     short_limit_list.append(float(order.origin_price))
 
-        # elif order.exchange_order_type.name == "MARKET":
-        #     if order.side == TradeOrderSide.BUY:
-        #         long_entry_list.append(float(order.origin_price))
-        #     else:
-        #         short_entry_list.append(float(order.origin_price))
-
-    # if ctx.exchange_manager.is_backtesting:
-    #     value_key_prefix = "b" if ctx.exchange_manager.is_backtesting else "l"
-    #     if long_tp_list:
-    #         await ctx.set_cached_value(
-    #             value=long_tp_list, value_key=f"{value_key_prefix}ltp"
-    #         )
-    #     if long_sl_list:
-    #         await ctx.set_cached_value(
-    #             value=long_sl_list, value_key=f"{value_key_prefix}lsl"
-    #         )
-    #     if long_limit_list:
-    #         await ctx.set_cached_value(
-    #             value=long_limit_list, value_key=f"{value_key_prefix}llmt"
-    #         )
-    #     if short_tp_list:
-    #         await ctx.set_cached_value(
-    #             value=short_tp_list, value_key=f"{value_key_prefix}stp"
-    #         )
-    #     if short_sl_list:
-    #         await ctx.set_cached_value(
-    #             value=short_sl_list, value_key=f"{value_key_prefix}ssl"
-    #         )
-    #     if short_limit_list:
-    #         await ctx.set_cached_value(
-    #             value=short_limit_list, value_key=f"{value_key_prefix}slmt"
-    #         )
-    #     try:
-    #         await plotting.plot(
-    #             ctx,
-    #             "Short stop losses",
-    #             cache_value=f"{value_key_prefix}ssl",
-    #             mode="markers",
-    #             chart="main-chart",
-    #             color="yellow",
-    #             shift_to_open_candle_time=False,
-    #         )
-    #         await plotting.plot(
-    #             ctx,
-    #             "Long stop losses",
-    #             cache_value=f"{value_key_prefix}lsl",
-    #             mode="markers",
-    #             chart="main-chart",
-    #             color="yellow",
-    #             shift_to_open_candle_time=False,
-    #         )
-    #         await plotting.plot(
-    #             ctx,
-    #             "Short take profits",
-    #             cache_value=f"{value_key_prefix}stp",
-    #             mode="markers",
-    #             chart="main-chart",
-    #             color="green",
-    #             shift_to_open_candle_time=False,
-    #         )
-    #         await plotting.plot(
-    #             ctx,
-    #             "Long take profits",
-    #             cache_value=f"{value_key_prefix}ltp",
-    #             mode="markers",
-    #             chart="main-chart",
-    #             color="magenta",
-    #             shift_to_open_candle_time=False,
-    #         )
-    #         await plotting.plot(
-    #             ctx,
-    #             "Short entry limit orders",
-    #             cache_value=f"{value_key_prefix}slmt",
-    #             mode="markers",
-    #             chart="main-chart",
-    #             color="red",
-    #             shift_to_open_candle_time=False,
-    #         )
-    #         await plotting.plot(
-    #             ctx,
-    #             "Long entry limit orders",
-    #             cache_value=f"{value_key_prefix}llmt",
-    #             mode="markers",
-    #             chart="main-chart",
-    #             color="cyan",
-    #             shift_to_open_candle_time=False,
-    #         )
-    #     except RuntimeError:
-    #         pass  # no cache
-    # else:
     candle_time = await exchange_public_data.current_candle_time(ctx)
     if long_tp_list:
         await plotting.plot(
@@ -226,7 +129,7 @@ async def plot_orders(
             x=[candle_time],
             mode="markers",
             chart="main-chart",
-            color="blue",
+            color="cyan",
             shift_to_open_candle_time=False,
         )
     if short_limit_list:
