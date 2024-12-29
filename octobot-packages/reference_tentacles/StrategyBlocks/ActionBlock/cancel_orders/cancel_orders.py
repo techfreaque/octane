@@ -31,12 +31,18 @@ CANCEL_LONG_ORDERS = "Cancel long orders"
 CANCEL_SHORT_ORDERS = "Cancel short orders"
 
 
+ENTRY_ORDER = "Entry orders"
+STOP_LOSS_ORDER = "Stop loss orders"
+TAKE_PROFIT_ORDER = "Take profit orders"
+
+
 class CancelOrdersAction(abstract_exit_order_block.ExitSignalsOrderBlock):
     NAME = "cancel_orders"
     TITLE = "Cancel Orders"
     TITLE_SHORT = TITLE
     DESCRIPTION = "This block can be used to cancel orders based on signals"
     exit_side: str
+    order_type: str
 
     def init_block_settings(self) -> None:
         self.exit_side = self.user_input(
@@ -49,47 +55,58 @@ class CancelOrdersAction(abstract_exit_order_block.ExitSignalsOrderBlock):
                 CANCEL_SHORT_ORDERS,
             ],
         )
+        self.order_type = self.user_input(
+            "order_type",
+            commons_enums.UserInputTypes.MULTIPLE_OPTIONS.value,
+            title="Exit Side",
+            options=[ENTRY_ORDER, STOP_LOSS_ORDER, TAKE_PROFIT_ORDER],
+            def_val=[ENTRY_ORDER, STOP_LOSS_ORDER, TAKE_PROFIT_ORDER],
+        )
 
     async def execute_block(
         self,
     ) -> None:
         if self.exit_side == CANCEL_LONG_ORDERS:
-            await cancel_long_orders(self.block_factory.ctx)
+            await self.cancel_long_orders()
         else:
-            await cancel_short_orders(self.block_factory.ctx)
+            await self.cancel_short_orders()
 
+    async def cancel_short_orders(self):
+        if TAKE_PROFIT_ORDER in self.order_type:
+            await cancelling.cancel_orders(
+                self.block_factory.ctx,
+                side=TradeOrderSide.BUY,
+                tag=f"{matrix_enums.TAKE_PROFIT}{matrix_enums.TAG_SEPERATOR}",
+            )
+        if STOP_LOSS_ORDER in self.order_type:
+            await cancelling.cancel_orders(
+                self.block_factory.ctx,
+                side=TradeOrderSide.BUY,
+                tag=f"{matrix_enums.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}",
+            )
+        if ENTRY_ORDER in self.order_type:
+            await cancelling.cancel_orders(
+                self.block_factory.ctx,
+                side=TradeOrderSide.SELL,
+                tag=f"{matrix_enums.ENTRY}{matrix_enums.TAG_SEPERATOR}",
+            )
 
-async def cancel_short_orders(ctx: context_management.Context):
-    await cancelling.cancel_orders(
-        ctx,
-        side=TradeOrderSide.BUY,
-        tag=f"{matrix_enums.TAKE_PROFIT}{matrix_enums.TAG_SEPERATOR}",
-    )
-    await cancelling.cancel_orders(
-        ctx,
-        side=TradeOrderSide.BUY,
-        tag=f"{matrix_enums.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}",
-    )
-    await cancelling.cancel_orders(
-        ctx,
-        side=TradeOrderSide.SELL,
-        tag=f"{matrix_enums.ENTRY}{matrix_enums.TAG_SEPERATOR}",
-    )
-
-
-async def cancel_long_orders(ctx: context_management.Context):
-    await cancelling.cancel_orders(
-        ctx,
-        side=TradeOrderSide.SELL,
-        tag=f"{matrix_enums.TAKE_PROFIT}{matrix_enums.TAG_SEPERATOR}",
-    )
-    await cancelling.cancel_orders(
-        ctx,
-        side=TradeOrderSide.SELL,
-        tag=f"{matrix_enums.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}",
-    )
-    await cancelling.cancel_orders(
-        ctx,
-        side=TradeOrderSide.BUY,
-        tag=f"{matrix_enums.ENTRY}{matrix_enums.TAG_SEPERATOR}",
-    )
+    async def cancel_long_orders(self):
+        if TAKE_PROFIT_ORDER in self.order_type:
+            await cancelling.cancel_orders(
+                self.block_factory.ctx,
+                side=TradeOrderSide.SELL,
+                tag=f"{matrix_enums.TAKE_PROFIT}{matrix_enums.TAG_SEPERATOR}",
+            )
+        if STOP_LOSS_ORDER in self.order_type:
+            await cancelling.cancel_orders(
+                self.block_factory.ctx,
+                side=TradeOrderSide.SELL,
+                tag=f"{matrix_enums.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}",
+            )
+        if ENTRY_ORDER in self.order_type:
+            await cancelling.cancel_orders(
+                self.block_factory.ctx,
+                side=TradeOrderSide.BUY,
+                tag=f"{matrix_enums.ENTRY}{matrix_enums.TAG_SEPERATOR}",
+            )
