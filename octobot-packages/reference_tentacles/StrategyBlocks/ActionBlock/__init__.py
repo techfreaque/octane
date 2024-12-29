@@ -1,7 +1,7 @@
 from octobot_tentacles_manager.api.inspector import check_tentacle_version
 from octobot_commons.logging.logging_util import get_logger
 
-if check_tentacle_version("1.0.0", "all_in_one_orders", "Octane-Default-Tentacles"):
+if check_tentacle_version("0.9.51", "all_in_one_orders", "Octane-Default-Tentacles"):
     try:
         from .all_in_one_orders import *
     except Exception as e:
@@ -12,7 +12,7 @@ if check_tentacle_version("1.0.0", "all_in_one_orders", "Octane-Default-Tentacle
             f'"python start.py tentacles --install --all".'
         )
 
-if check_tentacle_version("1.0.0", "send_alert", "Octane-Default-Tentacles"):
+if check_tentacle_version("0.9.51", "send_alert", "Octane-Default-Tentacles"):
     try:
         from .send_alert import *
     except Exception as e:
@@ -23,7 +23,7 @@ if check_tentacle_version("1.0.0", "send_alert", "Octane-Default-Tentacles"):
             f'"python start.py tentacles --install --all".'
         )
 
-if check_tentacle_version('1.0.0', 'all_in_one_orders', 'Octane-Default-Tentacles'):
+if check_tentacle_version('0.9.51', 'all_in_one_orders', 'Octane-Default-Tentacles'):
     try:
         from .all_in_one_orders import *
     except Exception as e:
@@ -32,7 +32,7 @@ if check_tentacle_version('1.0.0', 'all_in_one_orders', 'Octane-Default-Tentacle
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.0.0', 'send_alert', 'Octane-Default-Tentacles'):
+if check_tentacle_version('0.9.51', 'send_alert', 'Octane-Default-Tentacles'):
     try:
         from .send_alert import *
     except Exception as e:
@@ -41,7 +41,7 @@ if check_tentacle_version('1.0.0', 'send_alert', 'Octane-Default-Tentacles'):
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.0.0', 'exit_trades', 'Octane-Default-Tentacles'):
+if check_tentacle_version('0.9.51', 'exit_trades', 'Octane-Default-Tentacles'):
     try:
         from .exit_trades import *
     except Exception as e:
