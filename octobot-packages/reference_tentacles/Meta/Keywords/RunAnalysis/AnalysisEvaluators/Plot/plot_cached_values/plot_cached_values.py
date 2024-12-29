@@ -72,8 +72,19 @@ class PlotCachedValues(abstract_analysis_evaluator.AnalysisEvaluator):
                             plotted_element = sub_plotted_element
                         else:
                             return
+                        
+                        cleaned_values = []
+                        first_y = cached_values_metadata[0]["y"]
+                        if first_y and isinstance(first_y, list):
+                            for element in cached_values_metadata:
+                                for y in element["y"]:
+                                    cleaned_values.append(
+                                        {**element, "y": y}
+                                    )
+                        else:
+                            cleaned_values = cached_values_metadata                                    
                         plot_from_standard_data(
-                            data_set=cached_values_metadata,
+                            data_set=cleaned_values,
                             plotted_element=plotted_element,
                             title=table_name,
                         )
