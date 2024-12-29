@@ -70,6 +70,11 @@ async def cancel_short_orders(ctx: context_management.Context):
         side=TradeOrderSide.BUY,
         tag=f"{matrix_enums.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}",
     )
+    await cancelling.cancel_orders(
+        ctx,
+        side=TradeOrderSide.SELL,
+        tag=f"{matrix_enums.ENTRY}{matrix_enums.TAG_SEPERATOR}",
+    )
 
 
 async def cancel_long_orders(ctx: context_management.Context):
@@ -82,4 +87,9 @@ async def cancel_long_orders(ctx: context_management.Context):
         ctx,
         side=TradeOrderSide.SELL,
         tag=f"{matrix_enums.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}",
+    )
+    await cancelling.cancel_orders(
+        ctx,
+        side=TradeOrderSide.BUY,
+        tag=f"{matrix_enums.ENTRY}{matrix_enums.TAG_SEPERATOR}",
     )
