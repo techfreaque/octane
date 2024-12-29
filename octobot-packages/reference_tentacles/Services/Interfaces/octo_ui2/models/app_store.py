@@ -63,7 +63,6 @@ CATEGORY_KEY_TO_TITLE = {
 DISTRO_UPDATED_PACKAGES = (
     "OctoBot-Default-Tentacles",
     "Octane-Default-Tentacles",
-    "Octane-Pro-Tentacles-Keywords",
 )
 DISTRO_UPDATED_APPS = (
     "arbitrage_trading",
