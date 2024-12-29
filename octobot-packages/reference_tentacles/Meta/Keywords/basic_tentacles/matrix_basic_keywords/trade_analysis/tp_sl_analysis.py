@@ -24,10 +24,11 @@ from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums 
     PriceDataSources,
 )
 import tentacles.Meta.Keywords.scripting_library.data.writing.plotting as plotting
+from octobot_trading.modes.script_keywords.context_management import Context
 
 
 async def stop_loss_analysis(
-    maker, ctx, requested_long_sl, requested_short_sl, take_profit_in_p
+    maker, ctx: Context, requested_long_sl, requested_short_sl, take_profit_in_p
 ):
     required_long_stops = []
     required_short_stops = []
