@@ -19,7 +19,7 @@ if check_tentacle_version('1.0.0', 'trading_view_webhook_strategy', 'Matrix-Stra
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.0.0', 'real_time_strategy', 'Octane-Strategy-Blocks'):
+if check_tentacle_version('1.0.0', 'real_time_strategy', 'Octane-Default-Tentacles'):
     try:
         from .real_time_strategy import *
     except Exception as e:

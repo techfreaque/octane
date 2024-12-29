@@ -505,7 +505,7 @@ if check_tentacle_version('1.0.0', 'exchange_delta', 'Matrix-Strategy-Blocks'):
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.0.0', 'open_interest', 'Octane-Strategy-Blocks'):
+if check_tentacle_version('1.0.0', 'open_interest', 'Octane-Default-Tentacles'):
     try:
         from .open_interest import *
     except Exception as e:
@@ -514,7 +514,7 @@ if check_tentacle_version('1.0.0', 'open_interest', 'Octane-Strategy-Blocks'):
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('1.0.0', 'math', 'Octane-Strategy-Blocks'):
+if check_tentacle_version('1.0.0', 'math', 'Octane-Default-Tentacles'):
     try:
         from .math import *
     except Exception as e:
