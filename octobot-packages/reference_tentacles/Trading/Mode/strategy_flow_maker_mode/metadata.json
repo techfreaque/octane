@@ -1,6 +1,11 @@
 {
-  "version": "0.9.23",
-  "origin_package": "Octane-Strategy-Blocks",
-  "tentacles": ["StrategyFlowMakerMode"],
-  "tentacles-requirements": ["TimeFrameStrategyEvaluator", "basic_tentacles"]
+  "version": "0.9.51",
+  "origin_package": "Octane-Default-Tentacles",
+  "tentacles": [
+    "StrategyFlowMakerMode"
+  ],
+  "tentacles-requirements": [
+    "TimeFrameStrategyEvaluator",
+    "basic_tentacles"
+  ]
 }
