@@ -1,0 +1,2 @@
+Strategy Designer allows you build your strategies from the webinterface with a easy to use visual editor. <br>
+You can use 50+ indicators and 15 evaluators to build your strategies, including deep neural nets

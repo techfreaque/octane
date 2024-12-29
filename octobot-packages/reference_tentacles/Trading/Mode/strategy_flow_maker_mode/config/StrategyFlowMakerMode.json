@@ -1,0 +1,9 @@
+{
+    "default_config": [
+        "TimeFrameStrategyEvaluator"
+    ],
+    "required_strategies": [
+        "TimeFrameStrategyEvaluator"
+    ],
+    "activation_method": "once per bar close"
+}

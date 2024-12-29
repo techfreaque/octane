@@ -1,0 +1,12 @@
+{
+  "version": "0.9.51",
+  "origin_package": "Octane-Default-Tentacles",
+  "tentacles": [
+    "divergence_between_data"
+  ],
+  "tentacles-requirements": [
+    "block_factory",
+    "indicator_keywords",
+    "basic_tentacles"
+  ]
+}
