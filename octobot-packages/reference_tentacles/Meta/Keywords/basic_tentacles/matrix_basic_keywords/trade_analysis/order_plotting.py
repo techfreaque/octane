@@ -174,72 +174,72 @@ async def plot_orders(
     #         pass  # no cache
     # else:
     candle_time = await exchange_public_data.current_candle_time(ctx)
-    # if long_tp_list:
-    await plotting.plot(
-        ctx,
-        "Long take profits",
-        y=[long_tp_list],
-        x=[candle_time],
-        mode="markers",
-        chart="main-chart",
-        color="magenta",
-        shift_to_open_candle_time=False,
-    )
-    # if short_tp_list:
-    await plotting.plot(
-        ctx,
-        "Short take profits",
-        y=[short_tp_list],
-        x=[candle_time],
-        mode="markers",
-        chart="main-chart",
-        color="green",
-        shift_to_open_candle_time=False,
-    )
-    # if long_sl_list:
-    await plotting.plot(
-        ctx,
-        "Long stop losses",
-        y=[long_sl_list],
-        x=[candle_time],
-        mode="markers",
-        chart="main-chart",
-        color="yellow",
-        shift_to_open_candle_time=False,
-    )
-    # if short_sl_list:
-    await plotting.plot(
-        ctx,
-        "Short stop losses",
-        y=[short_sl_list],
-        x=[candle_time],
-        mode="markers",
-        chart="main-chart",
-        color="yellow",
-        shift_to_open_candle_time=False,
-    )
-    # if long_limit_list:
-    await plotting.plot(
-        ctx,
-        "Long entry limit orders",
-        y=[long_limit_list],
-        x=[candle_time],
-        mode="markers",
-        chart="main-chart",
-        color="blue",
-        shift_to_open_candle_time=False,
-    )
-    # if short_limit_list:
-    await plotting.plot(
-        ctx,
-        "Short entry limit orders",
-        y=[short_limit_list],
-        x=[candle_time],
-        mode="markers",
-        chart="main-chart",
-        color="red",
-        shift_to_open_candle_time=False,
-    )
+    if long_tp_list:
+        await plotting.plot(
+            ctx,
+            "Long take profits",
+            y=[long_tp_list],
+            x=[candle_time],
+            mode="markers",
+            chart="main-chart",
+            color="magenta",
+            shift_to_open_candle_time=False,
+        )
+    if short_tp_list:
+        await plotting.plot(
+            ctx,
+            "Short take profits",
+            y=[short_tp_list],
+            x=[candle_time],
+            mode="markers",
+            chart="main-chart",
+            color="green",
+            shift_to_open_candle_time=False,
+        )
+    if long_sl_list:
+        await plotting.plot(
+            ctx,
+            "Long stop losses",
+            y=[long_sl_list],
+            x=[candle_time],
+            mode="markers",
+            chart="main-chart",
+            color="yellow",
+            shift_to_open_candle_time=False,
+        )
+    if short_sl_list:
+        await plotting.plot(
+            ctx,
+            "Short stop losses",
+            y=[short_sl_list],
+            x=[candle_time],
+            mode="markers",
+            chart="main-chart",
+            color="yellow",
+            shift_to_open_candle_time=False,
+        )
+    if long_limit_list:
+        await plotting.plot(
+            ctx,
+            "Long entry limit orders",
+            y=[long_limit_list],
+            x=[candle_time],
+            mode="markers",
+            chart="main-chart",
+            color="blue",
+            shift_to_open_candle_time=False,
+        )
+    if short_limit_list:
+        await plotting.plot(
+            ctx,
+            "Short entry limit orders",
+            y=[short_limit_list],
+            x=[candle_time],
+            mode="markers",
+            chart="main-chart",
+            color="red",
+            shift_to_open_candle_time=False,
+        )
 
 
 async def plot_current_position(ctx: Context, parent_input):
