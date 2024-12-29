@@ -29,6 +29,7 @@ class ManagedOrderSettingsPositionSizeTypes:
     QUANTITY_RISK_OF_ACCOUNT = "quantity_risk_of_account"
     PERCENT_RISK_OF_ACCOUNT = "percent_risk_of_account"
     PERCENT_OF_ACCOUNT = "percent_of_account"
+    PERCENT_OF_ASSET_AMOUNT = "percent_of_asset_amount"
     PERCENT_OF_AVAILABLE_ACCOUNT = "percent_of_available_account"
 
     QUANTITY_RISK_OF_ACCOUNT_DESCRIPTION = (
@@ -38,6 +39,7 @@ class ManagedOrderSettingsPositionSizeTypes:
         "Position size based on % risk of total account"
     )
     PERCENT_OF_ACCOUNT_DESCRIPTION = "Position size based on % of total account size"
+    PERCENT_OF_ASSET_AMOUNT_DESCRIPTION = "Position size based on % of asset amount"
     PERCENT_OF_AVAILABLE_ACCOUNT_DESCRIPTION = (
         "Position size based on % of available account size"
     )
@@ -45,12 +47,14 @@ class ManagedOrderSettingsPositionSizeTypes:
         QUANTITY_RISK_OF_ACCOUNT: QUANTITY_RISK_OF_ACCOUNT_DESCRIPTION,
         PERCENT_RISK_OF_ACCOUNT: PERCENT_RISK_OF_ACCOUNT_DESCRIPTION,
         PERCENT_OF_ACCOUNT: PERCENT_OF_ACCOUNT_DESCRIPTION,
+        PERCENT_OF_ASSET_AMOUNT: PERCENT_OF_ASSET_AMOUNT_DESCRIPTION,
         PERCENT_OF_AVAILABLE_ACCOUNT: PERCENT_OF_AVAILABLE_ACCOUNT_DESCRIPTION,
     }
     DESCRIPTIONS = [
         QUANTITY_RISK_OF_ACCOUNT_DESCRIPTION,
         PERCENT_RISK_OF_ACCOUNT_DESCRIPTION,
         PERCENT_OF_ACCOUNT_DESCRIPTION,
+        PERCENT_OF_ASSET_AMOUNT_DESCRIPTION,
         PERCENT_OF_AVAILABLE_ACCOUNT_DESCRIPTION,
     ]
 
@@ -90,6 +94,7 @@ class ManagedOrderSettingsPositionSize:
         if sl_type == sl_settings.ManagedOrderSettingsSLTypes.NO_SL_DESCRIPTION:
             position_size_options = [
                 ManagedOrderSettingsPositionSizeTypes.PERCENT_OF_ACCOUNT_DESCRIPTION,
+                ManagedOrderSettingsPositionSizeTypes.PERCENT_OF_ASSET_AMOUNT_DESCRIPTION,
                 ManagedOrderSettingsPositionSizeTypes.PERCENT_OF_AVAILABLE_ACCOUNT_DESCRIPTION,
             ]
             position_size_def_val = (
@@ -235,6 +240,40 @@ class ManagedOrderSettingsPositionSize:
                         "float",
                         100,
                         title="max position in % of available account size",
+                        min_val=0,
+                        max_val=100,
+                        parent_input_name=position_size_setting_name,
+                    )
+                )
+            )
+
+        # position size based on % of available account size
+        elif (
+            self.position_size_type
+            == ManagedOrderSettingsPositionSizeTypes.PERCENT_OF_ASSET_AMOUNT_DESCRIPTION
+        ):
+            self.risk_in_p = decimal.Decimal(
+                str(
+                    await basic_keywords.user_input(
+                        ctx,
+                        f"{position_size_setting_name_prefix}_position_per_trade_in_%_of_asset_amount",
+                        "float",
+                        50,
+                        title="position per trade in % of asset amount holding",
+                        min_val=0,
+                        max_val=100,
+                        parent_input_name=position_size_setting_name,
+                    )
+                )
+            )
+            self.total_risk_in_p = decimal.Decimal(
+                str(
+                    await basic_keywords.user_input(
+                        ctx,
+                        f"{position_size_setting_name_prefix}_max_position_in_%_of_account_size",
+                        "float",
+                        100,
+                        title="max position in % of asset amount holding",
                         min_val=0,
                         max_val=100,
                         parent_input_name=position_size_setting_name,
