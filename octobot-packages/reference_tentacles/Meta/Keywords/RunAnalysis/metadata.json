@@ -1,6 +1,8 @@
 {
-  "version": "1.1.0",
+  "version": "0.9.51",
   "origin_package": "Octane-Default-Tentacles",
-  "tentacles": ["RunAnalysis"],
+  "tentacles": [
+    "RunAnalysis"
+  ],
   "tentacles-requirements": []
 }

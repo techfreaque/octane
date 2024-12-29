@@ -19,7 +19,7 @@ if check_tentacle_version('1.2.0', 'web_interface', 'OctoBot-Default-Tentacles')
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('0.9.23', 'run_analysis_mode', 'Octane-Default-Tentacles'):
+if check_tentacle_version('0.9.51', 'run_analysis_mode', 'Octane-Default-Tentacles'):
     try:
         from .run_analysis_mode import *
     except Exception as e:
@@ -28,7 +28,7 @@ if check_tentacle_version('0.9.23', 'run_analysis_mode', 'Octane-Default-Tentacl
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('0.9.23', 'octo_ui2_pro', 'O_UI_Pro'):
+if check_tentacle_version('0.9.51', 'octo_ui2_pro', 'O_UI_Pro'):
     try:
         from .octo_ui2_pro import *
     except Exception as e:
