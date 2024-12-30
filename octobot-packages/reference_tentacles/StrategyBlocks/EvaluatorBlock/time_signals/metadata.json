@@ -2,7 +2,7 @@
   "version": "0.9.51",
   "origin_package": "Octane-Default-Tentacles",
   "tentacles": [
-    "dollar_cost_average"
+    "time_signals"
   ],
   "tentacles-requirements": [
     "block_factory",
