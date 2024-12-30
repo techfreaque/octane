@@ -35,7 +35,6 @@ class TimeSignalsEvaluator(abstract_evaluator_block.EvaluatorBlock):
     day: typing.Optional[str]
     hour: typing.Optional[str]
     minute: typing.Optional[str]
-    week: typing.Optional[str]
     month: typing.Optional[str]
 
     def init_block_settings(self) -> None:
@@ -57,70 +56,10 @@ class TimeSignalsEvaluator(abstract_evaluator_block.EvaluatorBlock):
                 "10",
                 "11",
                 "12",
-                "13",
-                "14",
-                "15",
-                "16",
-                "17",
-                "18",
-                "19",
-                "20",
-                "21",
-                "22",
-                "23",
-                "24",
-                "25",
-                "26",
-                "27",
-                "28",
-                "29",
-                "30",
-                "31",
             ],
         )
         if self.month == "every":
             self.month = None
-        self.week = self.user_input(
-            "signals on week",
-            "options",
-            "every",
-            options=[
-                "every",
-                "1",
-                "2",
-                "3",
-                "4",
-                "5",
-                "6",
-                "7",
-                "8",
-                "9",
-                "10",
-                "11",
-                "12",
-                "13",
-                "14",
-                "15",
-                "16",
-                "17",
-                "18",
-                "19",
-                "20",
-                "21",
-                "22",
-                "23",
-                "24",
-                "25",
-                "26",
-                "27",
-                "28",
-                "29",
-                "30",
-                "31",
-            ],
-        )
-        if self.week == "every":
-            self.week = None
         self.day = self.user_input(
             "signals on day of the month",
             "options",
@@ -284,11 +223,11 @@ class TimeSignalsEvaluator(abstract_evaluator_block.EvaluatorBlock):
         for timestamp in times:
             signals.append(
                 get_buy_signal_from_time(
-                    timestamp, self.day, self.hour, self.minute, self.week, self.month
+                    timestamp, self.day, self.hour, self.minute, self.month
                 )
             )
         await self.store_evaluator_signals(
-            title=f"DCA buy signal (d:{self.day or 'every'} h:{self.hour or 'every'} m:{self.minute or 'every'} w:{self.week or 'every'} m:{self.month or 'every'})",
+            title=f"DCA buy signal (d:{self.day or 'every'} h:{self.hour or 'every'} m:{self.minute or 'every'} m:{self.month or 'every'})",
             signals=signals,
             signal_values=values,
             chart_location=commons_enums.PlotCharts.MAIN_CHART.value,
@@ -296,26 +235,26 @@ class TimeSignalsEvaluator(abstract_evaluator_block.EvaluatorBlock):
 
 
 def get_buy_signal_from_time(
-    current_time, day=None, hour=None, minute=None, week=None, month=None
+    current_time, day=None, hour=None, minute=None, month=None
 ):
     current_datetime = datetime.datetime.fromtimestamp(current_time)
     time_to_buy = current_datetime
 
     if month:
         time_to_buy = time_to_buy.replace(
-            month=int(month), day=1, hour=0, minute=0, second=0, microsecond=0
+            month=int(month),
         )
-    if week:
-        time_to_buy = time_to_buy + relativedelta(weeks=int(week))
     if day:
         time_to_buy = time_to_buy.replace(
-            day=int(day), hour=0, minute=0, second=0, microsecond=0
+            day=int(day),
         )
     if hour:
         time_to_buy = time_to_buy.replace(
-            hour=int(hour), minute=0, second=0, microsecond=0
+            hour=int(hour),
         )
     if minute:
-        time_to_buy = time_to_buy.replace(minute=int(minute), second=0, microsecond=0)
+        time_to_buy = time_to_buy.replace(
+            minute=int(minute),
+        )
 
     return current_datetime == time_to_buy
