@@ -28,11 +28,11 @@ if check_tentacle_version('0.9.51', 'data_is_the_same_as_data', 'Matrix-Strategy
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
-if check_tentacle_version('0.9.51', 'dollar_cost_average', 'Matrix-Strategy-Blocks'):
+if check_tentacle_version('0.9.51', 'time_signals', 'Matrix-Strategy-Blocks'):
     try:
-        from .dollar_cost_average import *
+        from .time_signals import *
     except Exception as e:
-        get_logger('TentacleLoader').error(f'Error when loading dollar_cost_average: '
+        get_logger('TentacleLoader').error(f'Error when loading time_signals: '
                                            f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
