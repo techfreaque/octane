@@ -126,7 +126,7 @@
             "justMyCode": false
         },
         {
-            "name": "Start backtesting with profiler on binance_BTCUSDT_1m data file",
+            "name": "Start backtesting with profiler on binance_BTCUSDT_1d data file",
             "type": "python",
             "request": "launch",
             "env": {
@@ -139,11 +139,11 @@
             "args": [
                 "-o",
                 "${workspaceFolder}/profiler/result.prof",
-                "start.py",
+                "octobot-packages/OctoBot/start.py",
                 "--backtesting",
                 "-nl",
                 "-bf",
-                "ExchangeBotSnapshotWithHistoryCollector_binance_BTCUSDT_1m.data"
+                "ExchangeBotSnapshotWithHistoryCollector_binance_BTCUSDT_1d.data"
             ],
             "justMyCode": false
         },
