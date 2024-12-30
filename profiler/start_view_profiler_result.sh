@@ -1,3 +1,4 @@
 # install snakeviz first
-# python -m pip install snakeviz
+source ../.venv/bin/activate
+pip install snakeviz
 snakeviz result.prof
