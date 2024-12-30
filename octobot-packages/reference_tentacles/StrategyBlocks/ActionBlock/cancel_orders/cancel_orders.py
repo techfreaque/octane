@@ -42,7 +42,9 @@ class CancelOrdersAction(abstract_exit_order_block.ExitSignalsOrderBlock):
     TITLE_SHORT = TITLE
     DESCRIPTION = "This block can be used to cancel orders based on signals"
     exit_side: str
-    order_type: str
+    cancel_entry_orders: str
+    cancel_stop_loss_orders: str
+    cancel_take_profit_orders: str
 
     def init_block_settings(self) -> None:
         self.exit_side = self.user_input(
@@ -55,56 +57,67 @@ class CancelOrdersAction(abstract_exit_order_block.ExitSignalsOrderBlock):
                 CANCEL_SHORT_ORDERS,
             ],
         )
-        self.order_type = self.user_input(
-            "order_type",
-            commons_enums.UserInputTypes.MULTIPLE_OPTIONS.value,
-            title="Exit Side",
-            options=[ENTRY_ORDER, STOP_LOSS_ORDER, TAKE_PROFIT_ORDER],
-            def_val=[ENTRY_ORDER, STOP_LOSS_ORDER, TAKE_PROFIT_ORDER],
+        self.cancel_entry_orders = self.user_input(
+            "cancel_entry_orders",
+            commons_enums.UserInputTypes.BOOLEAN.value,
+            title="Cancel Entry Orders",
+            def_val=True,
+        )
+        self.cancel_stop_loss_orders = self.user_input(
+            "cancel_stop_loss_orders",
+            commons_enums.UserInputTypes.BOOLEAN.value,
+            title="Cancel Stop Loss Orders",
+            def_val=True,
+        )
+        self.cancel_take_profit_orders = self.user_input(
+            "cancel_take_profit_orders",
+            commons_enums.UserInputTypes.BOOLEAN.value,
+            title="Cancel Take Profit Orders",
+            def_val=True,
         )
 
     async def execute_block(
         self,
     ) -> None:
         if self.exit_side == CANCEL_LONG_ORDERS:
-            await self.cancel_long_orders()
+            await self._cancel_long_orders()
         else:
-            await self.cancel_short_orders()
+            await self._cancel_short_orders()
 
-    async def cancel_short_orders(self):
-        if TAKE_PROFIT_ORDER in self.order_type:
+    async def _cancel_short_orders(self):
+        if self.cancel_take_profit_orders:
             await cancelling.cancel_orders(
                 self.block_factory.ctx,
                 side=TradeOrderSide.BUY,
                 tag=f"{matrix_enums.TAKE_PROFIT}{matrix_enums.TAG_SEPERATOR}",
             )
-        if STOP_LOSS_ORDER in self.order_type:
+        if self.cancel_stop_loss_orders:
             await cancelling.cancel_orders(
                 self.block_factory.ctx,
                 side=TradeOrderSide.BUY,
                 tag=f"{matrix_enums.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}",
             )
-        if ENTRY_ORDER in self.order_type:
+        if self.cancel_entry_orders:
             await cancelling.cancel_orders(
                 self.block_factory.ctx,
                 side=TradeOrderSide.SELL,
                 tag=f"{matrix_enums.ENTRY}{matrix_enums.TAG_SEPERATOR}",
             )
 
-    async def cancel_long_orders(self):
-        if TAKE_PROFIT_ORDER in self.order_type:
+    async def _cancel_long_orders(self):
+        if self.cancel_take_profit_orders:
             await cancelling.cancel_orders(
                 self.block_factory.ctx,
                 side=TradeOrderSide.SELL,
                 tag=f"{matrix_enums.TAKE_PROFIT}{matrix_enums.TAG_SEPERATOR}",
             )
-        if STOP_LOSS_ORDER in self.order_type:
+        if self.cancel_stop_loss_orders:
             await cancelling.cancel_orders(
                 self.block_factory.ctx,
                 side=TradeOrderSide.SELL,
                 tag=f"{matrix_enums.STOP_LOSS}{matrix_enums.TAG_SEPERATOR}",
             )
-        if ENTRY_ORDER in self.order_type:
+        if self.cancel_entry_orders:
             await cancelling.cancel_orders(
                 self.block_factory.ctx,
                 side=TradeOrderSide.BUY,
