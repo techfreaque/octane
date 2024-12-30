@@ -18,4 +18,4 @@
 # or you want your own custom solution,
 # please contact me at max@a42.ch
 
-from .time_signals import DcaEvaluator
+from .time_signals import TimeSignalsEvaluator
