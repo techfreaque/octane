@@ -288,7 +288,7 @@ class TimeSignalsEvaluator(abstract_evaluator_block.EvaluatorBlock):
                 )
             )
         await self.store_evaluator_signals(
-            title=f"DCA buy signal ({self.interval_value} {self.interval_type})",
+            title=f"DCA buy signal (d:{self.day or 'every'} h:{self.hour or 'every'} m:{self.minute or 'every'} w:{self.week or 'every'} m:{self.month or 'every'})",
             signals=signals,
             signal_values=values,
             chart_location=commons_enums.PlotCharts.MAIN_CHART.value,
