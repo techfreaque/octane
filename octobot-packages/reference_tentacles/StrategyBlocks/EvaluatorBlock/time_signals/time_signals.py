@@ -37,13 +37,13 @@ class TimeSignalsEvaluator(abstract_evaluator_block.EvaluatorBlock):
     def init_block_settings(self) -> None:
         self.interval_type = self.user_input(
             "Interval type",
-            "options",
+            commons_enums.UserInputTypes.OPTIONS,
             "hours",
             options=["hours", "days", "weeks", "months"],
         )
         self.interval_value = int(self.user_input(
             "Interval value",
-            "number",
+            commons_enums.UserInputTypes.INT,
             "1",
         ))
 
