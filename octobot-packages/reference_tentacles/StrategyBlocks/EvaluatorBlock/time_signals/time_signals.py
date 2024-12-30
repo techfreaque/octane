@@ -18,6 +18,7 @@
 # or you want your own custom solution,
 # please contact me at max@a42.ch
 import datetime
+from dateutil.relativedelta import relativedelta
 import typing
 import octobot_commons.enums as commons_enums
 
@@ -31,21 +32,241 @@ class TimeSignalsEvaluator(abstract_evaluator_block.EvaluatorBlock):
     TITLE = "Time based signals"
     TITLE_SHORT = "Time based signals"
     DESCRIPTION = "Get signals based on time"
-    interval_type: typing.Optional[str]
-    interval_value: typing.Optional[int]
+    day: typing.Optional[str]
+    hour: typing.Optional[str]
+    minute: typing.Optional[str]
+    week: typing.Optional[str]
+    month: typing.Optional[str]
 
     def init_block_settings(self) -> None:
-        self.interval_type = self.user_input(
-            "Interval type",
-            commons_enums.UserInputTypes.OPTIONS,
-            "hours",
-            options=["hours", "days", "weeks", "months"],
+        self.month = self.user_input(
+            "signals on month of the year",
+            "options",
+            "every",
+            options=[
+                "every",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "10",
+                "11",
+                "12",
+                "13",
+                "14",
+                "15",
+                "16",
+                "17",
+                "18",
+                "19",
+                "20",
+                "21",
+                "22",
+                "23",
+                "24",
+                "25",
+                "26",
+                "27",
+                "28",
+                "29",
+                "30",
+                "31",
+            ],
         )
-        self.interval_value = int(self.user_input(
-            "Interval value",
-            commons_enums.UserInputTypes.INT,
-            "1",
-        ))
+        if self.month == "every":
+            self.month = None
+        self.week = self.user_input(
+            "signals on week",
+            "options",
+            "every",
+            options=[
+                "every",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "10",
+                "11",
+                "12",
+                "13",
+                "14",
+                "15",
+                "16",
+                "17",
+                "18",
+                "19",
+                "20",
+                "21",
+                "22",
+                "23",
+                "24",
+                "25",
+                "26",
+                "27",
+                "28",
+                "29",
+                "30",
+                "31",
+            ],
+        )
+        if self.week == "every":
+            self.week = None
+        self.day = self.user_input(
+            "signals on day of the month",
+            "options",
+            "every",
+            options=[
+                "every",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "10",
+                "11",
+                "12",
+                "13",
+                "14",
+                "15",
+                "16",
+                "17",
+                "18",
+                "19",
+                "20",
+                "21",
+                "22",
+                "23",
+                "24",
+                "25",
+                "26",
+                "27",
+                "28",
+                "29",
+                "30",
+                "31",
+            ],
+        )
+        if self.day == "every":
+            self.day = None
+        self.hour = self.user_input(
+            "signals on hour",
+            "options",
+            "0",
+            options=[
+                "every",
+                "0",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "10",
+                "11",
+                "12",
+                "13",
+                "14",
+                "15",
+                "16",
+                "17",
+                "18",
+                "19",
+                "20",
+                "21",
+                "22",
+                "23",
+            ],
+        )
+        if self.hour == "every":
+            self.hour = None
+
+        self.minute = self.user_input(
+            "signals on minute",
+            "options",
+            "0",
+            options=[
+                "every",
+                "0",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "10",
+                "11",
+                "12",
+                "13",
+                "14",
+                "15",
+                "16",
+                "17",
+                "18",
+                "19",
+                "20",
+                "21",
+                "22",
+                "23",
+                "24",
+                "25",
+                "26",
+                "27",
+                "28",
+                "29",
+                "30",
+                "31",
+                "32",
+                "33",
+                "34",
+                "35",
+                "36",
+                "37",
+                "38",
+                "39",
+                "40",
+                "41",
+                "42",
+                "43",
+                "44",
+                "45",
+                "46",
+                "47",
+                "48",
+                "49",
+                "50",
+                "51",
+                "52",
+                "53",
+                "54",
+                "55",
+                "56",
+                "57",
+                "58",
+                "59",
+            ],
+        )
+        if self.minute == "every":
+            self.minute = None
 
         self.register_evaluator_data_output(
             title="DCA Signals",
@@ -62,7 +283,9 @@ class TimeSignalsEvaluator(abstract_evaluator_block.EvaluatorBlock):
         signals = []
         for timestamp in times:
             signals.append(
-                get_buy_signal_from_time(timestamp, self.interval_type, self.interval_value)
+                get_buy_signal_from_time(
+                    timestamp, self.day, self.hour, self.minute, self.week, self.month
+                )
             )
         await self.store_evaluator_signals(
             title=f"DCA buy signal ({self.interval_value} {self.interval_type})",
@@ -72,17 +295,27 @@ class TimeSignalsEvaluator(abstract_evaluator_block.EvaluatorBlock):
         )
 
 
-def get_buy_signal_from_time(current_time, interval_type, interval_value):
+def get_buy_signal_from_time(
+    current_time, day=None, hour=None, minute=None, week=None, month=None
+):
     current_datetime = datetime.datetime.fromtimestamp(current_time)
-    if interval_type == "hours":
-        next_signal_time = current_datetime + datetime.timedelta(hours=interval_value)
-    elif interval_type == "days":
-        next_signal_time = current_datetime + datetime.timedelta(days=interval_value)
-    elif interval_type == "weeks":
-        next_signal_time = current_datetime + datetime.timedelta(weeks=interval_value)
-    elif interval_type == "months":
-        next_signal_time = current_datetime + datetime.timedelta(days=30 * interval_value)  # Approximation
-    else:
-        return False
+    time_to_buy = current_datetime
 
-    return current_datetime >= next_signal_time
+    if month:
+        time_to_buy = time_to_buy.replace(
+            month=int(month), day=1, hour=0, minute=0, second=0, microsecond=0
+        )
+    if week:
+        time_to_buy = time_to_buy + relativedelta(weeks=int(week))
+    if day:
+        time_to_buy = time_to_buy.replace(
+            day=int(day), hour=0, minute=0, second=0, microsecond=0
+        )
+    if hour:
+        time_to_buy = time_to_buy.replace(
+            hour=int(hour), minute=0, second=0, microsecond=0
+        )
+    if minute:
+        time_to_buy = time_to_buy.replace(minute=int(minute), second=0, microsecond=0)
+
+    return current_datetime == time_to_buy
