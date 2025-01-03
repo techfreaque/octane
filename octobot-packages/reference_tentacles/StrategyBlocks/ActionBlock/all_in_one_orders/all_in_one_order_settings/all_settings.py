@@ -47,7 +47,7 @@ class ManagedOrdersSettings:
         self.leverage: int = None
 
         self.order_groups: typing.Dict[
-            order_settings_group.ManagedOrderSettingsOrderGroup
+            str, order_settings_group.ManagedOrderSettingsOrderGroup
         ] = {}
         self.managed_order_id: int = None
 

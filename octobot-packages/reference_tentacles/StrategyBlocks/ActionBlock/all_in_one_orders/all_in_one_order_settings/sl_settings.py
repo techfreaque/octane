@@ -20,43 +20,9 @@
 
 import decimal
 import octobot_commons.enums as commons_enums
-
-
-class ManagedOrderSettingsSLTypes:
-    NO_SL = "no_sl"
-    BASED_ON_LOW_HIGH = "based_on_low_high"
-    BASED_ON_PERCENT_ENTRY = "based_on_percent"
-    BASED_ON_PERCENT_PRICE = "based_on_percent_price"
-    BASED_ON_STATIC_PRICE = "based_on_static_price"
-    BASED_ON_ATR = "based_on_atr"
-    BASED_ON_INDICATOR = "based_on_indicator"
-
-    NO_SL_DESCRIPTION = "no SL"
-    AT_LOW_HIGH_DESCRIPTION = "SL at the low/high"
-    BASED_ON_PERCENT_ENTRY_DESCRIPTION = "SL based on % from the filled entry price"
-    BASED_ON_PERCENT_PRICE_DESCRIPTION = "SL based on % from the current price"
-    BASED_ON_STATIC_PRICE_DESCRIPTION = "SL based on static_price"
-    BASED_ON_ATR_DESCRIPTION = "Sl based on ATR"
-    BASED_ON_INDICATOR_DESCRIPTION = "SL based on indicator"
-
-    KEY_TO_DESCRIPTIONS = {
-        NO_SL: NO_SL_DESCRIPTION,
-        BASED_ON_LOW_HIGH: AT_LOW_HIGH_DESCRIPTION,
-        BASED_ON_PERCENT_ENTRY: BASED_ON_PERCENT_ENTRY_DESCRIPTION,
-        BASED_ON_PERCENT_PRICE: BASED_ON_PERCENT_PRICE_DESCRIPTION,
-        BASED_ON_STATIC_PRICE: BASED_ON_STATIC_PRICE_DESCRIPTION,
-        BASED_ON_ATR: BASED_ON_ATR_DESCRIPTION,
-        # BASED_ON_INDICATOR: BASED_ON_INDICATOR_DESCRIPTION,
-    }
-    DESCRIPTIONS = [
-        NO_SL_DESCRIPTION,
-        AT_LOW_HIGH_DESCRIPTION,
-        BASED_ON_PERCENT_ENTRY_DESCRIPTION,
-        BASED_ON_PERCENT_PRICE_DESCRIPTION,
-        BASED_ON_STATIC_PRICE_DESCRIPTION,
-        BASED_ON_ATR_DESCRIPTION,
-        BASED_ON_INDICATOR_DESCRIPTION,
-    ]
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.settings.sl_settings import (
+    ManagedOrderSettingsSLTypes,
+)
 
 
 class ManagedOrderSettingsSLTrailTypes:

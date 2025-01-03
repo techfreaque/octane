@@ -27,7 +27,6 @@ import tentacles.Meta.Keywords.scripting_library.data.reading.exchange_public_da
 
 class ManagedOrdersSettings:
     def __init__(self):
-        super().__init__()
         self.maker = None
 
         self.initialized: bool = False
@@ -47,7 +46,7 @@ class ManagedOrdersSettings:
         self.leverage: int = None
 
         self.order_groups: typing.Dict[
-            order_settings_group.ManagedOrderSettingsOrderGroup
+            str, order_settings_group.ManagedOrderSettingsOrderGroup
         ] = {}
         self.managed_order_id: int = None
 

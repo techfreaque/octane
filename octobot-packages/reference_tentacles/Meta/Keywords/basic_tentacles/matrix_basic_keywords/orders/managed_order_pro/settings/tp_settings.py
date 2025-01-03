@@ -27,6 +27,7 @@ import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.mana
 # import tentacles.Meta.Keywords.pro_tentacles.standalone_data_source.standalone_data_sources as standalone_data_sources
 
 
+
 class ManagedOrderSettingsTPTypes:
     NO_TP = "no_tp"
     SINGLE_RISK_REWARD = "SINGLE_RISK_REWARD"

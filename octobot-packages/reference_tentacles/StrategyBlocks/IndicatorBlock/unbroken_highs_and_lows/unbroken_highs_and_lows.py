@@ -18,21 +18,22 @@
 # or you want your own custom solution,
 # please contact me at max@a42.ch
 
-from octobot_commons.enums import UserInputEditorOptionsTypes
+from octobot_commons.enums import UserInputEditorOptionsTypes, UserInputTypes
 import tentacles.Meta.Keywords.block_factory.block_factory_enums as block_factory_enums
 import tentacles.Meta.Keywords.block_factory.abstract_indicator_block as abstract_indicator_block
 import tentacles.Meta.Keywords.indicator_keywords.pivots_lib.multi_pivots_lib as multi_pivots_lib
 
 
-class HighsAndLowsIndicator(abstract_indicator_block.IndicatorBlock):
-    NAME = "highs_and_lows"
-    TITLE = "Highs and lows"
-    TITLE_SHORT = "Highs and lows"
-    DESCRIPTION = (
-        "Highs and lows can be used to detect pivot highs and lows from a data source"
-    )
+class UnbrokenHighsAndLowsIndicator(abstract_indicator_block.IndicatorBlock):
+    NAME = "unbroken_highs_and_lows"
+    TITLE = "Unbroken Highs and lows"
+    TITLE_SHORT = "Unbroken Highs and lows"
+    DESCRIPTION = "Unbroken Highs and lows can be used to detect unbroken pivot highs and lows from a data source"
     candle_source: str
-    pivot_lookback: int
+    pivots_len: int
+    confirmation: int
+    min_pivot_age: int
+    max_pivot_lookback: int
     pivot_low_active: bool
     pivot_high_active: bool
 
@@ -42,14 +43,25 @@ class HighsAndLowsIndicator(abstract_indicator_block.IndicatorBlock):
         #     evaluator.pivot_lookback if hasattr(evaluator, "pivot_lookback") else None
         # ) or self.user_input("pivot lookback length", "int", 2, 1)
 
-        self.pivot_lookback = self.user_input("pivot lookback length", "int", 2, 1)
+        self.pivots_len = self.user_input(
+            "pivots_len", title="Pivots length", input_type=UserInputTypes.INT, def_val=100, min_val=1
+        )
+        self.confirmation = self.user_input(
+            "confirmation", title="Breaking confirmation time", input_type=UserInputTypes.INT, def_val=0, min_val=1
+        )
+        self.min_pivot_age = self.user_input(
+            "min_pivot_age", title="Min pivot age", input_type=UserInputTypes.INT, def_val=0, min_val=1
+        )
+        self.max_pivot_lookback = self.user_input(
+            "max_pivot_lookback", title="Max pivot lookback", input_type=UserInputTypes.INT, def_val=3000, min_val=1
+        )
 
         pivot_lows_settings_name = "pivot_low_settings"
         self.user_input(
             pivot_lows_settings_name,
             def_val=None,
             title="Pivot Lows",
-            input_type="object",
+            input_type=UserInputTypes.OBJECT,
             editor_options={
                 UserInputEditorOptionsTypes.COLLAPSED.value: True,
                 UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
@@ -62,7 +74,7 @@ class HighsAndLowsIndicator(abstract_indicator_block.IndicatorBlock):
         self.pivot_low_active = self.user_input(
             "Activate pivot lows",
             def_val=True,
-            input_type="boolean",
+            input_type=UserInputTypes.BOOLEAN,
             show_in_summary=False,
             parent_input_name_new=pivot_lows_settings_name,
         )
@@ -85,7 +97,7 @@ class HighsAndLowsIndicator(abstract_indicator_block.IndicatorBlock):
             pivot_high_settings_name,
             def_val=None,
             title="Pivot Highs",
-            input_type="object",
+            input_type=UserInputTypes.OBJECT,
             editor_options={
                 UserInputEditorOptionsTypes.COLLAPSED.value: True,
                 UserInputEditorOptionsTypes.DISABLE_COLLAPSE.value: False,
@@ -98,7 +110,7 @@ class HighsAndLowsIndicator(abstract_indicator_block.IndicatorBlock):
         self.pivot_high_active = self.user_input(
             "Activate pivot highs",
             def_val=True,
-            input_type="boolean",
+            input_type=UserInputTypes.BOOLEAN,
             show_in_summary=False,
             parent_input_name_new=pivot_high_settings_name,
         )
@@ -121,39 +133,73 @@ class HighsAndLowsIndicator(abstract_indicator_block.IndicatorBlock):
     ) -> None:
         if self.pivot_low_active:
             (
-                low_data_source_values,
+                lows_data,
+                lows_conditions,
+                lows_additional_payload_data,
                 chart_location,
-                low_data_source_title,
-            ) = await self.get_input_node_data()
-            pivot_low_data = multi_pivots_lib.pivot_lows(
-                low_data_source_values, swing_history=self.pivot_lookback
+                pivots_title_lows,
+            ) = await self.get_input_node_data(get_additional_node_data=True)
+            pivot_lookback = lows_additional_payload_data.get("pivot_lookback")
+            if not pivot_lookback:
+                raise Exception(
+                    "Pivot lookback not found , make sure highs and lows indicator is connected"
+                )
+            (
+                history_pivot_lows_data,
+                history_pivot_price_list,
+            ) = multi_pivots_lib.unbroken_pivot_lows(
+                lows_conditions,
+                lows_additional_payload_data["low_data_source_values"],
+                pivots_len=self.pivots_len,
+                confirmation=self.confirmation,
+                min_pivot_age=self.min_pivot_age,
+                max_pivot_lookback=self.max_pivot_lookback,
+                pivot_lookback=pivot_lookback,
             )
             await self.store_indicator_data(
-                title=f"{low_data_source_title} pivot low (lb {self.pivot_lookback})",
-                data=low_data_source_values[: -self.pivot_lookback],
-                data_display_conditions=pivot_low_data,
+                title=f"Unbroken  {pivots_title_lows}",
+                data=history_pivot_price_list,
                 additional_payload_data={
-                    "low_data_source_values": low_data_source_values,
-                    "pivot_lookback": self.pivot_lookback,
+                    "low_data_source_values": lows_additional_payload_data[
+                        "low_data_source_values"
+                    ]
                 },
                 chart_location=chart_location,
+                mode="markers",
             )
         if self.pivot_high_active:
             (
-                high_data_source_values,
-                chart_location,
-                high_data_source_title,
-            ) = await self.get_input_node_data()
-            pivot_high_data = multi_pivots_lib.pivot_highs(
-                high_data_source_values, swing_history=self.pivot_lookback
+                highs_data,
+                highs_conditions,
+                highs_additional_payload_data,
+                _,
+                pivots_title_highs,
+            ) = await self.get_input_node_data(get_additional_node_data=True)
+            pivot_lookback = highs_additional_payload_data.get("pivot_lookback")
+            if not pivot_lookback:
+                raise Exception(
+                    "Pivot lookback not found , make sure highs and lows indicator is connected"
+                )
+            (
+                history_pivot_highs_data,
+                history_pivot_price_list,
+            ) = multi_pivots_lib.unbroken_pivot_highs(
+                highs_conditions,
+                highs_additional_payload_data["high_data_source_values"],
+                pivots_len=self.pivots_len,
+                confirmation=self.confirmation,
+                min_pivot_age=self.min_pivot_age,
+                max_pivot_lookback=self.max_pivot_lookback,
+                pivot_lookback=pivot_lookback,
             )
             await self.store_indicator_data(
-                title=f"{high_data_source_title} pivot high (lb {self.pivot_lookback})",
-                data=high_data_source_values[: -self.pivot_lookback],
+                title=f"Unbroken {pivots_title_highs}",
+                data=history_pivot_price_list,
                 additional_payload_data={
-                    "high_data_source_values": high_data_source_values,
-                    "pivot_lookback": self.pivot_lookback,
+                    "high_data_source_values": highs_additional_payload_data[
+                        "high_data_source_values"
+                    ]
                 },
-                data_display_conditions=pivot_high_data,
                 chart_location=chart_location,
+                mode="markers",
             )

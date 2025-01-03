@@ -31,15 +31,20 @@ from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.expire
     cancel_expired_orders_for_this_candle,
 )
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.activate_managed_order as activate_managed_order
+
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.settings.entry_types import ManagedOrderSettingsEntryTypes
 from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.tools.utilities import (
     cut_data_to_same_len,
 )
 import tentacles.Meta.Keywords.block_factory as _block_factory
 import typing
 import tentacles.Meta.Keywords.block_factory.abstract_entry_order_block as abstract_entry_order_block
-from tentacles.StrategyBlocks.ActionBlock.all_in_one_orders.all_in_one_order_settings import (
-    all_settings,
-    order_settings_group,
+
+from tentacles.StrategyBlocks.ActionBlock.all_in_one_orders.all_in_one_order_settings.all_settings import (
+    ManagedOrdersSettings,
+)
+from tentacles.StrategyBlocks.ActionBlock.all_in_one_orders.all_in_one_order_settings.order_settings_group import (
+    ManagedOrderSettingsOrderGroup,
 )
 from tentacles.StrategyBlocks.ActionBlock.all_in_one_orders.all_in_one_order_settings.sl_settings import (
     ManagedOrderSettingsSLTypes,
@@ -72,9 +77,7 @@ class AllInOneOrders(abstract_entry_order_block.EntryOrderBlock):
             "config_mode_node"
         ].get("enable_ping_pong")
         try:
-            self.managed_order_settings: all_settings.ManagedOrdersSettings = (
-                all_settings.ManagedOrdersSettings()
-            )
+            self.managed_order_settings: ManagedOrdersSettings = ManagedOrdersSettings()
             self.managed_order_settings.initialize(
                 order_block=self,
                 parent_user_input_name=parent_input_name,
@@ -98,6 +101,7 @@ class AllInOneOrders(abstract_entry_order_block.EntryOrderBlock):
         await self.load_indicators()
 
     async def load_indicators(self):
+        times = None
         for order_group in self.managed_order_settings.order_groups.values():
             if (
                 order_group.stop_loss.sl_type
@@ -108,7 +112,9 @@ class AllInOneOrders(abstract_entry_order_block.EntryOrderBlock):
                     _,
                     _,
                 ) = await self.get_input_node_data()
-                times = await self.get_candles(matrix_enums.PriceDataSources.TIME.value)
+                times = times or await self.get_candles(
+                    matrix_enums.PriceDataSources.TIME.value
+                )
                 cutted_times, cutted_data_source_values = cut_data_to_same_len(
                     (times, data_source_values)
                 )
@@ -124,13 +130,45 @@ class AllInOneOrders(abstract_entry_order_block.EntryOrderBlock):
                     _,
                     _,
                 ) = await self.get_input_node_data()
-                times = await self.get_candles(matrix_enums.PriceDataSources.TIME.value)
+                times = times or await self.get_candles(
+                    matrix_enums.PriceDataSources.TIME.value
+                )
                 cutted_times, cutted_data_source_values = cut_data_to_same_len(
                     (times, data_source_values)
                 )
                 cutted_int_times = numpy.array(cutted_times).astype(int)
                 order_group.take_profit.indicator_times = cutted_int_times
                 order_group.take_profit.indicator_values = cutted_data_source_values
+            if (
+                order_group.entry.entry_type
+                == ManagedOrderSettingsEntryTypes.SCALED_INDICATOR_DESCRIPTION
+            ):
+                for grid in order_group.entry.entry_grids.values():
+                    (
+                        data_source_values,
+                        _,
+                        _,
+                    ) = await self.get_input_node_data()
+                    times = times or await self.get_candles(
+                        matrix_enums.PriceDataSources.TIME.value
+                    )
+                    cutted_times, cutted_data_source_values = cut_data_to_same_len(
+                        (times, data_source_values)
+                    )
+                    cutted_int_times = numpy.array(cutted_times).astype(int)
+                    grid.from_indicator_times = cutted_int_times
+                    grid.from_indicator_values = cutted_data_source_values
+                    (
+                        data_source_values,
+                        _,
+                        _,
+                    ) = await self.get_input_node_data()
+                    cutted_times, cutted_data_source_values = cut_data_to_same_len(
+                        (times, data_source_values)
+                    )
+                    cutted_int_times = numpy.array(cutted_times).astype(int)
+                    grid.to_indicator_times = cutted_int_times
+                    grid.to_indicator_values = cutted_data_source_values
 
     def get_indicator_value(self, order_group_sl_or_tp):
         try:
@@ -162,7 +200,7 @@ class AllInOneOrders(abstract_entry_order_block.EntryOrderBlock):
         triggering_block: typing.Optional[_block_factory.AbstractBlock] = None,
     ):
         for order_group in self.managed_order_settings.order_groups.values():
-            order_group: order_settings_group.ManagedOrderSettingsOrderGroup
+            order_group: ManagedOrderSettingsOrderGroup
             if order_group.entry.enable_expired_limit_cancel:
                 await cancel_expired_orders_for_this_candle(
                     block_factory.ctx,

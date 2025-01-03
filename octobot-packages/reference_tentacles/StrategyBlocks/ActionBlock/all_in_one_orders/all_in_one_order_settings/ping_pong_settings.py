@@ -20,28 +20,12 @@
 
 import octobot_commons.enums as commons_enums
 
-from tentacles.StrategyBlocks.ActionBlock.all_in_one_orders.all_in_one_order_settings import (
-    entry_types,
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.settings.entry_types import (
+    ManagedOrderSettingsEntryTypes,
 )
-
-
-class ManagedOrderSettingsPingPongTypes:
-    SIMPLE_PING_PONG = "simple_ping_pong"
-    SIMPLE_PING_PONG_DESCRIPTION = (
-        "Recreate entry orders when take profits get filled "
-        "and repeat the process until the order gets canceled"
-    )
-    NO_PING_PONG = "no_ping_pong"
-    NO_PING_PONG_DESCRIPTION = "dont use ping pong mode"
-
-    KEY_TO_DESCRIPTIONS = {
-        SIMPLE_PING_PONG: SIMPLE_PING_PONG_DESCRIPTION,
-        NO_PING_PONG: NO_PING_PONG_DESCRIPTION,
-    }
-    DESCRIPTIONS = [
-        SIMPLE_PING_PONG_DESCRIPTION,
-        NO_PING_PONG_DESCRIPTION,
-    ]
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.settings.ping_pong_settings import (
+    ManagedOrderSettingsPingPongTypes,
+)
 
 
 class ManagedOrderSettingsPingPong:
@@ -58,14 +42,15 @@ class ManagedOrderSettingsPingPong:
         managed_order_group_id: int,
     ):
         if entry_type in (
-            entry_types.ManagedOrderSettingsEntryTypes.SCALED_DYNAMIC_DESCRIPTION,
-            entry_types.ManagedOrderSettingsEntryTypes.SCALED_STATIC_DESCRIPTION,
+            ManagedOrderSettingsEntryTypes.SCALED_DYNAMIC_DESCRIPTION,
+            ManagedOrderSettingsEntryTypes.SCALED_INDICATOR_DESCRIPTION,
+            ManagedOrderSettingsEntryTypes.SCALED_STATIC_DESCRIPTION,
         ):
             ping_pong_name_prefix = f"{managed_order_group_id}"
             _ping_pong_settings_name = "ping_pong_settings"
             ping_pong_settings_name = (
-            f"{_ping_pong_settings_name}_{managed_order_group_id}"
-        )
+                f"{_ping_pong_settings_name}_{managed_order_group_id}"
+            )
             order_block.user_input(
                 _ping_pong_settings_name,
                 "object",
