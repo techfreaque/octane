@@ -1,0 +1,11 @@
+{
+  "version": "0.9.51",
+  "origin_package": "Octane-Default-Tentacles",
+  "tentacles": [
+    "unborken_highs_and_lows"
+  ],
+  "tentacles-requirements": [
+    "block_factory",
+    "indicator_keywords"
+  ]
+}

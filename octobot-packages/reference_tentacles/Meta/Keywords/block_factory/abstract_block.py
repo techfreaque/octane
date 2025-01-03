@@ -73,11 +73,12 @@ class AbstractBlock:
         max_val=None,
         title: str = None,
         options: list = None,
-        show_in_summary=True,
-        show_in_optimizer=True,
+        show_in_summary: bool = True,
+        show_in_optimizer: bool = True,
         item_title: str = None,
         order=None,
-        parent_input_name=None,
+        parent_input_name: str | None = None,
+        parent_input_name_new: str | None = None,
         grid_columns: int = 12,
         description: str = None,
         other_schema_values: dict = {},
@@ -93,21 +94,32 @@ class AbstractBlock:
     ):
         _editor_options = {**editor_options}
         if grid_columns:
-            _editor_options[enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value] = (
-                grid_columns
-            )
+            _editor_options[
+                enums.UserInputEditorOptionsTypes.GRID_COLUMNS.value
+            ] = grid_columns
 
         _other_schema_values = {**other_schema_values}
         if description:
             _other_schema_values[
                 enums.UserInputOtherSchemaValuesTypes.DESCRIPTION.value
             ] = description
+
+        _parent_input_name: str
+        if parent_input_name_new:
+            _parent_input_name = (
+                f"{parent_input_name_new}_{self.node_parent_input}".replace(" ", "_")
+            )
+        elif parent_input_name:
+            _parent_input_name = parent_input_name
+        else:
+            _parent_input_name = self.node_parent_input
+
         return self.UI.user_input(
             name=f"{name}_{self.node_parent_input}".replace(" ", "_"),
             input_type=enums.UserInputTypes(input_type),
             def_val=def_val,
             registered_inputs=self.inputs,
-            parent_input_name=parent_input_name or self.node_parent_input,
+            parent_input_name=_parent_input_name,
             value=value,
             min_val=min_val,
             max_val=max_val,
@@ -373,6 +385,7 @@ class AbstractBlock:
         default_color=block_factory_enums.Colors.BLUE,
         name: typing.Optional[str] = None,
         parent_input_name: typing.Optional[str] = None,
+        parent_input_name_new: typing.Optional[str] = None,
     ):
         return block_factory_enums.Colors(
             self.user_input(
@@ -384,6 +397,7 @@ class AbstractBlock:
                 show_in_summary=False,
                 show_in_optimizer=False,
                 parent_input_name=parent_input_name,
+                parent_input_name_new=parent_input_name_new,
             )
         )
 
@@ -393,6 +407,7 @@ class AbstractBlock:
         name: typing.Optional[str] = None,
         default_chart_location: str = enums.PlotCharts.MAIN_CHART.value,
         parent_input_name: typing.Optional[str] = None,
+        parent_input_name_new: typing.Optional[str] = None,
     ):
         return self.user_input(
             name if name else title.replace(" ", "_"),
@@ -409,6 +424,7 @@ class AbstractBlock:
             show_in_summary=False,
             show_in_optimizer=False,
             parent_input_name=parent_input_name,
+            parent_input_name_new=parent_input_name_new,
         )
 
     def user_select_candle_source_name(
@@ -537,7 +553,7 @@ class AbstractBlock:
             def_val=True,
             show_in_summary=False,
             show_in_optimizer=False,
-            parent_input_name=parent_input_name,
+            parent_input_name_new=parent_input_name,
         )
         chart_location: str = None
         plot_color: str = None
@@ -545,14 +561,14 @@ class AbstractBlock:
             plot_color = self.user_select_color(
                 default_color=default_plot_color,
                 title=plot_color_title,
-                parent_input_name=parent_input_name,
+                parent_input_name_new=parent_input_name,
             )
             if chart_location_title:
                 chart_location = self.user_select_chart_location(
                     default_chart_location=default_chart_location,
                     title=chart_location_title,
                     name=f"chart_{self.NAME}_{self.last_io_node_id}",
-                    parent_input_name=parent_input_name,
+                    parent_input_name_new=parent_input_name,
                 )
         else:
             chart_location = default_chart_location
@@ -617,6 +633,7 @@ class AbstractBlock:
         default_chart_location: typing.Optional[
             str
         ] = enums.PlotCharts.MAIN_CHART.value,
+        parent_input_name: typing.Optional[str] = None,
     ):
         self.register_data_output(
             title,
@@ -627,6 +644,7 @@ class AbstractBlock:
             default_plot_color=default_plot_color,
             default_chart_location=default_chart_location,
             chart_location_title=chart_location_title,
+            parent_input_name=parent_input_name,
         )
 
     async def store_indicator_data(

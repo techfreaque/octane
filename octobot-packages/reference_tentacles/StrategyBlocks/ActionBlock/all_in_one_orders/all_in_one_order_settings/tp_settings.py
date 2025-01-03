@@ -20,51 +20,10 @@
 
 import decimal
 import octobot_commons.enums as commons_enums
-from tentacles.StrategyBlocks.ActionBlock.all_in_one_orders.all_in_one_order_settings import (
-    entry_types,
-    sl_settings,
-)
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.settings.entry_types import ManagedOrderSettingsEntryTypes
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.settings.sl_settings import ManagedOrderSettingsSLTypes
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.settings.tp_settings import ManagedOrderSettingsTPTypes
 
-
-class ManagedOrderSettingsTPTypes:
-    NO_TP = "no_tp"
-    SINGLE_RISK_REWARD = "SINGLE_RISK_REWARD"
-    SINGLE_PERCENT = "SINGLE_PERCENT"
-    SINGLE_STATIC = "SINGLE_STATIC"
-    SINGLE_INDICATOR = "SINGLE_INDICATOR"
-    SCALED_RISK_REWARD = "SCALED_RISK_REWARD"
-    SCALED_PERCENT = "SCALED_PERCENT"
-    SCALED_STATIC = "SCALED_STATIC"
-
-    NO_TP_DESCRIPTION = "dont use managed Take Profit"
-    SINGLE_RISK_REWARD_DESCRIPTION = "take profit based on risk reward"
-    SINGLE_PERCENT_DESCRIPTION = "take profit based on fixed percent from entry"
-    SINGLE_STATIC_DESCRIPTION = "take profit based on static price"
-    SINGLE_INDICATOR_DESCRIPTION = "take profit based on indicator"
-    SCALED_RISK_REWARD_DESCRIPTION = "scaled take profit based on risk reward"
-    SCALED_PERCENT_DESCRIPTION = "scaled take profit based on percent"
-    SCALED_STATIC_DESCRIPTION = "spread limit exits based on a dynamic or static range"
-
-    KEY_TO_DESCRIPTIONS = {
-        NO_TP: NO_TP_DESCRIPTION,
-        SINGLE_RISK_REWARD: SINGLE_RISK_REWARD_DESCRIPTION,
-        SINGLE_PERCENT: SINGLE_PERCENT_DESCRIPTION,
-        SINGLE_STATIC: SINGLE_STATIC_DESCRIPTION,
-        SINGLE_INDICATOR: SINGLE_INDICATOR_DESCRIPTION,
-        SCALED_RISK_REWARD: SCALED_RISK_REWARD_DESCRIPTION,
-        SCALED_PERCENT: SCALED_PERCENT_DESCRIPTION,
-        SCALED_STATIC: SCALED_STATIC_DESCRIPTION,
-    }
-    DESCRIPTIONS = [
-        NO_TP_DESCRIPTION,
-        SINGLE_RISK_REWARD_DESCRIPTION,
-        SINGLE_PERCENT_DESCRIPTION,
-        SINGLE_STATIC_DESCRIPTION,
-        SINGLE_INDICATOR_DESCRIPTION
-        # SCALED_RISK_REWARD_DESCRIPTION,
-        # SCALED_PERCENT_DESCRIPTION,
-        # SCALED_STATIC_DESCRIPTION,
-    ]
 
 
 class ManagedOrderSettingsTP:
@@ -100,7 +59,7 @@ class ManagedOrderSettingsTP:
         enable_take_profit_settings: bool = True,
     ):
         if not enable_take_profit_settings:
-            self.tp_type = sl_settings.ManagedOrderSettingsSLTypes.NO_SL_DESCRIPTION
+            self.tp_type = ManagedOrderSettingsSLTypes.NO_SL_DESCRIPTION
             return
         _tp_setting_name = "tp_settings"
         tp_setting_name = f"{_tp_setting_name}_{managed_order_group_id}"
@@ -133,13 +92,13 @@ class ManagedOrderSettingsTP:
         #     show_in_optimizer=False,
         #     show_in_summary=False,
         # )
-        if sl_type == sl_settings.ManagedOrderSettingsSLTypes.NO_SL_DESCRIPTION:
+        if sl_type == ManagedOrderSettingsSLTypes.NO_SL_DESCRIPTION:
             # self.use_bundled_tp_orders = False
             tp_type_def_val = ManagedOrderSettingsTPTypes.SINGLE_PERCENT_DESCRIPTION
             if self.use_bundled_tp_orders:
                 if entry_type in (
-                    entry_types.ManagedOrderSettingsEntryTypes.SINGLE_LIMIT_IN_DESCRIPTION,
-                    entry_types.ManagedOrderSettingsEntryTypes.SINGLE_MARKET_IN_DESCRIPTION,
+                    ManagedOrderSettingsEntryTypes.SINGLE_LIMIT_IN_DESCRIPTION,
+                    ManagedOrderSettingsEntryTypes.SINGLE_MARKET_IN_DESCRIPTION,
                 ):
                     tp_type_optinions = [
                         ManagedOrderSettingsTPTypes.NO_TP_DESCRIPTION,
@@ -167,8 +126,8 @@ class ManagedOrderSettingsTP:
             tp_type_def_val = ManagedOrderSettingsTPTypes.SINGLE_RISK_REWARD_DESCRIPTION
             if self.use_bundled_tp_orders:
                 if entry_type in (
-                    entry_types.ManagedOrderSettingsEntryTypes.SINGLE_LIMIT_IN_DESCRIPTION,
-                    entry_types.ManagedOrderSettingsEntryTypes.SINGLE_MARKET_IN_DESCRIPTION,
+                    ManagedOrderSettingsEntryTypes.SINGLE_LIMIT_IN_DESCRIPTION,
+                    ManagedOrderSettingsEntryTypes.SINGLE_MARKET_IN_DESCRIPTION,
                 ):
                     tp_type_optinions = [
                         ManagedOrderSettingsTPTypes.NO_TP_DESCRIPTION,
@@ -187,8 +146,8 @@ class ManagedOrderSettingsTP:
                     ]
             else:
                 if entry_type in (
-                    entry_types.ManagedOrderSettingsEntryTypes.SINGLE_LIMIT_IN_DESCRIPTION,
-                    entry_types.ManagedOrderSettingsEntryTypes.SINGLE_MARKET_IN_DESCRIPTION,
+                    ManagedOrderSettingsEntryTypes.SINGLE_LIMIT_IN_DESCRIPTION,
+                    ManagedOrderSettingsEntryTypes.SINGLE_MARKET_IN_DESCRIPTION,
                 ):
                     tp_type_optinions = [
                         ManagedOrderSettingsTPTypes.NO_TP_DESCRIPTION,

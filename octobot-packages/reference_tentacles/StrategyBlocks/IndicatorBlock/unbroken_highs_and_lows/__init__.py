@@ -18,10 +18,4 @@
 # or you want your own custom solution,
 # please contact me at max@a42.ch
 
-from .ping_pong_settings import *
-from .order_settings_group import *
-from .entry_settings import *
-from .all_settings import *
-from .sl_settings import *
-from .position_size_settings import *
-from .tp_settings import *
+from .unbroken_highs_and_lows import UnbrokenHighsAndLowsIndicator

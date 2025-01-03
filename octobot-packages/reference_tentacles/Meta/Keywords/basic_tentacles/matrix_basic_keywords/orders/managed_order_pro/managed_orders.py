@@ -50,16 +50,15 @@ class ManagedOrder:
         self.trading_side = trading_side
         success = False
         for group_orders_settings in self.managed_orders_settings.order_groups.values():
-            managed_group = order_placement.ManagedOrderPlacement()
+            managed_group = order_placement.ManagedOrderPlacement(
+                trading_side, self.managed_orders_settings, group_orders_settings
+            )
             self.executed_groups.append(managed_group)
             # create entry and exit orders orders if possible
             try:
                 await managed_group.place_managed_entry_and_exits(
                     maker=maker,
                     order_block=order_block,
-                    trading_side=self.trading_side,
-                    group_orders_settings=group_orders_settings,
-                    managed_orders_settings=self.managed_orders_settings,
                     forced_amount=forced_amount,
                     order_preview_mode=order_preview_mode,
                 )

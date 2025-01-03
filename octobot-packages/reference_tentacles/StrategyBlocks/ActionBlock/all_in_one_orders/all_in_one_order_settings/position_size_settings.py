@@ -21,41 +21,8 @@
 import decimal
 import octobot_commons.enums as commons_enums
 
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.settings.position_size_settings import ManagedOrderSettingsPositionSizeTypes
 import tentacles.StrategyBlocks.ActionBlock.all_in_one_orders.all_in_one_order_settings.sl_settings as sl_settings
-
-
-class ManagedOrderSettingsPositionSizeTypes:
-    QUANTITY_RISK_OF_ACCOUNT = "quantity_risk_of_account"
-    PERCENT_RISK_OF_ACCOUNT = "percent_risk_of_account"
-    PERCENT_OF_ACCOUNT = "percent_of_account"
-    PERCENT_OF_ASSET_AMOUNT = "percent_of_asset_amount"
-    PERCENT_OF_AVAILABLE_ACCOUNT = "percent_of_available_account"
-
-    QUANTITY_RISK_OF_ACCOUNT_DESCRIPTION = (
-        "Position size based on quantity risk (for example 0.1 BTC)"
-    )
-    PERCENT_RISK_OF_ACCOUNT_DESCRIPTION = (
-        "Position size based on % risk of total account"
-    )
-    PERCENT_OF_ACCOUNT_DESCRIPTION = "Position size based on % of total account size"
-    PERCENT_OF_ASSET_AMOUNT_DESCRIPTION = "Position size based on % of asset amount"
-    PERCENT_OF_AVAILABLE_ACCOUNT_DESCRIPTION = (
-        "Position size based on % of available account size"
-    )
-    KEY_TO_DESCRIPTIONS = {
-        QUANTITY_RISK_OF_ACCOUNT: QUANTITY_RISK_OF_ACCOUNT_DESCRIPTION,
-        PERCENT_RISK_OF_ACCOUNT: PERCENT_RISK_OF_ACCOUNT_DESCRIPTION,
-        PERCENT_OF_ACCOUNT: PERCENT_OF_ACCOUNT_DESCRIPTION,
-        PERCENT_OF_ASSET_AMOUNT: PERCENT_OF_ASSET_AMOUNT_DESCRIPTION,
-        PERCENT_OF_AVAILABLE_ACCOUNT: PERCENT_OF_AVAILABLE_ACCOUNT_DESCRIPTION,
-    }
-    DESCRIPTIONS = [
-        QUANTITY_RISK_OF_ACCOUNT_DESCRIPTION,
-        PERCENT_RISK_OF_ACCOUNT_DESCRIPTION,
-        PERCENT_OF_ACCOUNT_DESCRIPTION,
-        PERCENT_OF_ASSET_AMOUNT_DESCRIPTION,
-        PERCENT_OF_AVAILABLE_ACCOUNT_DESCRIPTION,
-    ]
 
 
 class ManagedOrderSettingsPositionSize:

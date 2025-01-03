@@ -38,35 +38,12 @@ class TimeSignalsEvaluator(abstract_evaluator_block.EvaluatorBlock):
     month: typing.Optional[str]
 
     def init_block_settings(self) -> None:
-        self.month = self.user_input(
-            "signals on month of the year",
-            "options",
-            "every",
-            options=[
-                "every",
-                "1",
-                "2",
-                "3",
-                "4",
-                "5",
-                "6",
-                "7",
-                "8",
-                "9",
-                "10",
-                "11",
-                "12",
-            ],
-        )
-        if self.month == "every":
-            self.month = None
         self.day = self.user_input(
-            "signals on day of the month",
+            "signals on every n days",
             "options",
             "every",
             options=[
                 "every",
-                "1",
                 "2",
                 "3",
                 "4",
@@ -100,7 +77,9 @@ class TimeSignalsEvaluator(abstract_evaluator_block.EvaluatorBlock):
             ],
         )
         if self.day == "every":
-            self.day = None
+            self.day = 1
+        else:
+            self.day = int(self.day)
         self.hour = self.user_input(
             "signals on hour",
             "options",
@@ -222,12 +201,10 @@ class TimeSignalsEvaluator(abstract_evaluator_block.EvaluatorBlock):
         signals = []
         for timestamp in times:
             signals.append(
-                get_buy_signal_from_time(
-                    timestamp, self.day, self.hour, self.minute, self.month
-                )
+                get_buy_signal_from_time(timestamp, self.day, self.hour, self.minute)
             )
         await self.store_evaluator_signals(
-            title=f"DCA buy signal (d:{self.day or 'every'} h:{self.hour or 'every'} m:{self.minute or 'every'} m:{self.month or 'every'})",
+            title=f"DCA buy signal (d:{self.day or 'every'} h:{self.hour or 'every'} m:{self.minute or 'every'}",
             signals=signals,
             signal_values=values,
             chart_location=commons_enums.PlotCharts.MAIN_CHART.value,
@@ -235,19 +212,19 @@ class TimeSignalsEvaluator(abstract_evaluator_block.EvaluatorBlock):
 
 
 def get_buy_signal_from_time(
-    current_time, day=None, hour=None, minute=None, month=None
+    current_time: float,
+    every_n_days: int | None = None,
+    hour: str | None = None,
+    minute: str | None = None,
 ):
     current_datetime = datetime.datetime.fromtimestamp(current_time)
     time_to_buy = current_datetime
 
-    if month:
-        time_to_buy = time_to_buy.replace(
-            month=int(month),
-        )
-    if day:
-        time_to_buy = time_to_buy.replace(
-            day=int(day),
-        )
+    if every_n_days:
+        start_date = datetime.datetime(1970, 1, 1)
+        delta_days = (current_datetime - start_date).days
+        if delta_days % every_n_days != 0:
+            return False
     if hour:
         time_to_buy = time_to_buy.replace(
             hour=int(hour),

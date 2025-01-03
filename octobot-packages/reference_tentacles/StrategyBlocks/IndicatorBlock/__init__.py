@@ -487,6 +487,15 @@ if check_tentacle_version('0.9.51', 'macd', 'Matrix-Strategy-Blocks'):
                                            f'error persists, try reinstalling your tentacles via '
                                            f'"python start.py tentacles --install --all".')
 
+if check_tentacle_version('0.9.51', 'unbroken_highs_and_lows', 'Matrix-Strategy-Blocks'):
+    try:
+        from .unbroken_highs_and_lows import *
+    except Exception as e:
+        get_logger('TentacleLoader').error(f'Error when loading unbroken_highs_and_lows: '
+                                           f'{e.__class__.__name__}{f" ({e})" if f"{e}" else ""}. If this '
+                                           f'error persists, try reinstalling your tentacles via '
+                                           f'"python start.py tentacles --install --all".')
+
 if check_tentacle_version('0.9.51', 'highs_and_lows', 'Matrix-Strategy-Blocks'):
     try:
         from .highs_and_lows import *

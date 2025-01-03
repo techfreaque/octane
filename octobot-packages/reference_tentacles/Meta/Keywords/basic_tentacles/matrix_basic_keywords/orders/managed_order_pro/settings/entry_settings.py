@@ -19,6 +19,9 @@
 # please contact me at max@a42.ch
 
 import decimal
+
+import numpy
+from octobot import logger
 import octobot_commons.enums as commons_enums
 
 import octobot_trading.modes.script_keywords.basic_keywords as basic_keywords
@@ -49,7 +52,28 @@ class ManagedOrderEntryGrid:
         self.value_growth_factor = value_growth_factor
         self.from_level = from_level
         self.to_level = to_level
+        self.from_indicator_times = None
+        self.from_indicator_values = None
+        self.to_indicator_times = None
+        self.to_indicator_values = None
         self.value_percent = value_percent
+
+    def get_indicator_values(self, ctx):
+        try:
+            data_index = numpy.where(
+                self.from_indicator_times == int(ctx.trigger_value[0])
+            )[0][0]
+            from_value = decimal.Decimal(str(self.from_indicator_values[data_index]))
+            to_data_index = numpy.where(
+                self.to_indicator_times == int(ctx.trigger_value[0])
+            )[0][0]
+            to_value = decimal.Decimal(str(self.to_indicator_values[to_data_index]))
+            from_string = f"@{from_value}"
+            to_string = f"@{to_value}"
+            return from_string, to_string
+        except Exception:
+            ctx.logger.error("Failed to get indicator values for Entry Grid")
+        return None, None
 
 
 class ManagedOrderSettingsEntry:
@@ -76,8 +100,7 @@ class ManagedOrderSettingsEntry:
 
     entry_multi_grid_mode: bool = None
     amount_of_entry_grids: int = None
-    # entry_grids: typing.Dict[ManagedOrderEntryGrid] = None
-    entry_grids = None
+    entry_grids: dict[str, ManagedOrderEntryGrid] = None
 
     def __init__(self):
         pass

@@ -33,6 +33,9 @@ import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.mana
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.calculators.stop_loss as stop_loss
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.calculators.take_profit as take_profit
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.daemons.ping_pong.ping_pong_storage.storage as storage
+from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.settings import (
+    order_settings_group,
+)
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.settings.all_settings as all_settings
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.settings.entry_types as entry_types
 import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.managed_order_pro.settings.sl_settings as sl_settings
@@ -46,71 +49,74 @@ import tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.orders.scal
 
 
 class ManagedOrderPlacement:
-    stop_loss_tag: str = None
-    take_profit_tag: str = None
+    entry_side: str
+    exit_side: str
 
-    entry_type: str = None
+    def __init__(
+        self,
+        trading_side,
+        managed_orders_settings: all_settings.ManagedOrdersSettings,
+        group_orders_settings: all_settings.ManagedOrdersSettings,
+    ):
+        self.stop_loss_tag: str = None
+        self.take_profit_tag: str = None
 
-    average_stop_loss_price: decimal.Decimal = None
-    average_take_profit_price: decimal.Decimal = None
-    average_entry_price: decimal.Decimal = None
-    entry_quantity: decimal.Decimal = None
+        self.entry_type: str = None
 
-    managed_orders_settings: all_settings.ManagedOrdersSettings = None
-    group_orders_settings: all_settings.ManagedOrdersSettings = None
+        self.average_stop_loss_price: decimal.Decimal = None
+        self.average_take_profit_price: decimal.Decimal = None
+        self.average_entry_price: decimal.Decimal = None
+        self.entry_quantity: decimal.Decimal = None
 
-    market_fee: decimal.Decimal = None
-    limit_fee: decimal.Decimal = None
-    entry_fees: decimal.Decimal = None
+        self.managed_orders_settings: all_settings.ManagedOrdersSettings = (
+            managed_orders_settings
+        )
+        self.group_orders_settings: order_settings_group.ManagedOrderSettingsOrderGroup = (
+            group_orders_settings
+        )
 
-    position_size: decimal.Decimal = None
-    max_position_size: decimal.Decimal = None
-    current_open_risk: decimal.Decimal = None
-    max_buying_power: decimal.Decimal = None
-    place_entries: bool = None
-    entry_side: str = None
-    exit_side: str = None
-    exit_order_tag: str = None
-    entry_order_tag: str = None
-    order_tag_id: int = None
+        self.market_fee: decimal.Decimal = None
+        self.limit_fee: decimal.Decimal = None
+        self.entry_fees: decimal.Decimal = None
 
-    current_price_val: decimal.Decimal = None
-    trading_side: str = None
+        self.position_size: decimal.Decimal = None
+        self.max_position_size: decimal.Decimal = None
+        self.current_open_risk: decimal.Decimal = None
+        self.max_buying_power: decimal.Decimal = None
+        self.place_entries: bool = None
 
-    created_orders: list = None
-    calculated_entries: list = None
-    stop_loss_prices: list
-    take_profit_prices: list
-    order_amounts: list
-    tentacle = None
+        self.exit_order_tag: str = None
+        self.entry_order_tag: str = None
+        self.order_tag_id: int = None
+
+        self.current_price_val: decimal.Decimal = None
+        self.trading_side: str = trading_side
+
+        self.tentacle = None
+
+        self.created_orders: list = []
+        self.created_orders: list = []
+        self.calculated_entries: list = []
+        self.stop_loss_prices: list = []
+        self.take_profit_prices: list = []
+        self.order_amounts: list = []
+
+        (self.entry_side, self.exit_side) = matrix_utilities.get_trading_sides(
+            trading_side
+        )
 
     async def place_managed_entry_and_exits(
         self,
         maker,
         order_block,
-        trading_side,
-        managed_orders_settings,
-        group_orders_settings,
         forced_amount: decimal.Decimal,
         order_preview_mode: bool,
     ):
-        self.created_orders = []
-        self.created_orders = []
-        self.calculated_entries = []
-        self.stop_loss_prices = []
-        self.take_profit_prices = []
-        self.order_amounts = []
-        self.trading_side = trading_side
-        self.managed_orders_settings = managed_orders_settings
-        self.group_orders_settings = group_orders_settings
-
-        self.entry_side, self.exit_side = matrix_utilities.get_trading_sides(
-            trading_side
-        )
-
         # ensure leverage is up to date
         # if not maker.ctx.exchange_manager.is_backtesting:
-        await basic_keywords.set_leverage(maker.ctx, managed_orders_settings.leverage)
+        await basic_keywords.set_leverage(
+            maker.ctx, self.managed_orders_settings.leverage
+        )
         try:
             await basic_keywords.set_partial_take_profit_stop_loss(maker.ctx)
         except NotImplementedError:
@@ -166,7 +172,7 @@ class ManagedOrderPlacement:
             ) = await self.get_single_order_data(
                 maker,
                 order_block=order_block,
-                group_orders_settings=group_orders_settings,
+                group_orders_settings=self.group_orders_settings,
                 entry_price=self.current_price_val,
                 entry_side=self.entry_side,
                 forced_amount=forced_amount,
@@ -195,7 +201,7 @@ class ManagedOrderPlacement:
                         maker=maker,
                         grid_instance_id=order_tag_id,
                         grid_id=0,
-                        group_key=group_orders_settings.order_tag_prefix,
+                        group_key=self.group_orders_settings.order_tag_prefix,
                         created_orders=self.created_orders,
                         calculated_entries=self.calculated_entries,
                         calculated_amounts=self.order_amounts,
@@ -237,7 +243,7 @@ class ManagedOrderPlacement:
             ) = await self.get_single_order_data(
                 maker,
                 order_block=order_block,
-                group_orders_settings=group_orders_settings,
+                group_orders_settings=self.group_orders_settings,
                 entry_price=self.average_entry_price,
                 entry_side=self.entry_side,
                 forced_amount=forced_amount,
@@ -267,7 +273,7 @@ class ManagedOrderPlacement:
                         maker=maker,
                         grid_instance_id=order_tag_id,
                         grid_id=0,
-                        group_key=group_orders_settings.order_tag_prefix,
+                        group_key=self.group_orders_settings.order_tag_prefix,
                         created_orders=self.created_orders,
                         calculated_entries=self.calculated_entries,
                         calculated_amounts=self.order_amounts,
@@ -280,6 +286,8 @@ class ManagedOrderPlacement:
             == entry_types.ManagedOrderSettingsEntryTypes.SCALED_STATIC_DESCRIPTION
             or self.group_orders_settings.entry.entry_type
             == entry_types.ManagedOrderSettingsEntryTypes.SCALED_DYNAMIC_DESCRIPTION
+            or self.group_orders_settings.entry.entry_type
+            == entry_types.ManagedOrderSettingsEntryTypes.SCALED_INDICATOR_DESCRIPTION
         ):
             self.set_entry_type(entry_type="limit")
             self.place_entries = False
@@ -296,34 +304,44 @@ class ManagedOrderPlacement:
                     else:
                         scale_from = f"{grid.from_level}%"
                         scale_to = f"{grid.to_level}%"
-                else:
+                elif (
+                    self.group_orders_settings.entry.entry_type
+                    == entry_types.ManagedOrderSettingsEntryTypes.SCALED_STATIC_DESCRIPTION
+                ):
                     scale_from = f"@{grid.from_level}"
                     scale_to = f"@{grid.to_level}"
-                (
-                    created_orders,
-                    place_entries,
-                    calculated_entries,
-                    stop_loss_prices,
-                    take_profit_prices,
-                    order_amounts,
-                    order_tag_id,
-                ) = await scaled_orders.scaled_order(
-                    maker,
-                    order_block=order_block,
-                    current_price=self.current_price_val,
-                    side=self.entry_side,
-                    scale_from=scale_from,
-                    scale_to=scale_to,
-                    grid_id=grid_id,
-                    order_count=grid.order_count,
-                    group_orders_settings=group_orders_settings,
-                    forced_amount=forced_amount,
-                    value_distribution_type=grid.value_distribution_type,
-                    value_growth_factor=grid.value_growth_factor,
-                    price_distribution_type=grid.price_distribution_type,
-                    price_growth_factor=grid.price_growth_factor,
-                    order_preview_mode=order_preview_mode,
-                )
+                elif (
+                    self.group_orders_settings.entry.entry_type
+                    == entry_types.ManagedOrderSettingsEntryTypes.SCALED_INDICATOR_DESCRIPTION
+                ):
+                    scale_from, scale_to = grid.get_indicator_values(maker.ctx)
+                place_entries = False
+                if scale_from is not None and scale_to is not None:
+                    (
+                        created_orders,
+                        place_entries,
+                        calculated_entries,
+                        stop_loss_prices,
+                        take_profit_prices,
+                        order_amounts,
+                        order_tag_id,
+                    ) = await scaled_orders.scaled_order(
+                        maker,
+                        order_block=order_block,
+                        current_price=self.current_price_val,
+                        side=self.entry_side,
+                        scale_from=scale_from,
+                        scale_to=scale_to,
+                        grid_id=grid_id,
+                        order_count=grid.order_count,
+                        group_orders_settings=self.group_orders_settings,
+                        forced_amount=forced_amount,
+                        value_distribution_type=grid.value_distribution_type,
+                        value_growth_factor=grid.value_growth_factor,
+                        price_distribution_type=grid.price_distribution_type,
+                        price_growth_factor=grid.price_growth_factor,
+                        order_preview_mode=order_preview_mode,
+                    )
                 if place_entries:
                     self.place_entries = self.place_entries or place_entries
                     self.created_orders += created_orders
@@ -336,7 +354,7 @@ class ManagedOrderPlacement:
                             maker=maker,
                             grid_instance_id=order_tag_id,
                             grid_id=grid_id,
-                            group_key=group_orders_settings.order_tag_prefix,
+                            group_key=self.group_orders_settings.order_tag_prefix,
                             created_orders=created_orders,
                             calculated_entries=calculated_entries,
                             calculated_amounts=order_amounts,

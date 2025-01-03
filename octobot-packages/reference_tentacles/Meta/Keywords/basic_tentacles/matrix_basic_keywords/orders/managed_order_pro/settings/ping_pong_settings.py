@@ -59,6 +59,7 @@ class ManagedOrderSettingsPingPong:
         if entry_type in (
             entry_types.ManagedOrderSettingsEntryTypes.SCALED_DYNAMIC_DESCRIPTION,
             entry_types.ManagedOrderSettingsEntryTypes.SCALED_STATIC_DESCRIPTION,
+            entry_types.ManagedOrderSettingsEntryTypes.SCALED_INDICATOR_DESCRIPTION,
         ):
             ping_pong_name_prefix = f"{managed_order_group_id}"
             ping_pong_settings_name = f"{managed_order_group_id}_ping_pong_settings"

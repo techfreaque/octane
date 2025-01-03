@@ -21,9 +21,6 @@
 import tulipy as tulipy
 import numpy as numpy
 import octobot_trading.enums as trading_enums
-from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.matrix_enums import (
-    PriceDataSources,
-)
 from tentacles.Meta.Keywords.basic_tentacles.matrix_basic_keywords.tools.utilities import (
     cut_data_to_same_len,
 )
@@ -49,18 +46,49 @@ class FibLineIndicator(abstract_indicator_block.IndicatorBlock):
     def init_block_settings(self) -> None:
         self.activate_single_input_data_node(
             enable_force_def_val=True,
-            data_source_name="Unbroken pivots source",
-            def_val="unbroken_pivots",
+            data_source_name="Pivot Lows",
+            def_val="highs_and_lows",
+        )
+        self.activate_single_input_data_node(
+            enable_force_def_val=True,
+            data_source_name="Pivots Highs",
+            def_val="highs_and_lows",
         )
         self.fib_line_level = self.user_input("Fib line level", "float", 0.618)
-        self.fib_line_ema_length = self.user_input(
-            "Fib line ema length", "float", 50, min_val=1
-        )
+
         self.enable_both_line = self.user_input(
             "Enable combined fib line",
             "boolean",
             True,
         )
+        self.enable_0_line = self.user_input(
+            "Enable fib 0 line",
+            "boolean",
+            False,
+        )
+        self.enable_1_line = self.user_input(
+            "Enable fib 1 line",
+            "boolean",
+            False,
+        )
+        self.enable_ema_line = self.user_input(
+            "Enable ema fib line",
+            "boolean",
+            False,
+        )
+        # self.enable_short_line = self.user_input(
+        #     "Enable short fib line",
+        #     "boolean",
+        #     False,
+        # )
+        # self.enable_long_line = self.user_input(
+        #     "Enable long fib line",
+        #     "boolean",
+        #     False,
+        # )
+        self.register_outputs()
+
+    def register_outputs(self):
         if self.enable_both_line:
             self.register_indicator_data_output(
                 title="Combined fib line",
@@ -68,11 +96,6 @@ class FibLineIndicator(abstract_indicator_block.IndicatorBlock):
                 plot_color_switch_title="Combined fib line plot color",
                 default_plot_color=block_factory_enums.Colors.ORANGE,
             )
-        self.enable_0_line = self.user_input(
-            "Enable fib 0 line",
-            "boolean",
-            False,
-        )
         if self.enable_0_line:
             self.register_indicator_data_output(
                 title="Fib 0 Line",
@@ -80,11 +103,6 @@ class FibLineIndicator(abstract_indicator_block.IndicatorBlock):
                 plot_color_switch_title="Fib 0 Line plot color",
                 default_plot_color=block_factory_enums.Colors.ORANGE,
             )
-        self.enable_1_line = self.user_input(
-            "Enable fib 1 line",
-            "boolean",
-            False,
-        )
         if self.enable_1_line:
             self.register_indicator_data_output(
                 title="Fib 1 Line",
@@ -92,96 +110,111 @@ class FibLineIndicator(abstract_indicator_block.IndicatorBlock):
                 plot_color_switch_title="Fib 1 Line plot color",
                 default_plot_color=block_factory_enums.Colors.ORANGE,
             )
-        self.enable_ema_line = self.user_input(
-            "Enable ema fib line",
-            "boolean",
-            False,
-        )
         if self.enable_ema_line:
+            self.fib_line_ema_length = self.user_input(
+                "Fib line ema length", "float", 50, min_val=1
+            )
             self.register_indicator_data_output(
                 title="Ema Fib Line",
                 plot_switch_text="Plot Ema Fib Line",
                 plot_color_switch_title="Ema Fib Line plot color",
                 default_plot_color=block_factory_enums.Colors.ORANGE,
             )
-        self.enable_short_line = self.user_input(
-            "Enable short fib line",
-            "boolean",
-            False,
-        )
-        if self.enable_short_line:
-            self.register_indicator_data_output(
-                title="Short Fib Line",
-                plot_switch_text="Plot Short Fib Line",
-                plot_color_switch_title="Short Fib Line plot color",
-                default_plot_color=block_factory_enums.Colors.ORANGE,
-            )
-        self.enable_long_line = self.user_input(
-            "Enable long fib line",
-            "boolean",
-            False,
-        )
-        if self.enable_long_line:
-            self.register_indicator_data_output(
-                title="Long Fib Line",
-                plot_switch_text="Plot Long Fib Line",
-                plot_color_switch_title="Long Fib Line plot color",
-                default_plot_color=block_factory_enums.Colors.ORANGE,
-            )
-            self.user_select_data_source_time_frame()
+        # if self.enable_short_line:
+        #     self.register_indicator_data_output(
+        #         title="Short Fib Line",
+        #         plot_switch_text="Plot Short Fib Line",
+        #         plot_color_switch_title="Short Fib Line plot color",
+        #         default_plot_color=block_factory_enums.Colors.ORANGE,
+        #     )
+        # if self.enable_long_line:
+        #     self.register_indicator_data_output(
+        #         title="Long Fib Line",
+        #         plot_switch_text="Plot Long Fib Line",
+        #         plot_color_switch_title="Long Fib Line plot color",
+        #         default_plot_color=block_factory_enums.Colors.ORANGE,
+        #     )
+        self.user_select_data_source_time_frame()
 
-    async def execute_block(
-        self,
-    ) -> None:
+    async def execute_block(self) -> None:
         (
-            pivot_data,
+            lows_data,
+            lows_conditions,
+            lows_additional_payload_data,
             chart_location,
-            pivots_title,
-        ) = await self.get_input_node_data()
+            pivots_title_lows,
+        ) = await self.get_input_node_data(get_additional_node_data=True)
+        (
+            highs_data,
+            highs_conditions,
+            highs_additional_payload_data,
+            _,
+            pivots_title_highs,
+        ) = await self.get_input_node_data(get_additional_node_data=True)
 
+        (
+            fib_line_values,
+            fib_long_line_values,
+            fib_short_line_values,
+            fib_0line_values,
+            fib_1line_values,
+            fib_ema,
+        ) = self.calculate_fib_lines(
+            highs_data,
+            lows_data,
+            highs_additional_payload_data,
+            lows_additional_payload_data,
+        )
+
+        await self.store_fib_lines(
+            fib_line_values,
+            fib_ema,
+            fib_0line_values,
+            fib_1line_values,
+            fib_long_line_values,
+            fib_short_line_values,
+            pivots_title_highs,
+            pivots_title_lows,
+            chart_location,
+        )
+
+    def calculate_fib_lines(
+        self,
+        highs_data,
+        lows_data,
+        highs_additional_payload_data,
+        lows_additional_payload_data,
+    ):
         fib_line_values = []
         fib_long_line_values = []
         fib_short_line_values = []
         fib_0line_values = []
         fib_1line_values = []
         fib_ema = []
-        if (pivot_highs_data := pivot_data.get(PriceDataSources.HIGH.value)) and (
-            pivot_lows_data := pivot_data.get(PriceDataSources.LOW.value)
-        ):
+
+        if highs_data is not None and lows_data is not None:
             pivot_highs, pivot_lows, highs, lows = cut_data_to_same_len(
                 (
-                    pivot_highs_data["pivots"],
-                    pivot_lows_data["pivots"],
-                    pivot_highs_data["values"],
-                    pivot_lows_data["values"],
+                    highs_data,
+                    lows_data,
+                    highs_additional_payload_data["high_data_source_values"],
+                    lows_additional_payload_data["low_data_source_values"],
                 )
             )
             for index, pivot_high in enumerate(pivot_highs):
-                lowest_low = None
-                highest_high = None
-                try:
-                    lowest_low = min(pivot_lows[index])
-                    highest_high = max(pivot_high)
-                except ValueError:
-                    start_index = index - 50 if index - 50 > 0 else 0
-                    if not lowest_low:
-                        lowest_low = min(lows[start_index : index + 1])
-                    if not highest_high:
-                        highest_high = max(highs[start_index : index + 1])
-
+                lowest_low, highest_high = self.get_high_low(
+                    pivot_lows=pivot_lows,
+                    pivot_highs=pivot_highs,
+                    lows=lows,
+                    highs=highs,
+                    index=index,
+                )
                 fib_side = detect_fib_side(highest_high, highs, lowest_low, lows, index)
-                if fib_side == trading_enums.PositionSide.LONG:
-                    current_fib_line = (
-                        (highest_high - lowest_low) * (1 - self.fib_line_level)
-                    ) + lowest_low
-                    current_long_fib_line = current_fib_line
-                    current_short_fib_line = numpy.nan
-                else:
-                    current_fib_line = (
-                        (highest_high - lowest_low) * (self.fib_line_level)
-                    ) + lowest_low
-                    current_long_fib_line = numpy.nan
-                    current_short_fib_line = current_fib_line
+                (
+                    current_fib_line,
+                    current_long_fib_line,
+                    current_short_fib_line,
+                ) = self.get_fib_lines(fib_side, highest_high, lowest_low)
 
                 fib_long_line_values.append(current_long_fib_line)
                 fib_short_line_values.append(current_short_fib_line)
@@ -193,11 +226,65 @@ class FibLineIndicator(abstract_indicator_block.IndicatorBlock):
                 fib_line_values = numpy.asarray(fib_line_values)
                 fib_ema = tulipy.ema(fib_line_values, self.fib_line_ema_length)
 
+        return (
+            fib_line_values,
+            fib_long_line_values,
+            fib_short_line_values,
+            fib_0line_values,
+            fib_1line_values,
+            fib_ema,
+        )
+
+    def get_high_low(self, pivot_lows, pivot_highs, lows, highs, index):
+        try:
+            lowest_low = min(pivot_lows[index])
+        except ValueError:
+            start_index = self.get_last_low_index(pivot_lows, index)
+            lowest_low = min(lows[start_index : index + 1])
+
+        try:
+            highest_high = max(pivot_highs[index])
+        except ValueError:
+            start_index = self.get_last_low_index(pivot_highs, index)
+            highest_high = max(highs[start_index : index + 1])
+
+        return lowest_low, highest_high
+
+    def get_last_low_index(self, pivots, index):
+        for i in range(index - 1, -1, -1):
+            if pivots[i]:
+                return i
+        return 0
+
+    def get_fib_lines(self, fib_side, highest_high, lowest_low):
+        current_fib_line = (highest_high - lowest_low) * (
+            1 - self.fib_line_level
+        ) + lowest_low
+        if fib_side == trading_enums.PositionSide.LONG:
+            current_long_fib_line = current_fib_line
+            current_short_fib_line = numpy.nan
+        else:
+            current_long_fib_line = numpy.nan
+            current_short_fib_line = current_fib_line
+        return current_fib_line, current_long_fib_line, current_short_fib_line
+
+    async def store_fib_lines(
+        self,
+        fib_line_values,
+        fib_ema,
+        fib_0line_values,
+        fib_1line_values,
+        fib_long_line_values,
+        fib_short_line_values,
+        pivots_title_highs,
+        pivots_title_lows,
+        chart_location,
+    ):
         if self.enable_both_line:
             await self.store_indicator_data(
                 enable_rounding_plots=False,
                 filter_nan_for_plots=True,
-                title=f"Fib line {pivots_title}",
+                title=f"Fib line ({self.fib_line_level}) {pivots_title_highs} / {pivots_title_lows}",
                 data=fib_line_values,
                 chart_location=chart_location,
             )
@@ -205,7 +292,7 @@ class FibLineIndicator(abstract_indicator_block.IndicatorBlock):
             await self.store_indicator_data(
                 enable_rounding_plots=False,
                 filter_nan_for_plots=True,
-                title=f"Fib ema line {pivots_title}",
+                title=f"Fib ema line ({self.fib_line_level}) {pivots_title_highs} / {pivots_title_lows}",
                 data=fib_ema,
                 chart_location=chart_location,
             )
@@ -213,7 +300,7 @@ class FibLineIndicator(abstract_indicator_block.IndicatorBlock):
             await self.store_indicator_data(
                 enable_rounding_plots=False,
                 filter_nan_for_plots=True,
-                title=f"Fib 0 line {pivots_title}",
+                title=f"Fib 0 line {pivots_title_highs} / {pivots_title_lows}",
                 data=fib_0line_values,
                 chart_location=chart_location,
             )
@@ -221,30 +308,30 @@ class FibLineIndicator(abstract_indicator_block.IndicatorBlock):
             await self.store_indicator_data(
                 enable_rounding_plots=False,
                 filter_nan_for_plots=True,
-                title=f"Fib 1 line {pivots_title}",
+                title=f"Fib 1 line {pivots_title_highs} / {pivots_title_lows}",
                 data=fib_1line_values,
                 chart_location=chart_location,
             )
-        if self.enable_long_line:
-            await self.store_indicator_data(
-                enable_rounding_plots=False,
-                filter_nan_for_plots=True,
-                title=f"Fib long line {pivots_title}",
-                data=fib_long_line_values,
-                chart_location=chart_location,
-                mode="markers",
-                line_shape=None,
-            )
-        if self.enable_short_line:
-            await self.store_indicator_data(
-                enable_rounding_plots=False,
-                filter_nan_for_plots=True,
-                title=f"Fib short line {pivots_title}",
-                data=fib_short_line_values,
-                chart_location=chart_location,
-                mode="markers",
-                line_shape=None,
-            )
+        # if self.enable_short_line:
+        #     await self.store_indicator_data(
+        #         enable_rounding_plots=False,
+        #         filter_nan_for_plots=True,
+        #         title=f"Fib short line ({self.fib_line_level}) {pivots_title_highs} / {pivots_title_lows}",
+        #         data=fib_short_line_values,
+        #         chart_location=chart_location,
+        #         mode="markers",
+        #         line_shape=None,
+        #     )
+        # if self.enable_long_line:
+        #     await self.store_indicator_data(
+        #         enable_rounding_plots=False,
+        #         filter_nan_for_plots=True,
+        #         title=f"Fib long line ({self.fib_line_level}) {pivots_title_highs} / {pivots_title_lows}",
+        #         data=fib_long_line_values,
+        #         chart_location=chart_location,
+        #         mode="markers",
+        #         line_shape=None,
+        #     )
 
 
 def detect_fib_side(
