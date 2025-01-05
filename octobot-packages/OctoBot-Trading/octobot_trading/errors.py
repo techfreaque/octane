@@ -15,13 +15,19 @@
 #  License along with this library.
 
 
-class MissingFunds(Exception):
+class OctoBotExchangeError(Exception):
+    """
+    Parent class of local exceptions raised when communicating with exchanges
+    """
+
+
+class MissingFunds(OctoBotExchangeError):
     """
     Raised upon placing an order while having insufficient funds
     """
 
 
-class MissingMinimalExchangeTradeVolume(Exception):
+class MissingMinimalExchangeTradeVolume(OctoBotExchangeError):
     """
     Raised when a new order is impossible to create due to exchange minimal funds restrictions
     """
@@ -33,19 +39,19 @@ class TradingModeIncompatibility(Exception):
     """
 
 
-class OrderCreationError(Exception):
+class OrderCreationError(OctoBotExchangeError):
     """
     Raised upon a failed order creation
     """
 
 
-class OrderEditError(Exception):
+class OrderEditError(OctoBotExchangeError):
     """
     Raised upon a failed order edition
     """
 
 
-class OrderCancelError(Exception):
+class OrderCancelError(OctoBotExchangeError):
     """
     Raised upon a failed order cancel
     """
@@ -93,40 +99,61 @@ class NotSupported(Exception):
     """
 
 
-class FailedRequest(Exception):
+class FailedRequest(OctoBotExchangeError):
     """
     Raised upon a failed request on an exchange API
     """
 
 
-class RateLimitExceeded(Exception):
+class RateLimitExceeded(OctoBotExchangeError):
     """
     Raised upon an exchange API rate limit error
     """
 
 
-class UnavailableOrderTypeForMarketError(Exception):
+class UnavailableOrderTypeForMarketError(OctoBotExchangeError):
     """
     Raised when an exchange refuses to create a given type of order that should normally be supported
     """
 
 
-class AuthenticationError(Exception):
+class AuthenticationError(OctoBotExchangeError):
     """
     Raised when an exchange failed to authenticate
     """
 
 
-class ExchangeCompliancyError(Exception):
+class ExchangeInternalSyncError(OctoBotExchangeError):
+    """
+    Raised when an exchange is returning an error due to its internal sync process
+    (ex: when an order is filled but portfolio has not yet been updated)
+    """
+
+
+class ExchangeCompliancyError(OctoBotExchangeError):
     """
     Raised when an exchange failed to execute the given request because of compliance rules for the current user account
     """
 
 
-class ExchangeAccountSymbolPermissionError(Exception):
+class ExchangeAccountSymbolPermissionError(OctoBotExchangeError):
     """
     Raised when an exchange failed to execute the given request because of allowed traded symbols
     on the current user account
+    """
+
+
+class ExchangeClosedPositionError(OctoBotExchangeError):
+    """
+    Raised when an exchange failed to execute the given request because the associated position is closed.
+    Can happen with reduce-only orders
+    """
+
+
+class ExchangeOrderInstantTriggerError(OctoBotExchangeError):
+    """
+    Raised when an exchange failed to execute the given request because the associated order would immediately trigger.
+    Can happen with stop orders
     """
 
 

@@ -81,6 +81,16 @@ class Binance(exchanges.Exchange):
             restrictions = await self._exchange.connector.client.sapi_get_account_apirestrictions()
         except ValueError as err:
             raise ccxt.AuthenticationError(f"Invalid key format ({err})")
+        except ccxt.NotSupported:
+            if self._exchange.exchange_manager.is_sandboxed:
+                # API not available on testnet: return all rights
+                return [
+                    trading_backend.enums.APIKeyRights.READING,
+                    trading_backend.enums.APIKeyRights.SPOT_TRADING,
+                    trading_backend.enums.APIKeyRights.FUTURES_TRADING,
+                    trading_backend.enums.APIKeyRights.MARGIN_TRADING,
+                ]
+            raise
         rights = []
         if restrictions.get('enableReading'):
             rights.append(trading_backend.enums.APIKeyRights.READING)
@@ -107,6 +117,15 @@ class Binance(exchanges.Exchange):
             if not details.get("ifNewUser", False):
                 return False, "Binance requires accounts that were created after july 1st 2021, " \
                               "this account is too old."
+        except ccxt.NotSupported:
+            if self._exchange.exchange_manager.is_sandboxed:
+                # API not available on testnet
+                try:
+                    await self._exchange.get_balance()
+                    return True, None
+                except Exception as err:
+                    raise ccxt.AuthenticationError(f"Invalid auth details ({err})")
+            raise
         except ValueError as err:
             raise ccxt.AuthenticationError(f"Invalid key format ({err})")
         except AttributeError:

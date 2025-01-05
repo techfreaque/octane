@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot-Default-Tentacles
+#  Drakkar-Software OctoBot-Private-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -28,6 +28,7 @@ import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_commons.constants as commons_constants
 import octobot_trading.constants as constants
 import octobot_trading.enums as trading_enums
+import octobot.community
 
 
 def _kucoin_retrier(f):
@@ -110,7 +111,7 @@ class Kucoin(exchanges.RestExchange):
         trading_enums.ExchangeTypes.SPOT.value: {
             # order that should be self-managed by OctoBot
             trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
-                trading_enums.TraderOrderType.STOP_LOSS,
+                # trading_enums.TraderOrderType.STOP_LOSS,    # supported on spot
                 trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
                 trading_enums.TraderOrderType.TAKE_PROFIT,
                 trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
@@ -127,15 +128,27 @@ class Kucoin(exchanges.RestExchange):
         # 'kucoin The order does not exist.'
         ("order does not exist",),
     ]
+    # text content of errors due to a closed position on the exchange. Relevant for reduce-only orders
+    EXCHANGE_CLOSED_POSITION_ERRORS: typing.List[typing.Iterable[str]] = [
+        # 'kucoinfutures No open positions to close.'
+        ("No open positions to close", )
+    ]
+    # text content of errors due to an order that would immediately trigger if created. Relevant for stop losses
+    EXCHANGE_ORDER_IMMEDIATELY_TRIGGER_ERRORS: typing.List[typing.Iterable[str]] = [
+        # doesn't seem to happen on kucoin
+    ]
+
+    DEFAULT_BALANCE_CURRENCIES_TO_FETCH = ["USDT"]
 
     @classmethod
     def get_name(cls):
         return 'kucoin'
 
-    def get_rest_name(self):
-        if self.exchange_manager.is_future:
-            return self.FUTURES_CCXT_CLASS_NAME
-        return self.get_name()
+    @classmethod
+    def get_rest_name(cls, exchange_manager):
+        if exchange_manager.is_future:
+            return cls.FUTURES_CCXT_CLASS_NAME
+        return cls.get_name()
 
     def get_adapter_class(self):
         return KucoinCCXTAdapter
@@ -174,6 +187,10 @@ class Kucoin(exchanges.RestExchange):
                         else:
                             # only subaccounts have a subUserId: if this condition is True, we are on the main account
                             account_id = account["subName"]
+                if account_id and self.exchange_manager.is_future:
+                    account_id = octobot.community.to_community_exchange_internal_name(
+                        account_id, commons_constants.CONFIG_EXCHANGE_FUTURE
+                    )
             if subaccount_id:
                 # there is at least a subaccount: ensure the current account is the main account as there is no way
                 # to know the id of the current account (only a list of existing accounts)
@@ -259,6 +276,13 @@ class Kucoin(exchanges.RestExchange):
         """
         return Kucoin.INSTANT_RETRY_ERROR_CODE not in str(exception)
 
+    def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:
+        signature_identifier = "KC-API-SIGN"
+        return bool(
+            headers
+            and signature_identifier in headers
+        )
+
     def get_order_additional_params(self, order) -> dict:
         params = {}
         if self.exchange_manager.is_future:
@@ -288,9 +312,16 @@ class Kucoin(exchanges.RestExchange):
         if self.exchange_manager.is_future:
             # on futures, balance has to be fetched per currency
             # use gather to fetch everything at once (and not allow other requests to get in between)
+            currencies = self.exchange_manager.exchange_config.get_all_traded_currencies()
+            if not currencies:
+                currencies = self.DEFAULT_BALANCE_CURRENCIES_TO_FETCH
+                self.logger.warning(
+                    f"Can't fetch balance on {self.exchange_manager.exchange_name} futures when no traded currencies "
+                    f"are set, fetching {currencies[0]} balance instead"
+                )
             await asyncio.gather(*(
                 self._update_balance(balance, currency, **kwargs)
-                for currency in self.exchange_manager.exchange_config.get_all_traded_currencies()
+                for currency in currencies
             ))
             return balance
         return await super().get_balance(**kwargs)
@@ -317,8 +348,7 @@ class Kucoin(exchanges.RestExchange):
             limit = 200
         regular_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
         stop_orders = []
-        if self.exchange_manager.is_future:
-            # stop ordes are futures only for now
+        if "stop" not in kwargs:
             # add untriggered stop orders (different api endpoint)
             kwargs["stop"] = True
             stop_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
@@ -333,8 +363,21 @@ class Kucoin(exchanges.RestExchange):
                            side: trading_enums.TradeOrderSide = None, current_price: decimal.Decimal = None,
                            reduce_only: bool = False, params: dict = None) -> typing.Optional[dict]:
         if self.exchange_manager.is_future:
+            params = params or {}
             # on futures exchange expects, quantity in contracts: convert quantity into contracts
             quantity = quantity / self.get_contract_size(symbol)
+            try:
+                # "marginMode": "ISOLATED" // Added field for margin mode: ISOLATED, CROSS, default: ISOLATED
+                # from https://www.kucoin.com/docs/rest/futures-trading/orders/place-order
+                if (
+                    KucoinCCXTAdapter.KUCOIN_MARGIN_MODE not in params and
+                    self.exchange_manager.exchange_personal_data.positions_manager.get_symbol_position_margin_type(
+                        symbol
+                    ) is trading_enums.MarginType.CROSS
+                ):
+                    params[KucoinCCXTAdapter.KUCOIN_MARGIN_MODE] = "CROSS"
+            except ValueError as err:
+                self.logger.error(f"Impossible to add {KucoinCCXTAdapter.KUCOIN_MARGIN_MODE} to order: {err}")
         return await super().create_order(order_type, symbol, quantity,
                                           price=price, stop_price=stop_price,
                                           side=side, current_price=current_price,
@@ -448,13 +491,14 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
 
     # ORDER
     KUCOIN_LEVERAGE = "leverage"
+    KUCOIN_MARGIN_MODE = "marginMode"
 
     def fix_order(self, raw, symbol=None, **kwargs):
         raw_order_info = raw[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
         fixed = super().fix_order(raw, symbol=symbol, **kwargs)
         self._ensure_fees(fixed)
         if self.connector.exchange_manager.is_future and \
-                fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] is not None:
+                fixed.get(trading_enums.ExchangeConstantsOrderColumns.COST.value) is not None:
             fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] = \
                 fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] * \
                 float(raw_order_info.get(self.KUCOIN_LEVERAGE, 1))
@@ -464,6 +508,7 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
     def fix_trades(self, raw, **kwargs):
         fixed = super().fix_trades(raw, **kwargs)
         for trade in fixed:
+            self._adapt_order_type(trade)
             self._ensure_fees(trade)
         return fixed
 
@@ -476,16 +521,16 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
             down: Triggers when the price reaches or goes below the stopPrice.
             up: Triggers when the price reaches or goes above the stopPrice.
             """
-            side = fixed[trading_enums.ExchangeConstantsOrderColumns.SIDE.value]
+            side = fixed.get(trading_enums.ExchangeConstantsOrderColumns.SIDE.value)
             if side == trading_enums.TradeOrderSide.BUY.value:
-                if trigger_direction == "up":
+                if trigger_direction in ("up", "loss"):
                     updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
-                elif trigger_direction == "down":
+                elif trigger_direction in ("down", "entry"):
                     updated_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
             else:
-                if trigger_direction == "up":
+                if trigger_direction in ("up", "entry"):
                     updated_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
-                elif trigger_direction == "down":
+                elif trigger_direction in ("down", "loss"):
                     updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
             # stop loss are not tagged as such by ccxt, force it
             fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = updated_type
@@ -515,13 +560,9 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
     def parse_position(self, fixed, **kwargs):
         raw_position_info = fixed[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
         parsed = super().parse_position(fixed, **kwargs)
-        parsed[trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value] = \
-            trading_enums.MarginType(
-                fixed.get(ccxt_enums.ExchangePositionCCXTColumns.MARGIN_MODE.value)
-            )
-        parsed[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value] = \
-            trading_enums.PositionMode.HEDGE if raw_position_info[self.KUCOIN_AUTO_DEPOSIT] \
-            else trading_enums.PositionMode.ONE_WAY
+        parsed[trading_enums.ExchangeConstantsPositionColumns.AUTO_DEPOSIT_MARGIN.value] = (
+            raw_position_info.get(self.KUCOIN_AUTO_DEPOSIT, False)  # unset for cross positions
+        )
         parsed_leverage = self.safe_decimal(
             parsed, trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value, constants.ZERO
         )

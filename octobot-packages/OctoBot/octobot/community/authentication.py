@@ -669,6 +669,7 @@ class CommunityAuthentication(authentication.Authenticator):
                 )
                 self.successfully_fetched_tentacles_package_urls = True
                 self.user_account.owned_packages = packages
+                self.logger.debug(f"Account extension packages: {', '.join(packages) if packages else packages}")
                 self.save_installed_package_urls(package_urls)
                 has_tentacles_to_install = \
                     await community_tentacles_packages.has_tentacles_to_install_and_uninstall_tentacles_if_necessary(
@@ -849,6 +850,17 @@ class CommunityAuthentication(authentication.Authenticator):
             formatted_orders += formatters.format_orders(orders, exchange_name)
         await self.supabase_client.update_bot_orders(self.user_account.bot_id, formatted_orders)
         self.logger.info(f"Bot orders updated: using {len(formatted_orders)} orders")
+
+    @_bot_data_update
+    async def update_positions(self, positions_by_exchange: dict[str, list]):
+        """
+        Updates authenticated account positions
+        """
+        formatted_positions = []
+        for exchange_name, positions in positions_by_exchange.items():
+            formatted_positions += formatters.format_positions(positions, exchange_name)
+        await self.supabase_client.update_bot_positions(self.user_account.bot_id, formatted_positions)
+        self.logger.info(f"Bot positions updated: using {len(formatted_positions)} positions")
 
     @_bot_data_update
     async def update_portfolio(self, current_value: dict, initial_value: dict, profitability: float,

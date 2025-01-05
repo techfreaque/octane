@@ -176,6 +176,8 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
                     (parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
                      parsed_data[self.SYMBOL_KEY] == self.str_symbol):
                 await self.producers[0].signal_callback(parsed_data, script_keywords.get_base_context(self))
+        except trading_errors.InvalidArgumentError as e:
+            self.logger.error(f"Error when handling trading view signal: {e}")
         except trading_errors.MissingFunds as e:
             self.logger.error(f"Error when handling trading view signal: not enough funds: {e}")
         except KeyError as e:
@@ -261,10 +263,9 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         elif side == TradingViewSignalsTradingMode.CANCEL_SIGNAL:
             state = trading_enums.EvaluatorStates.NEUTRAL
         else:
-            self.logger.error(
+            raise trading_errors.InvalidArgumentError(
                 f"Unknown signal: {parsed_data[TradingViewSignalsTradingMode.SIGNAL_KEY]}, full data= {parsed_data}"
             )
-            state = trading_enums.EvaluatorStates.NEUTRAL
         target_price = 0 if order_type == TradingViewSignalsTradingMode.MARKET_SIGNAL else (
             await self._parse_price(ctx, parsed_data, TradingViewSignalsTradingMode.PRICE_KEY, 0))
         stop_price = await self._parse_price(
@@ -277,18 +278,18 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             ctx, parsed_data, f"{TradingViewSignalsTradingMode.TAKE_PROFIT_PRICE_KEY}_", math.nan
         )
         allow_holdings_adaptation = parsed_data.get(TradingViewSignalsTradingMode.ALLOW_HOLDINGS_ADAPTATION_KEY, False)
-
+        reduce_only = parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False)
+        amount = await self._parse_volume(
+            ctx, parsed_data, parsed_side, target_price, allow_holdings_adaptation, reduce_only
+        )
         order_data = {
             TradingViewSignalsModeConsumer.PRICE_KEY: target_price,
-            TradingViewSignalsModeConsumer.VOLUME_KEY: await self._parse_volume(
-                ctx, parsed_data, parsed_side, target_price, allow_holdings_adaptation
-            ),
+            TradingViewSignalsModeConsumer.VOLUME_KEY: amount,
             TradingViewSignalsModeConsumer.STOP_PRICE_KEY: stop_price,
             TradingViewSignalsModeConsumer.STOP_ONLY: order_type == TradingViewSignalsTradingMode.STOP_SIGNAL,
             TradingViewSignalsModeConsumer.TAKE_PROFIT_PRICE_KEY: tp_price,
             TradingViewSignalsModeConsumer.ADDITIONAL_TAKE_PROFIT_PRICES_KEY: additional_tp_prices,
-            TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY:
-                parsed_data.get(TradingViewSignalsTradingMode.REDUCE_ONLY_KEY, False),
+            TradingViewSignalsModeConsumer.REDUCE_ONLY_KEY: reduce_only,
             TradingViewSignalsModeConsumer.TAG_KEY:
                 parsed_data.get(TradingViewSignalsTradingMode.TAG_KEY, None),
             TradingViewSignalsModeConsumer.EXCHANGE_ORDER_IDS:
@@ -312,7 +313,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             )
         return target_price
 
-    async def _parse_volume(self, ctx, parsed_data, side, target_price, allow_holdings_adaptation):
+    async def _parse_volume(self, ctx, parsed_data, side, target_price, allow_holdings_adaptation, reduce_only):
         user_volume = str(parsed_data.get(TradingViewSignalsTradingMode.VOLUME_KEY, 0))
         if user_volume == "0":
             return trading_constants.ZERO
@@ -320,7 +321,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             context=ctx,
             input_amount=user_volume,
             side=side,
-            reduce_only=False,
+            reduce_only=reduce_only,
             is_stop_order=False,
             use_total_holding=False,
             target_price=target_price,

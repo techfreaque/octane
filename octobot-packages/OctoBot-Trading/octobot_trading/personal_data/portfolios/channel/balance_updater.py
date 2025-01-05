@@ -18,6 +18,7 @@ import asyncio
 import decimal
 
 import octobot_commons.logging as logging
+import octobot_commons.html_util as html_util
 
 import octobot_trading.errors as errors
 import octobot_trading.constants as constants
@@ -49,9 +50,9 @@ class BalanceUpdater(portfolios_channel.BalanceProducer):
                 await self.fetch_and_push()
                 await asyncio.sleep(self.BALANCE_REFRESH_TIME)
             except errors.FailedRequest as e:
-                self.logger.warning(str(e))
+                self.logger.warning(html_util.get_html_summary_if_relevant(e))
                 # avoid spamming on disconnected situation
-                await asyncio.sleep(constants.DEFAULT_FAILED_REQUEST_RETRY_TIME)
+                await asyncio.sleep(constants.FAILED_NETWORK_REQUEST_RETRY_ATTEMPTS)
             except errors.NotSupported:
                 self.logger.warning(
                     f"{self.channel.exchange_manager.exchange_name} is not supporting updates"
@@ -59,11 +60,19 @@ class BalanceUpdater(portfolios_channel.BalanceProducer):
                 await self.pause()
             except errors.AuthenticationError as err:
                 self.logger.exception(
-                    err, True, f"Authentication error when fetching balance: {err}. Retrying in the next update cycle"
+                    err,
+                    True,
+                    f"Authentication error when fetching balance: {html_util.get_html_summary_if_relevant(err)}. "
+                    f"Retrying in the next update cycle"
                 )
                 await asyncio.sleep(self.BALANCE_REFRESH_TIME)
             except Exception as e:
-                self.logger.exception(e, True, f"Failed to update balance : {e}")
+                self.logger.exception(
+                    e,
+                    True,
+                    f"Failed to update balance : {html_util.get_html_summary_if_relevant(e)}"
+                )
+                await asyncio.sleep(constants.FAILED_NETWORK_REQUEST_RETRY_ATTEMPTS)
 
     async def fetch_and_push(self):
         await self.push((await self.fetch_portfolio()))

@@ -19,6 +19,7 @@ import octobot_trading.constants as constants
 import octobot_trading.exchanges.util as exchange_util
 import octobot_trading.exchanges.connectors.simulator.exchange_simulator_connector as exchange_simulator_connector
 import octobot_trading.exchanges.types.rest_exchange as rest_exchange
+import octobot_trading.exchange_data.contracts.contract_factory as contract_factory
 
 
 class ExchangeSimulator(rest_exchange.RestExchange):
@@ -43,11 +44,11 @@ class ExchangeSimulator(rest_exchange.RestExchange):
         )
 
     async def initialize_impl(self):
-        await super().initialize_impl()
-        self.exchange_importers = self.connector.exchange_importers
         self.exchange_tentacle_class = exchange_util.get_rest_exchange_class(
             self.exchange_manager.exchange_name, self.exchange_manager.tentacles_setup_config, None
         )
+        await super().initialize_impl()
+        self.exchange_importers = self.connector.exchange_importers
         if self.connector.should_adapt_market_statuses():
             await self._init_exchange_tentacle()
 
@@ -119,15 +120,20 @@ class ExchangeSimulator(rest_exchange.RestExchange):
         Create a new FutureContract for the pair
         :param pair: the pair
         """
+        contract = contract_factory.create_default_future_contract(
+            pair,
+            constants.DEFAULT_SYMBOL_LEVERAGE,
+            self.exchange_manager.exchange_config.backtesting_exchange_config.future_contract_type
+        )
         return self.create_pair_contract(
-            pair=pair,
-            current_leverage=constants.DEFAULT_SYMBOL_LEVERAGE,
-            contract_size=constants.DEFAULT_SYMBOL_CONTRACT_SIZE,
-            margin_type=constants.DEFAULT_SYMBOL_MARGIN_TYPE,
-            contract_type=self.exchange_manager.exchange_config.backtesting_exchange_config.future_contract_type,
-            position_mode=constants.DEFAULT_SYMBOL_POSITION_MODE,
-            maintenance_margin_rate=constants.DEFAULT_SYMBOL_MAINTENANCE_MARGIN_RATE,
-            maximum_leverage=constants.DEFAULT_SYMBOL_MAX_LEVERAGE
+            contract.pair,
+            contract.current_leverage,
+            contract.contract_size,
+            contract.margin_type,
+            contract.contract_type,
+            contract.position_mode,
+            contract.maintenance_margin_rate,
+            maximum_leverage = contract.maximum_leverage,
         )
 
     async def get_symbol_leverage(self, symbol: str, **kwargs: dict):

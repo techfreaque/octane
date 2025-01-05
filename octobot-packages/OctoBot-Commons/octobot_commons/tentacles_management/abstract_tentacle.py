@@ -156,3 +156,14 @@ class AbstractTentacle:
         return await configuration.get_raw_config_and_user_inputs(
             cls, config, tentacles_setup_config, bot_id
         )
+
+    @classmethod
+    def get_tentacle_config_traded_symbols(
+        cls, config: dict, reference_market: str
+    ) -> list:
+        """
+        :return: the traded symbols of the tentacle according to its tentacle configuration
+        """
+        raise NotImplementedError(
+            "get_tentacle_config_traded_symbols is not implemented"
+        )

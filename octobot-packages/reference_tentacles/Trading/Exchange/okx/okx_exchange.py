@@ -112,6 +112,10 @@ class Okx(exchanges.RestExchange):
     DEFAULT_CONNECTOR_CLASS = OkxConnector
     MAX_PAGINATION_LIMIT: int = 100  # value from https://www.okex.com/docs/en/#spot-orders_pending
 
+    # set when the exchange returns nothing when fetching historical candles with a too early start time
+    # (will iterate historical OHLCV requests over this window)
+    MAX_FETCHED_OHLCV_COUNT = 100
+
     # Okx default take profits are market orders
     # note: use BUY_MARKET and SELL_MARKET since in reality those are conditional market orders, which behave the same
     # way as limit order but with higher fees
@@ -180,6 +184,13 @@ class Okx(exchanges.RestExchange):
             trading_enums.ExchangeTypes.SPOT,
             trading_enums.ExchangeTypes.FUTURE,
         ]
+
+    def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:
+        signature_identifier = "OK-ACCESS-SIGN"
+        return bool(
+            headers
+            and signature_identifier in headers
+        )
 
     def _fix_limit(self, limit: int) -> int:
         return min(self.MAX_PAGINATION_LIMIT, limit) if limit else limit

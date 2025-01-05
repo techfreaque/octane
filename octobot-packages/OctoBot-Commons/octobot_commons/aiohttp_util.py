@@ -15,9 +15,13 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import ssl
+import time
+import urllib.parse
+import dataclasses
 
 import contextlib
 import aiohttp
+import aiohttp.typedefs
 import certifi
 
 import octobot_commons.logging
@@ -145,3 +149,87 @@ async def certify_aiohttp_client_session():
     finally:
         if session is not None:
             await session.close()
+
+
+@dataclasses.dataclass
+class RequestCounter:
+    """
+    A counter with an identifier: counts requests and logs when its period is over
+    """
+
+    name: str
+    period: float
+    last_period_start: float = 0
+    paths: dict[str, float] = dataclasses.field(default_factory=dict)
+
+    def account_for(
+        self, method: str, str_or_url: aiohttp.typedefs.StrOrURL, timestamp: float
+    ):
+        """
+        Account for a request, log if period is over
+        """
+        if timestamp - self.last_period_start > self.period:
+            if self.last_period_start != 0:
+                self._log_stats()
+            self._clear()
+            self.last_period_start = timestamp - timestamp % self.period
+        url = str_or_url if isinstance(str_or_url, str) else str_or_url.human_repr()
+        path = f"[{method}] { urllib.parse.urlparse(url).path}"
+        self.paths[path] = self.paths.get(path, 0) + 1
+
+    def _clear(self):
+        self.paths.clear()
+
+    def _log_stats(self):
+        total_req = sum(value for value in self.paths.values())
+        hours = self.period / octobot_commons.constants.HOURS_TO_SECONDS
+        days = self.period / octobot_commons.constants.DAYS_TO_SECONDS
+        identifier = (
+            f"{days} days"
+            if days > 1
+            else f"{hours} hours"
+            if hours > 1
+            else f"{self.period} seconds"
+        )
+        octobot_commons.logging.get_logger(self.__class__.__name__).info(
+            f"[{self.name}]: {total_req} requests over {identifier}: {self.paths}"
+        )
+
+
+class CounterClientSession(aiohttp.ClientSession):
+    """
+    Extends aiohttp.ClientSession to periodically log requests statistics
+    """
+
+    def __init__(self, identifier: str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.per_min: RequestCounter = RequestCounter(
+            identifier, octobot_commons.constants.MINUTE_TO_SECONDS
+        )
+        self.per_hour: RequestCounter = RequestCounter(
+            identifier, octobot_commons.constants.HOURS_TO_SECONDS
+        )
+        self.per_day: RequestCounter = RequestCounter(
+            identifier, octobot_commons.constants.DAYS_TO_SECONDS
+        )
+
+    async def _request(
+        self, method: str, str_or_url: aiohttp.typedefs.StrOrURL, *args, **kwargs
+    ) -> aiohttp.ClientResponse:
+        self._account_for(method, str_or_url, time.time())
+        if kwargs:
+            return await super()._request(method, str_or_url, *args, **kwargs)
+        return await super()._request(method, str_or_url)
+
+    def _account_for(
+        self, method: str, str_or_url: aiohttp.typedefs.StrOrURL, timestamp: float
+    ):
+        try:
+            self.per_min.account_for(method, str_or_url, timestamp)
+            self.per_hour.account_for(method, str_or_url, timestamp)
+            self.per_day.account_for(method, str_or_url, timestamp)
+        except BaseException as err:
+            # never raise or the subsequent request is blocked
+            octobot_commons.logging.get_logger(__name__).exception(
+                err, True, "Error when accounting for request: {err}"
+            )

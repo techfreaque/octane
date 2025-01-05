@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.70] - 2024-12-11
+### Added
+[Constants] add FIAT_NON_USD_LIKE_COINS
+
+## [1.9.69] - 2024-12-06
+### Added
+[ProfileData] remove proxy_id
+
+## [1.9.68] - 2023-12-03
+### Added
+[Authenticator] update positions
+[ProfileData] leverage and exchange_type
+
+## [1.9.67] - 2023-12-02
+### Updated
+[HTML] handle html exception args
+
+## [1.9.66] - 2023-12-02
+### Updated
+[HTML] handle nested exception causes
+
+## [1.9.65] - 2023-11-24
+### Added
+[Configuration] add get_oldest_historical_tentacle_config_time
+[AbstractTentacle] add get_tentacle_config_traded_symbols
+
+## [1.9.64] - 2023-11-23
+### Added
+[Tentacles] historical config
+
+## [1.9.63] - 2023-11-21
+### Added
+[html] add html summarizer
+
+## [1.9.62] - 2023-11-11
+### Added
+[aiohttp] add CounterClientSession
+
 ## [1.9.61] - 2023-10-23
 ### Added
 [ProfileData] add proxy_id

@@ -15,10 +15,10 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import asyncio
-
 import time
 
 import octobot_commons.logging as logging_util
+import octobot_commons.html_util as html_util
 
 
 class AsyncJob:
@@ -219,7 +219,8 @@ class AsyncJob:
 
     def _handle_run_exception(self, exception, error_on_single_failure):
         self.successive_failures += 1
-        error_message = f"Failed to run job action, exception: {exception.__class__.__name__}: {exception}"
+        str_error = html_util.get_html_summary_if_relevant(exception)
+        error_message = f"Failed to run job action, exception: {exception.__class__.__name__}: {str_error}"
         if error_on_single_failure:
             self.logger.exception(exception, True, error_message)
         else:
