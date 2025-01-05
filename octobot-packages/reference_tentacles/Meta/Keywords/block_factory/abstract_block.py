@@ -638,7 +638,7 @@ class AbstractBlock:
                     await handle.origin_block_instance.execute_block_from_factory(
                         block_factory=self.block_factory, triggering_block=self
                     )
-                    print(f" strategy flow builder - done evaluator block {handle.origin_block_instance.NAME} in {time.time() - start_time}")
+                    print(f" strategy flow builder - building {handle.origin_block_instance.NAME} done {time.time() - start_time}")
                 elif isinstance(
                     handle.origin_block_instance,
                     _block_factory.ActionBlock,
@@ -651,8 +651,8 @@ class AbstractBlock:
                     new_strategy_signals_variation.add_action(
                         handle.origin_block_instance
                     )
-                    print(f" strategy flow builder - done executing strategy {new_strategy_signals_variation.flow_name} in {time.time() - start_time}")
-            print(f" strategy flow builder - done calculating {node.NAME} in {time.time() - start_time_node}")
+                    print(f" strategy flow builder - building {new_strategy_signals_variation.flow_name} done {time.time() - start_time}")
+            print(f" strategy flow builder - building {node.NAME} done {time.time() - start_time_node}")
             
 
     # indicators methods

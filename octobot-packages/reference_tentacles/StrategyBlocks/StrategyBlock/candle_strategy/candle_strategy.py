@@ -140,7 +140,7 @@ class CandleStrategy(abstract_strategy_block.StrategyBlock):
                     self.block_factory, triggering_block=self
                 )
                 print(
-                    f" strategy flow builder - done executing {action_block.NAME} in {time.time() - block_start_time}"
+                    f" strategy flow builder - building {action_block.NAME} done {time.time() - block_start_time}"
                 )
 
     async def execute_cron_jobs(self):
@@ -183,7 +183,7 @@ class CandleStrategy(abstract_strategy_block.StrategyBlock):
         if not self.block_factory.ctx.exchange_manager.is_backtesting and s_time:
             self.block_factory.end_measure_time(
                 s_time,
-                f"building strategy for {trades_count} trades on {self.block_factory.ctx.symbol} "
+                f"building strategy for {trades_count} signals on {self.block_factory.ctx.symbol} "
                 f"{self.block_factory.ctx.time_frame} {self.block_factory.ctx.exchange_name}",
             )
 

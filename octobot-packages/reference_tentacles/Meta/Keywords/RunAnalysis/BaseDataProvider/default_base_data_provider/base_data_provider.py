@@ -295,22 +295,34 @@ class RunAnalysisBaseDataGenerator:
 
     async def get_start_value(
         self, historical_portfolio_value
-    ) -> typing.Tuple[float, str]:
+    ) -> typing.Tuple[float, str | None]:
         if self._start_value is not None and self._value_asset is not None:
             return self._start_value, self._value_asset
         start_end_portfolio_values = await self.get_start_end_portfolio_values()
         self._start_value = 0
-        self._value_asset = list(historical_portfolio_value[0]["v"].keys())[0]
-        for asset_name, asset in start_end_portfolio_values[0][
-            "starting_portfolio"
-        ].items():
-            if asset_name == self._value_asset:
-                self._start_value = asset["total"]
-            else:
-                # TODO handle multiple assets
-                self.logger.error(
-                    f"Other assets than reference asset is not supported yet : {asset_name} will be ignored in unrealized pnl calculation"
-                )
+        self._value_asset = (
+            list(historical_portfolio_value[0]["v"].keys())[0]
+            if len(historical_portfolio_value)
+            else None
+        )
+        if (
+            len(start_end_portfolio_values)
+            and start_end_portfolio_values[0]["starting_portfolio"]
+        ):
+            for asset_name, asset in start_end_portfolio_values[0][
+                "starting_portfolio"
+            ].items():
+                if asset_name == self._value_asset:
+                    self._start_value = asset["total"]
+                else:
+                    # TODO handle multiple assets
+                    self.logger.error(
+                        f"Other assets than reference asset is not supported yet : {asset_name} will be ignored in unrealized pnl calculation"
+                    )
+        else:
+            self.logger.error(
+                "Starting portfolio not found, unrealized pnl calculation will be based on the first historical portfolio value"
+            )
         return self._start_value, self._value_asset
 
     async def get_deposits_withdrawals(self):
@@ -353,7 +365,7 @@ class RunAnalysisBaseDataGenerator:
         historical_unrealized_pnl = []
 
         for day in historical_portfolio_value:
-            cumulative_deposits = {value_asset: start_value}
+            cumulative_deposits = {value_asset: start_value} if value_asset else {}
             cumulative_withdrawals = {}
             timestamp = day["t"]
             value_by_currency = day["v"]
