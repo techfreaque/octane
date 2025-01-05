@@ -39,6 +39,14 @@ class FuturePortfolio(portfolio_class.Portfolio):
         """
         self._update_future_portfolio_data(currency, wallet_value=-amount)
 
+    def update_portfolio_data_from_deposit(self, amount, currency):
+        """
+        Call update_portfolio_data for order currency and market
+        :param amount: the deposit amount
+        :param currency: the deposit currency
+        """
+        self._update_future_portfolio_data(currency, wallet_value=amount)
+
     def update_portfolio_data_from_position_size_update(self,
                                                         position,
                                                         realized_pnl_update,

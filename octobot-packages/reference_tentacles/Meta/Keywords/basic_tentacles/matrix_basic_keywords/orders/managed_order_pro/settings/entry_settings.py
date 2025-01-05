@@ -60,14 +60,10 @@ class ManagedOrderEntryGrid:
 
     def get_indicator_values(self, ctx):
         try:
-            data_index = numpy.where(
-                self.from_indicator_times == int(ctx.trigger_value[0])
-            )[0][0]
-            from_value = decimal.Decimal(str(self.from_indicator_values[data_index]))
-            to_data_index = numpy.where(
-                self.to_indicator_times == int(ctx.trigger_value[0])
-            )[0][0]
-            to_value = decimal.Decimal(str(self.to_indicator_values[to_data_index]))
+            data_index = numpy.where(self.from_indicator_times == ctx.trigger_value[0])[0][0]
+            from_value = decimal.Decimal(str(self.from_indicator_values[data_index+1]))
+            to_data_index = numpy.where(self.to_indicator_times == ctx.trigger_value[0])[0][0]
+            to_value = decimal.Decimal(str(self.to_indicator_values[to_data_index+1]))
             from_string = f"@{from_value}"
             to_string = f"@{to_value}"
             return from_string, to_string

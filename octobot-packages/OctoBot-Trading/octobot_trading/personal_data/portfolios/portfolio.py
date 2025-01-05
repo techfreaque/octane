@@ -132,6 +132,14 @@ class Portfolio:
         """
         raise NotImplementedError("update_portfolio_data_from_withdrawal is not implemented")
 
+    def update_portfolio_data_from_deposit(self, amount, currency):
+        """
+        Call update_portfolio_data for order currency and market
+        :param amount: the deposit amount
+        :param currency: the deposit currency
+        """
+        raise NotImplementedError("update_portfolio_data_from_deposit is not implemented")
+
     def update_portfolio_available_from_order(self, order, is_new_order=True):
         """
         Realize portfolio availability update
@@ -163,6 +171,16 @@ class Portfolio:
 
         self.update_portfolio_data_from_withdrawal(amount, currency)
         self.log_portfolio_update_from_withdrawal(amount, currency)
+
+    def update_portfolio_from_deposit(self, amount, currency):
+        """
+        update_portfolio performs the update of the total / available quantity of a currency
+        It is called when a deposit is requested
+        :param order: the order to be taken into account
+        """
+
+        self.update_portfolio_data_from_deposit(amount, currency)
+        self.log_portfolio_update_from_deposit(amount, currency)
 
     def update_portfolio_available(self, order, is_new_order=False):
         """
@@ -288,6 +306,15 @@ class Portfolio:
         :param currency: withdraw currency
         """
         self.logger.debug(f"Portfolio updated from withdraw | {currency} -{amount}"
+                          f" | {constants.CURRENT_PORTFOLIO_STRING} {self.portfolio}")
+
+    def log_portfolio_update_from_deposit(self, amount, currency):
+        """
+        Log a portfolio update from a deposit
+        :param amount: deposit quantity
+        :param currency: deposit currency
+        """
+        self.logger.debug(f"Portfolio updated from deposit | {currency} -{amount}"
                           f" | {constants.CURRENT_PORTFOLIO_STRING} {self.portfolio}")
 
 

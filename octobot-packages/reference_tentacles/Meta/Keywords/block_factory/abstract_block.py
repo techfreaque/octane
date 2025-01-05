@@ -1,5 +1,9 @@
 # prevent circular import error
 from __future__ import annotations
+import time
+
+import numpy
+from octobot_commons.symbols import symbol_util
 import tentacles.Meta.Keywords.block_factory as _block_factory
 
 import typing
@@ -522,6 +526,17 @@ class AbstractBlock:
             )
         return self._available_pairs
 
+    def get_available_currencies(self) -> list:
+        available_pairs = self.get_available_pairs()
+        currencies: set = set()
+        for pair in available_pairs:
+            parsed_symbol = symbol_util.parse_symbol(pair)
+            currencies.add(parsed_symbol.base)
+            currencies.add(parsed_symbol.quote)
+        return list(currencies)
+
+            
+
     def user_select_trigger_pairs(self) -> list:
         all_pairs = self.get_available_pairs()
         return self.user_input(
@@ -545,6 +560,7 @@ class AbstractBlock:
             str
         ] = enums.PlotCharts.MAIN_CHART.value,
         parent_input_name: typing.Optional[str] = None,
+        allow_move_signal_to_the_right: bool = False,
     ):
         plot_data: bool = self.user_input(
             name=f"plot_{self.NAME}_{self.last_io_node_id}",
@@ -572,6 +588,16 @@ class AbstractBlock:
                 )
         else:
             chart_location = default_chart_location
+        move_signal_to_the_right: int = 0
+        if allow_move_signal_to_the_right:
+            move_signal_to_the_right = self.user_input(
+                name=f"move_signal_right_{self.NAME}_{self.last_io_node_id}",
+                title="Move signal to the right by X candles",
+                input_type=enums.UserInputTypes.INT.value,
+                def_val=0,
+                min_val=0,
+                parent_input_name_new=parent_input_name,
+            )
         self.register_block_output_node(
             output_node_class=output_node_class,
             node_id=self.block_id,
@@ -582,6 +608,7 @@ class AbstractBlock:
             output_node_plot_enabled=plot_data,
             output_node_plot_color=plot_color,
             output_node_chart_location=chart_location,
+            output_node_move_signal_to_the_right=move_signal_to_the_right,
         )
 
     # strategies methods
@@ -600,7 +627,9 @@ class AbstractBlock:
 
     async def get_strategy_signals(self):
         for node in self.output_nodes.values():
+            start_time_node = time.time()
             for handle in node.connected_handle_instances.values():
+                start_time = time.time()
                 handle: abstract_node.InputOutputNode
                 if isinstance(
                     handle.origin_block_instance,
@@ -609,6 +638,7 @@ class AbstractBlock:
                     await handle.origin_block_instance.execute_block_from_factory(
                         block_factory=self.block_factory, triggering_block=self
                     )
+                    print(f" strategy flow builder - done evaluator block {handle.origin_block_instance.NAME} in {time.time() - start_time}")
                 elif isinstance(
                     handle.origin_block_instance,
                     _block_factory.ActionBlock,
@@ -621,6 +651,9 @@ class AbstractBlock:
                     new_strategy_signals_variation.add_action(
                         handle.origin_block_instance
                     )
+                    print(f" strategy flow builder - done executing strategy {new_strategy_signals_variation.flow_name} in {time.time() - start_time}")
+            print(f" strategy flow builder - done calculating {node.NAME} in {time.time() - start_time_node}")
+            
 
     # indicators methods
     def register_indicator_data_output(
@@ -771,6 +804,7 @@ class AbstractBlock:
         default_plot_color: block_factory_enums.Colors = block_factory_enums.Colors.GREEN,
         default_chart_location: typing.Optional[str] = None,
         parent_input_name: typing.Optional[str] = None,
+        allow_move_signal_to_the_right: bool = False,
     ):
         self.register_data_output(
             title,
@@ -781,6 +815,7 @@ class AbstractBlock:
             default_plot_color=default_plot_color,
             default_chart_location=default_chart_location,
             chart_location_title=chart_location_title,
+            allow_move_signal_to_the_right=allow_move_signal_to_the_right,
             parent_input_name=parent_input_name,
         )
 
@@ -830,8 +865,15 @@ class AbstractBlock:
             #                 except Exception:
             #                     signals.append(0)
             #         evaluator.signals = signals
-
+            if node.move_signal_to_the_right:
+                signals = self.remove_last_n_elements(
+                    signals, node.move_signal_to_the_right
+                )
             if node.plot_enabled:
+                if node.move_signal_to_the_right:
+                    signal_values = self.remove_last_n_elements(
+                        signal_values, node.move_signal_to_the_right
+                    )
                 await self.plot_and_store_signals(
                     signal_values=signal_values,
                     signals=signals,
@@ -851,6 +893,12 @@ class AbstractBlock:
             )
             return
         raise RuntimeError(f"Falied to save data for {title}")
+
+    @staticmethod
+    def remove_last_n_elements(
+        lst: list | numpy.ndarray, n: int
+    ) -> list | numpy.ndarray:
+        return lst[:-n] if n else lst
 
     def get_block_time_frame(
         self,
@@ -1018,6 +1066,7 @@ class AbstractBlock:
         output_node_plot_enabled: bool = False,
         output_node_plot_color: block_factory_enums.Colors = block_factory_enums.Colors.YELLOW,
         output_node_chart_location: typing.Optional[str] = None,
+        output_node_move_signal_to_the_right: int = 0,
     ) -> None:
         io_node_instance: abstract_node.OutputNode = output_node_class(
             ui=self.UI,
@@ -1031,6 +1080,7 @@ class AbstractBlock:
             node_config_parent=self.node_in_output_parent_input,
             plot_color=output_node_plot_color,
             output_node_chart_location=output_node_chart_location,
+            output_node_move_signal_to_the_right=output_node_move_signal_to_the_right,
             origin_block_instance=self,
         )
         self.output_nodes[io_node_instance.full_io_id] = io_node_instance

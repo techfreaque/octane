@@ -1,10 +1,11 @@
 {
-  "version": "0.9.51",
+  "version": "0.9.52",
   "origin_package": "Octane-Default-Tentacles",
   "tentacles": [
     "O_UI"
   ],
   "tentacles-requirements": [
-    "RunAnalysis", "RunAnalysisModePlugin"
+    "RunAnalysis",
+    "RunAnalysisModePlugin"
   ]
 }

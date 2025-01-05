@@ -18,6 +18,7 @@
 # or you want your own custom solution,
 # please contact me at max@a42.ch
 
+import time
 import typing
 import numpy
 from octobot_commons.enums import ActivationTopics, PlotCharts
@@ -133,9 +134,13 @@ class CandleStrategy(abstract_strategy_block.StrategyBlock):
 
     async def execute_init_block_data(self, strategy_variation):
         for action_block in strategy_variation.actions:
+            block_start_time = time.time()
             if isinstance(action_block, abstract_action_block.ActionBlock):
                 await action_block.init_block_data_from_factory(
                     self.block_factory, triggering_block=self
+                )
+                print(
+                    f" strategy flow builder - done executing {action_block.NAME} in {time.time() - block_start_time}"
                 )
 
     async def execute_cron_jobs(self):

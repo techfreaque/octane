@@ -44,6 +44,7 @@ class DataIsRisingEvaluator(abstract_evaluator_block.EvaluatorBlock):
             plot_switch_text=f"Plot when data source is rising",
             plot_color_switch_title="Signals plot color",
             default_plot_color=block_factory_enums.Colors.GREEN,
+            allow_move_signal_to_the_right=True,
         )
 
     async def execute_block(
@@ -54,11 +55,10 @@ class DataIsRisingEvaluator(abstract_evaluator_block.EvaluatorBlock):
             chart_location,
             indicator_title,
         ) = await self.get_input_node_data()
-        signals = moving_up_down.moving_up_(
+        signals = moving_up_down.moving_up(
             data_source_values,
             self.signal_lag,
             sideways_is_rising=self.sideways_is_rising,
-            calculate_full_history=not self.block_factory.live_recording_mode,
             only_first_signal=self.only_one_signal,
         )
         await self.store_evaluator_signals(

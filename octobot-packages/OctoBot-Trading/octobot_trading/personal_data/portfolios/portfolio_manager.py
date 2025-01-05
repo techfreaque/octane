@@ -128,6 +128,22 @@ class PortfolioManager(util.Initializable):
                 raise errors.PortfolioOperationError("withdraw is not supported in real trading")
         return False
 
+    async def handle_balance_update_from_withdrawal(self, amount, currency) -> bool:
+        """
+        Handle a balance update from a deposit update
+        :param amount: the amount to deposit
+        :param currency: the currency to deposit
+        :return: True if the portfolio was updated
+        """
+        if self.trader.is_enabled:
+            async with self.portfolio_history_update():
+                if self.trader.simulate:
+                    self.portfolio.update_portfolio_from_deposit(amount, currency)
+                    return True
+                # do not deposit on real trading
+                raise errors.PortfolioOperationError("deposit is not supported in real trading")
+        return False
+
     def handle_balance_updated(self):
         """
         Handle balance update notification
