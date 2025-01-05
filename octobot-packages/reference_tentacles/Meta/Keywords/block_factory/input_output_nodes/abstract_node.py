@@ -134,6 +134,7 @@ class OutputNode(InputOutputNode):
         plot_enabled: bool,
         plot_color: block_factory_enums.Colors,
         output_node_chart_location: str,
+        output_node_move_signal_to_the_right: int,
         origin_block_instance: block_factory.AbstractBlock,
     ):
         super().__init__(
@@ -150,4 +151,5 @@ class OutputNode(InputOutputNode):
         )
         self.plot_enabled: bool = plot_enabled
         self.plot_color: block_factory_enums.Colors = plot_color
-        self.chart_location = output_node_chart_location
+        self.chart_location: str = output_node_chart_location
+        self.move_signal_to_the_right: int = output_node_move_signal_to_the_right

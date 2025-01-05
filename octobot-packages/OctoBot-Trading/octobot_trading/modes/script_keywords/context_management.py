@@ -32,6 +32,11 @@ import octobot_trading.signals as trading_signals
 import octobot_trading.storage.util as storage_util
 import octobot_tentacles_manager.api as tentacles_manager_api
 import octobot_tentacles_manager.models as tentacles_manager_models
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from octobot_trading.exchanges.exchange_manager import ExchangeManager
 
 
 def get_base_context(trading_mode, symbol=None, init_call=False):
@@ -65,7 +70,7 @@ class Context(databases.CacheClient):
     def __init__(
         self,
         tentacle,
-        exchange_manager,
+        exchange_manager: "ExchangeManager",
         trader,
         exchange_name,
         traded_pair,
@@ -93,7 +98,7 @@ class Context(databases.CacheClient):
             not exchange_manager.is_backtesting if exchange_manager else False
         )
         self.analysis_settings = analysis_settings
-        self.exchange_manager = exchange_manager
+        self.exchange_manager: "ExchangeManager" = exchange_manager
         self.trader = trader
         self.matrix_id = matrix_id
         self.cryptocurrency = cryptocurrency

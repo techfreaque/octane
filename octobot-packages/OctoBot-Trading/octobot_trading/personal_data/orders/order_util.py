@@ -29,6 +29,10 @@ import octobot_trading.personal_data.orders.decimal_order_adapter as decimal_ord
 import octobot_trading.exchanges.util.exchange_market_status_fixer as exchange_market_status_fixer
 import octobot_trading.personal_data.orders.states.fill_order_state as fill_order_state
 from octobot_trading.enums import ExchangeConstantsMarketStatusColumns as Ecmsc
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from octobot_trading.exchanges.exchange_manager import ExchangeManager
 
 
 LOGGER_NAME = "order_util"
@@ -243,7 +247,7 @@ async def get_pre_order_data(exchange_manager, symbol: str, timeout: int = None,
     return currency_available, market_available, market_quantity, price, symbol_market
 
 
-def get_portfolio_amounts(exchange_manager, symbol, price, portfolio_type=commons_constants.PORTFOLIO_AVAILABLE):
+def get_portfolio_amounts(exchange_manager: "ExchangeManager", symbol, price, portfolio_type=commons_constants.PORTFOLIO_AVAILABLE):
     currency, market = symbol_util.parse_symbol(symbol).base_and_quote()
     portfolio = exchange_manager.exchange_personal_data.portfolio_manager.portfolio
     currency_available = portfolio.get_currency_portfolio(currency).available \

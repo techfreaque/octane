@@ -76,6 +76,7 @@ class HighsAndLowsIndicator(abstract_indicator_block.IndicatorBlock):
                 title="Pivot lows",
                 plot_switch_text="Plot pivot lows",
                 plot_color_switch_title="Pivot lows plot color",
+                chart_location_title="Pivot lows chart location",
                 default_plot_color=block_factory_enums.Colors.PURPLE,
                 parent_input_name=pivot_lows_settings_name,
             )
@@ -112,6 +113,7 @@ class HighsAndLowsIndicator(abstract_indicator_block.IndicatorBlock):
                 title="Pivot highs",
                 plot_switch_text="Plot pivot highs",
                 plot_color_switch_title="Pivot highs plot color",
+                chart_location_title="Pivot highs chart location",
                 default_plot_color=block_factory_enums.Colors.GREEN,
                 parent_input_name=pivot_high_settings_name,
             )
@@ -155,5 +157,4 @@ class HighsAndLowsIndicator(abstract_indicator_block.IndicatorBlock):
                     "pivot_lookback": self.pivot_lookback,
                 },
                 data_display_conditions=pivot_high_data,
-                chart_location=chart_location,
             )

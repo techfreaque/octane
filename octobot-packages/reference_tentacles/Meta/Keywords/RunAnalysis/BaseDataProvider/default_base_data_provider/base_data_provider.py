@@ -289,6 +289,101 @@ class RunAnalysisBaseDataGenerator:
             await self._load_historical_portfolio_value()
         return self._historical_portfolio_value
 
+    async def get_start_value(
+        self, historical_portfolio_value
+    ) -> typing.Tuple[float, str]:
+        if self._start_value is not None and self._value_asset is not None:
+            return self._start_value, self._value_asset
+        start_end_portfolio_values = await self.get_start_end_portfolio_values()
+        self._start_value = 0
+        self._value_asset = list(historical_portfolio_value[0]["v"].keys())[0]
+        for asset_name, asset in start_end_portfolio_values[0][
+            "starting_portfolio"
+        ].items():
+            if asset_name == self._value_asset:
+                self._start_value = asset["total"]
+            else:
+                # TODO handle multiple assets
+                print(
+                    f"Other assets than reference asset is not supported yet : {asset_name}"
+                )
+        return self._start_value, self._value_asset
+
+    async def get_deposits_withdrawals(self):
+        if self._deposits is not None and self._withdrawals is not None:
+            return self._deposits, self._withdrawals
+
+        transactions = await self.get_transactions()
+
+        self._deposits = {}
+        self._withdrawals = {}
+
+        for transaction in transactions:
+            timestamp = int(transaction["x"] / 1000)
+            currency = transaction["currency"]
+            quantity = transaction["quantity"]
+
+            if transaction["type"] == "blockchain_deposit":
+                if currency not in self._deposits:
+                    self._deposits[currency] = {}
+                if timestamp not in self._deposits[currency]:
+                    self._deposits[currency][timestamp] = 0
+                self._deposits[currency][timestamp] += quantity
+            elif transaction["type"] == "blockchain_withdrawal":
+                if currency not in self._withdrawals:
+                    self._withdrawals[currency] = {}
+                if timestamp not in self._withdrawals[currency]:
+                    self._withdrawals[currency][timestamp] = 0
+                self._withdrawals[currency][timestamp] += quantity
+        return self._deposits, self._withdrawals
+
+    async def get_historical_unrealized_pnl(self):
+        historical_portfolio_value = await self.get_historical_portfolio_value()
+
+        start_value, value_asset = await self.get_start_value(
+            historical_portfolio_value
+        )
+
+        deposits, withdrawals = await self.get_deposits_withdrawals()
+
+        historical_unrealized_pnl = []
+
+        for day in historical_portfolio_value:
+            cumulative_deposits = {value_asset: start_value}
+            cumulative_withdrawals = {}
+            timestamp = day["t"]
+            value_by_currency = day["v"]
+
+            for currency, value in value_by_currency.items():
+                if currency not in cumulative_deposits:
+                    cumulative_deposits[currency] = 0
+                if currency not in cumulative_withdrawals:
+                    cumulative_withdrawals[currency] = 0
+
+                if currency in deposits:
+                    for deposit_time, deposit_amount in deposits[currency].items():
+                        if deposit_time < timestamp:
+                            cumulative_deposits[currency] += deposit_amount
+
+                if currency in withdrawals:
+                    for withdrawal_time, withdrawal_amount in withdrawals[
+                        currency
+                    ].items():
+                        if withdrawal_time < timestamp:
+                            cumulative_withdrawals[currency] += withdrawal_amount
+
+                adjusted_value = (
+                    value
+                    - cumulative_deposits[currency]
+                    + cumulative_withdrawals[currency]
+                )
+
+                if not any(d["t"] == timestamp for d in historical_unrealized_pnl):
+                    historical_unrealized_pnl.append({"t": timestamp, "v": {}})
+                historical_unrealized_pnl[-1]["v"][currency] = adjusted_value
+
+        return historical_unrealized_pnl
+
     async def _load_historical_portfolio_value(self):
         self._historical_portfolio_value = self._filter_cached_value_by_time_range(
             (

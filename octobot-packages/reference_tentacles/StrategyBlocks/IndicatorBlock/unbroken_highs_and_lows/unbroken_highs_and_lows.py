@@ -44,16 +44,32 @@ class UnbrokenHighsAndLowsIndicator(abstract_indicator_block.IndicatorBlock):
         # ) or self.user_input("pivot lookback length", "int", 2, 1)
 
         self.pivots_len = self.user_input(
-            "pivots_len", title="Pivots length", input_type=UserInputTypes.INT, def_val=100, min_val=1
+            "pivots_len",
+            title="Pivots length",
+            input_type=UserInputTypes.INT,
+            def_val=100,
+            min_val=1,
         )
         self.confirmation = self.user_input(
-            "confirmation", title="Breaking confirmation time", input_type=UserInputTypes.INT, def_val=0, min_val=1
+            "confirmation",
+            title="Breaking confirmation time",
+            input_type=UserInputTypes.INT,
+            def_val=0,
+            min_val=1,
         )
         self.min_pivot_age = self.user_input(
-            "min_pivot_age", title="Min pivot age", input_type=UserInputTypes.INT, def_val=0, min_val=1
+            "min_pivot_age",
+            title="Min pivot age",
+            input_type=UserInputTypes.INT,
+            def_val=0,
+            min_val=1,
         )
         self.max_pivot_lookback = self.user_input(
-            "max_pivot_lookback", title="Max pivot lookback", input_type=UserInputTypes.INT, def_val=3000, min_val=1
+            "max_pivot_lookback",
+            title="Max pivot lookback",
+            input_type=UserInputTypes.INT,
+            def_val=3000,
+            min_val=1,
         )
 
         pivot_lows_settings_name = "pivot_low_settings"
