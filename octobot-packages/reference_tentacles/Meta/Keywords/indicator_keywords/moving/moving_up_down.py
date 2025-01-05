@@ -102,6 +102,33 @@ def moving_down(
     return falling_data.tolist()
 
 
+def moving_up_or_down(
+    indicator_data: np.ndarray[int] | np.ndarray[float] | List[float] | List[int],
+    consecutive_bars: int,
+    sideways_is_direction: bool = True,
+    only_first_signal: bool = False,
+) -> np.ndarray[int]:
+    rising_data = moving_up(
+        indicator_data,
+        consecutive_bars,
+        sideways_is_rising=sideways_is_direction,
+        only_first_signal=only_first_signal,
+    )
+
+    falling_data = moving_down(
+        indicator_data,
+        consecutive_bars,
+        sideways_is_falling=sideways_is_direction,
+        only_first_signal=only_first_signal,
+    )
+
+    combined_data = np.logical_or(np.array(rising_data), np.array(falling_data)).astype(
+        int
+    )
+
+    return combined_data.tolist()
+
+
 def remove_consecutive_signals(signal_data: np.ndarray[int]) -> np.ndarray[int]:
     mask = np.diff(signal_data, prepend=0) != 0
     return signal_data * mask
