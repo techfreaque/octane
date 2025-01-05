@@ -31,6 +31,10 @@ from octobot.community.models import (
     CommunityDonation,
     StartupInfo,
     StrategyData,
+    get_exchange_type_from_availability,
+    to_bot_exchange_internal_name,
+    get_exchange_type_from_internal_name,
+    to_community_exchange_internal_name,
 )
 from octobot.community.supabase_backend import (
     SyncConfigurationStorage,
@@ -105,6 +109,10 @@ __all__ = [
     "flush_tracker",
     "StartupInfo",
     "StrategyData",
+    "get_exchange_type_from_availability",
+    "to_bot_exchange_internal_name",
+    "get_exchange_type_from_internal_name",
+    "to_community_exchange_internal_name",
     "SyncConfigurationStorage",
     "ASyncConfigurationStorage",
     "AuthenticatedAsyncSupabaseClient",

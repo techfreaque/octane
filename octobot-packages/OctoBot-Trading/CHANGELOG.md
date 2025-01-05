@@ -4,6 +4,93 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.140] - 2025-01-03
+### Updated
+[Positions] properly clear closed positions
+[Exchanges] handle newline error in keys
+### Fixed
+[Exchanges] don't raise on missing order description
+[Orders] fix closed pos & instant fill chained orders
+
+## [2.4.139] - 2023-12-29
+### Updated
+[Simulator] handle futures backtesting with market status and different ccxt classes
+
+## [2.4.138] - 2023-12-28
+### Updated
+[TradingModes] ignore fees in futures chained orders
+
+## [2.4.137] - 2023-12-27
+### Updated
+[Orders] handle reduce only in test tools and in register_chained_order
+
+## [2.4.136] - 2023-12-25
+### Updated
+[Positions] dont update entry price on empty positions
+### Fixed
+[Orders] fix reduce only
+
+## [2.4.134] - 2023-12-21
+### Added
+[Orders] add is_stop_trade_order_type
+### Updated
+[Exchanges] handle MAX_FETCHED_OHLCV_COUNT
+
+## [2.4.133] - 2023-12-11
+### Updated
+[TestTools] don't fetch positions when no given symbols
+
+## [2.4.132] - 2023-12-07
+### Fixed
+[Excahnges] properly handle invalid creds on market fetch
+
+## [2.4.131] - 2023-12-07
+### Updated
+[RestExchange] add is_authenticated_request
+
+## [2.4.130] - 2023-12-04
+### Updated
+[BalanceUpdater] don't spam exchange on balance fetch error
+
+## [2.4.129] - 2023-12-03
+### Updated
+[Futures] fix simulation numbers and update api
+### Fixed
+[Exchanges] fix cancelled order status error
+
+## [2.4.128] - 2023-`12-03
+###` Updated
+[OHLCVUpdater] prevent missing candles spam
+
+## [2.4.127] - 2023-11-28
+### Updated
+[MarketStatus] fix min cost overriding
+
+## [2.4.126] - 2023-11-24
+### Updated
+[Backtesting] make backtesting more flexible for missing data
+
+## [2.4.125] - 2023-11-23
+### Added
+[TradingMode] historical config
+
+## [2.4.124] - 2024-11-17
+### Updated
+[Exchanges] Handle limit order in converter
+[Exchanges] Handle more ccxt missed orders
+
+## [2.4.123] - 2024-11-16
+### Updated
+[Requirements] Bump cachetools and make version more flexible
+
+## [2.4.122] - 2024-11-14
+### Fixed
+[Exchanges] Authorization header
+
+## [2.4.121] - 2024-11-11
+### Added
+[Exchanges] ENABLE_CCXT_REQUESTS_COUNTER option
+
 ## [2.4.120] - 2024-11-05
 ### Fixed
 [Exchanges] Authorization header

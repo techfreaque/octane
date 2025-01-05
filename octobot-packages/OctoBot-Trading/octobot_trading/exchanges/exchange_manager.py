@@ -166,6 +166,12 @@ class ExchangeManager(util.Initializable):
         except Exception as err:
             self.logger.exception(err, True, f"Error when stopping storage_manager: {err}")
 
+        if self.proxy_config and self.proxy_config.stop_proxy_callback is not None:
+            try:
+                self.proxy_config.stop_proxy_callback()
+            except Exception as err:
+                self.logger.exception(err, True, f"Error when stopping proxy: {err}")
+
         self.exchange_config = None
         self.exchange_personal_data = None
         self.exchange_symbols_data = None
@@ -312,9 +318,9 @@ class ExchangeManager(util.Initializable):
             common_constants.CONFIG_EXCHANGE_SECRET, config_exchange, None
         )
         return (
-            # remove leading and trailing ", ' and whitespaces if any
-            key.strip(' "').strip("'") if key else key,
-            secret.strip(' "').strip("'") if secret else secret,
+            # remove leading and trailing ", ', newlines and whitespaces if any
+            key.strip(' "').strip("'").strip("\n") if key else key,
+            secret.strip(' "').strip("'").strip("\n") if secret else secret,
             configuration.decrypt_element_if_possible(
                 common_constants.CONFIG_EXCHANGE_PASSWORD, config_exchange, None
             ),

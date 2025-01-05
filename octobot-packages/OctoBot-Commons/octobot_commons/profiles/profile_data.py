@@ -42,8 +42,29 @@ class CryptoCurrencyData(octobot_commons.dataclasses.FlexibleDataclass):
 class ExchangeData(octobot_commons.dataclasses.FlexibleDataclass):
     exchange_credential_id: typing.Union[str, None] = None
     internal_name: typing.Union[str, None] = None
+    exchange_type: str = constants.DEFAULT_EXCHANGE_TYPE
     exchange_id: typing.Union[str, None] = None
-    proxy_id: typing.Union[str, None] = None
+    sandboxed: bool = False
+
+
+@dataclasses.dataclass
+class FutureSymbolData(octobot_commons.dataclasses.FlexibleDataclass):
+    symbol: str
+    leverage: typing.Union[float, None] = None
+
+
+@dataclasses.dataclass
+class FutureExchangeData(octobot_commons.dataclasses.FlexibleDataclass):
+    default_leverage: typing.Union[float, None] = None
+    symbol_data: list[FutureSymbolData] = dataclasses.field(default_factory=list)
+
+    # pylint: disable=E1134
+    def __post_init__(self):
+        if self.symbol_data and isinstance(self.symbol_data[0], dict):
+            self.symbol_data = [
+                FutureSymbolData.from_dict(symbol_datum)
+                for symbol_datum in self.symbol_data
+            ]
 
 
 @dataclasses.dataclass
@@ -116,6 +137,7 @@ class ProfileData(octobot_commons.dataclasses.MinimizableDataclass):
     crypto_currencies: list[CryptoCurrencyData]
     trading: TradingData
     exchanges: list[ExchangeData] = dataclasses.field(default_factory=list)
+    future_exchange_data: FutureExchangeData = dataclasses.field(default_factory=FutureExchangeData)
     trader: TraderData = dataclasses.field(default_factory=TraderData)
     trader_simulator: TraderSimulatorData = dataclasses.field(
         default_factory=TraderSimulatorData
@@ -230,7 +252,7 @@ class ProfileData(octobot_commons.dataclasses.MinimizableDataclass):
                 constants.CONFIG_EXCHANGES: {
                     exchange_details.internal_name: {
                         constants.CONFIG_ENABLED_OPTION: True,
-                        constants.CONFIG_EXCHANGE_TYPE: constants.DEFAULT_EXCHANGE_TYPE,
+                        constants.CONFIG_EXCHANGE_TYPE: exchange_details.exchange_type,
                     }
                     for exchange_details in self.exchanges
                 },

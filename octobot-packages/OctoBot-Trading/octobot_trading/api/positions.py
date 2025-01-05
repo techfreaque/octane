@@ -34,3 +34,20 @@ async def close_position(exchange_manager, symbol: str, side: enums.PositionSide
                 emit_trading_signals=emit_trading_signals
             ) else 0
     return 0
+
+
+def set_is_exclusively_using_exchange_position_details(
+    exchange_manager, is_exclusively_using_exchange_position_details: bool
+):
+    exchange_manager.exchange_personal_data.positions_manager.is_exclusively_using_exchange_position_details = (
+        is_exclusively_using_exchange_position_details
+    )
+
+
+async def update_position_mark_price(
+    exchange_manager, symbol: str, side: enums.PositionSide, mark_price: decimal.Decimal
+):
+    for position in exchange_manager.exchange_personal_data.positions_manager.get_symbol_positions(symbol):
+        if position.side is side:
+            await position.update(mark_price=mark_price)
+            return position

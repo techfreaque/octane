@@ -54,6 +54,7 @@ CONFIG_CANDLES_HISTORY_SIZE_TITLE = "Candles history size"
 CONFIG_CANDLES_HISTORY_SIZE_KEY = CONFIG_CANDLES_HISTORY_SIZE_TITLE.replace(" ", "_")
 CONFIG_BUY_ORDER_AMOUNT = "buy_order_amount"
 CONFIG_SELL_ORDER_AMOUNT = "sell_order_amount"
+CONFIG_LEVERAGE = "leverage"
 TRADING_MODE_ACTIVITY_REASON = "reason"
 
 # Exchange
@@ -73,6 +74,7 @@ EXCHANGE_HTTPS_PROXY_AUTHENTICATED_URL = os.getenv("EXCHANGE_HTTPS_PROXY_AUTHENT
 EXCHANGE_SOCKS_PROXY_AUTHENTICATED_URL = os.getenv("EXCHANGE_SOCKS_PROXY_AUTHENTICATED_URL")
 ENABLE_CCXT_VERBOSE = os_util.parse_boolean_environment_var("ENABLE_CCXT_VERBOSE", "False")
 ENABLE_CCXT_RATE_LIMIT = os_util.parse_boolean_environment_var("ENABLE_CCXT_RATE_LIMIT", "True")
+ENABLE_CCXT_REQUESTS_COUNTER = os_util.parse_boolean_environment_var("ENABLE_CCXT_REQUESTS_COUNTER", "False")
 CCXT_DEFAULT_CACHE_LIMIT = int(os.getenv("CCXT_DEFAULT_CACHE_LIMIT", "1000"))  # 1000: default ccxt value
 CCXT_TRADES_CACHE_LIMIT = int(os.getenv("CCXT_TRADES_CACHE_LIMIT", str(CCXT_DEFAULT_CACHE_LIMIT)))
 CCXT_ORDERS_CACHE_LIMIT = int(os.getenv("CCXT_ORDERS_CACHE_LIMIT", str(CCXT_DEFAULT_CACHE_LIMIT)))
@@ -122,6 +124,7 @@ FULL_CANDLE_HISTORY_EXCHANGES = [
     "coinbase",
     "binanceus",
     "bitmart",
+    "bitmex",
 ]
 
 DEFAULT_FUTURE_EXCHANGES = ["binanceusdm", "bybit"]
@@ -147,7 +150,7 @@ TESTED_EXCHANGES = [
     "bitmart",
 ])
 DEFAULT_FUTURE_EXCHANGES = sorted(["bybit"])
-SIMULATOR_TESTED_EXCHANGES = sorted(["bitfinex2", "bithumb", "bitstamp", "bittrex",
+SIMULATOR_TESTED_EXCHANGES = sorted(["bitfinex2", "bithumb", "bitstamp", "bitmex",
                               "hitbtc", "kraken", "poloniex", "bitso", "ndax", "upbit",
                               "wavesexchange",])
 
@@ -230,6 +233,10 @@ WEBSOCKET_FEEDS_TO_TRADING_CHANNELS = {
     POSITIONS_CHANNEL: [enums.WebsocketFeeds.POSITION],
     FUNDING_CHANNEL: [enums.WebsocketFeeds.FUNDING]
 }
+
+ALWAYS_STARTED_REST_PRODUCER_CHANNELS = [
+    TICKER_CHANNEL, # use to force mark price update when necessary: should always be reachable
+]
 
 FILL_ORDER_STATUS_SCOPE = [enums.OrderStatus.CLOSED,
                            enums.OrderStatus.FILLED,

@@ -18,13 +18,14 @@ import decimal
 import typing
 import copy
 import asyncio
-import traceback
-import sys
+# import traceback      # uncomment for debugging in tests
+# import sys        # uncomment for debugging in tests
 
 import ccxt.async_support as ccxt
 import octobot_commons.enums as commons_enums
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.tree as commons_tree
+import octobot_commons.html_util as html_util
 
 from octobot_commons import number_util
 
@@ -84,6 +85,11 @@ class RestExchange(abstract_exchange.AbstractExchange):
     MARK_PRICE_IN_POSITION = False
     MARK_PRICE_IN_TICKER = False
 
+    # OHLCV params
+    # set when the exchange returns nothing when fetching historical candles with a too early start time
+    # (will iterate historical OHLCV requests over this window)
+    MAX_FETCHED_OHLCV_COUNT = None
+
     # Funding rate params
     FUNDING_WITH_MARK_PRICE = False
     FUNDING_IN_TICKER = False
@@ -106,11 +112,19 @@ class RestExchange(abstract_exchange.AbstractExchange):
     EXCHANGE_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = []
     # text content of errors due to account compliancy issues
     EXCHANGE_COMPLIANCY_ERRORS: typing.List[typing.Iterable[str]] = []
+    # text content of errors due to exchange internal synch (like when portfolio is not yet up to date after a trade)
+    EXCHANGE_INTERNAL_SYNC_ERRORS: typing.List[typing.Iterable[str]] = []
+    # text content of errors due to missing fnuds when creating an order (when not identified as such by ccxt)
+    EXCHANGE_MISSING_FUNDS_ERRORS: typing.List[typing.Iterable[str]] = []
     # text content of errors due to exchange local account permissions (ex: accounts from X country can't trade XYZ)
     # text content of errors due to traded assets for account
     EXCHANGE_ACCOUNT_TRADED_SYMBOL_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = []
     # text content of errors due to unhandled authentication issues
     EXCHANGE_AUTHENTICATION_ERRORS: typing.List[typing.Iterable[str]] = []
+    # text content of errors due to a closed position on the exchange. Relevant for reduce-only orders
+    EXCHANGE_CLOSED_POSITION_ERRORS: typing.List[typing.Iterable[str]] = []
+    # text content of errors due to an order that would immediately trigger if created. Relevant for stop losses
+    EXCHANGE_ORDER_IMMEDIATELY_TRIGGER_ERRORS: typing.List[typing.Iterable[str]] = []
 
     DEFAULT_CONNECTOR_CLASS = ccxt_connector.CCXTConnector
 
@@ -130,7 +144,7 @@ class RestExchange(abstract_exchange.AbstractExchange):
             exchange_manager,
             adapter_class=self.get_adapter_class(),
             additional_config=self.get_additional_connector_config(),
-            rest_name=self.get_rest_name(),
+            rest_name=self.get_rest_name(self.exchange_manager),
             force_auth=self.REQUIRES_AUTHENTICATION,
         )
 
@@ -158,8 +172,9 @@ class RestExchange(abstract_exchange.AbstractExchange):
         """
         return [enums.ExchangeTypes.SPOT]
 
-    def get_rest_name(self):
-        return self.exchange_manager.exchange_class_string
+    @classmethod
+    def get_rest_name(cls, exchange_manager):
+        return exchange_manager.exchange_class_string
 
     def get_associated_websocket_exchange_name(self):
         return self.exchange_manager.exchange_name
@@ -258,21 +273,25 @@ class RestExchange(abstract_exchange.AbstractExchange):
                 f"price: {price} - {side})"
             )
 
+    def _on_missing_funds_err(self, err, order_type, symbol, quantity, price, stop_price):
+        self.log_order_creation_error(err, order_type, symbol, quantity, price, stop_price)
+        if self.__class__.PRINT_DEBUG_LOGS:
+            self.logger.warning(str(err))
+        raise errors.MissingFunds(html_util.get_html_summary_if_relevant(err)) from err
+
     @contextlib.asynccontextmanager
     async def _order_operation(self, order_type, symbol, quantity, price, stop_price):
         try:
             yield
         except ccxt.InsufficientFunds as e:
-            self.log_order_creation_error(e, order_type, symbol, quantity, price, stop_price)
-            if self.__class__.PRINT_DEBUG_LOGS:
-                self.logger.warning(str(e))
-            raise errors.MissingFunds(e) from e
-        except ccxt.NotSupported as err:
-            raise errors.NotSupported from err
+            self._on_missing_funds_err(e, order_type, symbol, quantity, price, stop_price)
+        except (ccxt.NotSupported, NotImplementedError) as err:
+            raise errors.NotSupported(err) from err
         except (errors.AuthenticationError, ccxt.AuthenticationError) as err:
             # invalid api key or missing trading rights
             raise errors.AuthenticationError(
-                f"Error when handling order {err}. Please make sure that trading permissions are on for this API key."
+                f"Error when handling order {html_util.get_html_summary_if_relevant(err)}. "
+                f"Please make sure that trading permissions are on for this API key."
             ) from err
         except ccxt.DDoSProtection as e:
             # ccxt.DDoSProtection: raised upon rate limit issues,
@@ -281,32 +300,52 @@ class RestExchange(abstract_exchange.AbstractExchange):
             if self.is_api_permission_error(e):
                 # invalid api key or missing trading rights
                 raise errors.AuthenticationError(
-                    f"Error when handling order {e}. Please make sure that trading permissions are on for this API key."
+                    f"Error when handling order {html_util.get_html_summary_if_relevant(e)}. "
+                    f"Please make sure that trading permissions are on for this API key."
                 ) from e
             if self.should_log_on_ddos_exception(e):
                 self.connector.log_ddos_error(e)
-            raise errors.FailedRequest(f"Failed to order operation: {e.__class__.__name__} {e}") from e
-        except errors.ExchangeAccountSymbolPermissionError:
+            raise errors.FailedRequest(
+                f"Failed order operation: {e.__class__.__name__} {html_util.get_html_summary_if_relevant(e)}"
+            ) from e
+        except errors.OctoBotExchangeError:
+            # custom error: forward it
             raise
         except Exception as e:
             if not self.is_market_open_for_order_type(symbol, order_type):
                 raise errors.UnavailableOrderTypeForMarketError(
-                    f"Error when handling order {e}. "
+                    f"Error when handling order {html_util.get_html_summary_if_relevant(e)}. "
                     f"Exchange currently refuses to create orders of type {order_type} on {symbol}."
                 ) from e
             if self.is_api_permission_error(e):
                 # invalid api key or missing trading rights
                 raise errors.AuthenticationError(
-                    f"Error when handling order {e}. Please make sure that trading permissions are on for this API key."
+                    f"Error when handling order {html_util.get_html_summary_if_relevant(e)}. "
+                    f"Please make sure that trading permissions are on for this API key."
                 ) from e
             if self.is_exchange_rules_compliancy_error(e):
                 raise errors.ExchangeCompliancyError(
-                    f"Error when handling order {e}. Exchange is refusing this order request on this account because "
+                    f"Error when handling order {html_util.get_html_summary_if_relevant(e)}. "
+                    f"Exchange is refusing this order request on this account because "
                     f"of its compliancy requirements."
                 ) from e
+            if self.is_exchange_closed_position_error(e):
+                raise errors.ExchangeClosedPositionError(
+                    f"Error when handling order {html_util.get_html_summary_if_relevant(e)}. "
+                    f"Exchange is refusing this order request because associated position is closed."
+                ) from e
+            if self.is_exchange_order_would_immediately_trigger_error(e):
+                raise errors.ExchangeOrderInstantTriggerError(
+                    f"Error when handling order {html_util.get_html_summary_if_relevant(e)}. "
+                    f"Exchange is refusing this order request because associated order would instantly trigger."
+                ) from e
             self.log_order_creation_error(e, order_type, symbol, quantity, price, stop_price)
-            print(traceback.format_exc(), file=sys.stderr)
-            self.logger.exception(e, False, f"Unexpected error during order operation: {e}")
+            # print(traceback.format_exc(), file=sys.stderr)    # uncomment for debugging in tests
+            self.logger.exception(
+                e,
+                False,
+                f"Unexpected error during order operation: {html_util.get_html_summary_if_relevant(e)}"
+            )
 
     async def _verify_order(self, created_order, order_type, symbol, price, side, get_order_params=None):
         # some exchanges are not returning the full order details on creation: fetch it if necessary
@@ -350,7 +389,8 @@ class RestExchange(abstract_exchange.AbstractExchange):
             if self.is_exchange_account_traded_symbol_permission_error(err):
                 # exchange won't let this order create: raise
                 raise errors.ExchangeAccountSymbolPermissionError(
-                    f"Error when creating {symbol} {order_type} order on {self.exchange_manager.exchange_name}: {err}"
+                    f"Error when creating {symbol} {order_type} order on "
+                    f"{self.exchange_manager.exchange_name}: {html_util.get_html_summary_if_relevant(err)}"
                 ) from err
             # otherwise propagate exception: this is not a situation to retry
             raise
@@ -358,11 +398,23 @@ class RestExchange(abstract_exchange.AbstractExchange):
             if self.is_exchange_account_traded_symbol_permission_error(err):
                 # exchange won't let this order create: raise
                 raise errors.ExchangeAccountSymbolPermissionError(
-                    f"Error when creating {symbol} {order_type} order on {self.exchange_manager.exchange_name}: {err}"
+                    f"Error when creating {symbol} {order_type} order on {self.exchange_manager.exchange_name}: "
+                    f"{html_util.get_html_summary_if_relevant(err)}"
                 ) from err
+            if self.is_exchange_internal_sync_error(err):
+                raise errors.ExchangeInternalSyncError(
+                    f"Error when handling {symbol} {order_type} order. "
+                    f"Exchange is refusing this order request because of sync error "
+                    f"({html_util.get_html_summary_if_relevant(err)})."
+                ) from err
+            if self.is_missing_funds_error(err):
+                self._on_missing_funds_err(err, order_type, symbol, quantity, price, stop_price)
             # can be raised when exchange precision/limits rules change
-            self.logger.debug(f"Failed to create order ({err}) : order_type: {order_type}, symbol: {symbol}. "
-                              f"This might be due to an update on {self.name} market rules. Fetching updated rules.")
+            self.logger.warning(
+                f"Failed to create order ({html_util.get_html_summary_if_relevant(err)}) : "
+                f"order_type: {order_type}, symbol: {symbol}. "
+                f"This might be due to an update on {self.name} market rules. Fetching updated rules."
+            )
             await self.connector.load_symbol_markets(reload=True, market_filter=self.exchange_manager.market_filter)
             # retry order creation with updated markets (ccxt will use the updated market values)
             return await self._create_specific_order(order_type, symbol, quantity, price=price,
@@ -736,6 +788,9 @@ class RestExchange(abstract_exchange.AbstractExchange):
     async def switch_to_account(self, account_type: enums.AccountTypes):
         return await self.connector.switch_to_account(account_type=account_type)
 
+    def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:
+        raise NotImplementedError("is_authenticated_request is not implemented")
+
     # Futures
     async def load_pair_future_contract(self, pair: str):
         """
@@ -1028,6 +1083,26 @@ class RestExchange(abstract_exchange.AbstractExchange):
     def is_exchange_rules_compliancy_error(self, error: BaseException) -> bool:
         if self.EXCHANGE_COMPLIANCY_ERRORS:
             return exchanges_util.is_error_on_this_type(error, self.EXCHANGE_COMPLIANCY_ERRORS)
+        return False
+
+    def is_exchange_closed_position_error(self, error: BaseException) -> bool:
+        if self.EXCHANGE_CLOSED_POSITION_ERRORS:
+            return exchanges_util.is_error_on_this_type(error, self.EXCHANGE_CLOSED_POSITION_ERRORS)
+        return False
+
+    def is_exchange_order_would_immediately_trigger_error(self, error: BaseException) -> bool:
+        if self.EXCHANGE_ORDER_IMMEDIATELY_TRIGGER_ERRORS:
+            return exchanges_util.is_error_on_this_type(error, self.EXCHANGE_ORDER_IMMEDIATELY_TRIGGER_ERRORS)
+        return False
+
+    def is_exchange_internal_sync_error(self, error: BaseException) -> bool:
+        if self.EXCHANGE_INTERNAL_SYNC_ERRORS:
+            return exchanges_util.is_error_on_this_type(error, self.EXCHANGE_INTERNAL_SYNC_ERRORS)
+        return False
+
+    def is_missing_funds_error(self, error: BaseException) -> bool:
+        if self.EXCHANGE_MISSING_FUNDS_ERRORS:
+            return exchanges_util.is_error_on_this_type(error, self.EXCHANGE_MISSING_FUNDS_ERRORS)
         return False
 
     def is_exchange_account_traded_symbol_permission_error(self, error: BaseException) -> bool:

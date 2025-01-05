@@ -144,6 +144,12 @@ class Authenticator(singleton.Singleton):
         """
         raise NotImplementedError
 
+    async def update_positions(self, positions_by_exchange: dict[str, list]):
+        """
+        Updates authenticated account positions
+        """
+        raise NotImplementedError
+
     async def update_portfolio(
         self,
         current_value: dict,

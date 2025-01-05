@@ -172,7 +172,7 @@ class AbstractTradingModeConsumer(modes_channel.ModeChannelConsumer):
             )
             can_create_order = max_order_size > symbol_min_amount
             self.logger.debug(
-                f"can_create_order: {can_create_order} = "
+                f"can_create_order: {can_create_order} [{symbol}] = "
                 f"max_order_size > symbol_min_amount = {max_order_size} > {symbol_min_amount}"
             )
             return can_create_order
@@ -182,7 +182,7 @@ class AbstractTradingModeConsumer(modes_channel.ModeChannelConsumer):
         if state == enums.EvaluatorStates.VERY_SHORT.value or state == enums.EvaluatorStates.SHORT.value:
             can_create_order = portfolio.get_currency_portfolio(currency).available > symbol_min_amount
             self.logger.debug(
-                f"can_create_order: {can_create_order} = "
+                f"can_create_order: {can_create_order} [{symbol}] = "
                 f"portfolio.get_currency_portfolio(currency).available > symbol_min_amount = "
                 f"{portfolio.get_currency_portfolio(currency).available} > {symbol_min_amount}"
             )
@@ -192,7 +192,7 @@ class AbstractTradingModeConsumer(modes_channel.ModeChannelConsumer):
         elif state == enums.EvaluatorStates.LONG.value or state == enums.EvaluatorStates.VERY_LONG.value:
             can_create_order = portfolio.get_currency_portfolio(market).available > order_min_amount
             self.logger.debug(
-                f"can_create_order: {can_create_order} = "
+                f"can_create_order: {can_create_order} [{symbol}] = "
                 f"portfolio.get_currency_portfolio(market).available > order_min_amount = "
                 f"{portfolio.get_currency_portfolio(market).available} > {order_min_amount}"
             )
@@ -251,7 +251,7 @@ class AbstractTradingModeConsumer(modes_channel.ModeChannelConsumer):
         return position.state.is_active()
 
     async def register_chained_order(
-        self, main_order, price, order_type, side, quantity=None, allow_bundling=True, tag=None
+        self, main_order, price, order_type, side, quantity=None, allow_bundling=True, tag=None, reduce_only=False
     ) -> tuple:
         chained_order = personal_data.create_order_instance(
             trader=self.exchange_manager.trader,
@@ -262,15 +262,20 @@ class AbstractTradingModeConsumer(modes_channel.ModeChannelConsumer):
             price=price,
             side=side,
             associated_entry_id=main_order.order_id,
+            reduce_only=reduce_only,
             tag=tag,
         )
         params = {}
+        # do not reduce chained order amounts to account for fees when trading futures
+        update_with_triggering_order_fees = not self.exchange_manager.is_future
         if allow_bundling:
             params = await self.exchange_manager.trader.bundle_chained_order_with_uncreated_order(
-                main_order, chained_order, True
+                main_order, chained_order, update_with_triggering_order_fees
             )
         else:
-            await self.exchange_manager.trader.chain_order(main_order, chained_order, True, False)
+            await self.exchange_manager.trader.chain_order(
+                main_order, chained_order, update_with_triggering_order_fees, False
+            )
         return params, chained_order
 
 

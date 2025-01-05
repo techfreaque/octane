@@ -16,9 +16,13 @@
 import octobot.community.supabase_backend.enums as backend_enums
 import octobot.community.supabase_backend as supabase_backend
 import octobot_commons.constants as commons_constants
+import octobot_commons.logging as commons_logging
 import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
 import octobot_trading.personal_data as trading_personal_data
+
+
+FUTURES_INTERNAL_NAME_SUFFIX = "_futures"
 
 
 def format_trades(trades: list, exchange_name: str, bot_id: str) -> list:
@@ -57,6 +61,51 @@ def _format_trade(trade: dict, exchange_name: str, bot_id: str):
         }
 
 
+def format_positions(positions: list, exchange_name: str) -> list:
+    return [
+        {
+            # local changes
+            backend_enums.PositionKeys.EXCHANGE.value: exchange_name,
+            backend_enums.PositionKeys.TIME.value: position[trading_enums.ExchangeConstantsPositionColumns.TIMESTAMP.value],
+            backend_enums.PositionKeys.POSITION_ID.value: position[trading_enums.ExchangeConstantsPositionColumns.ID.value],
+            # from trading positions
+            backend_enums.PositionKeys.SYMBOL.value: position[trading_enums.ExchangeConstantsPositionColumns.SYMBOL.value],
+            backend_enums.PositionKeys.STATUS.value: position[trading_enums.ExchangeConstantsPositionColumns.STATUS.value],
+            backend_enums.PositionKeys.SIDE.value: position[trading_enums.ExchangeConstantsPositionColumns.SIDE.value],
+            backend_enums.PositionKeys.QUANTITY.value: float(position[trading_enums.ExchangeConstantsPositionColumns.QUANTITY.value])
+                if position[trading_enums.ExchangeConstantsPositionColumns.QUANTITY.value] else 0,
+            backend_enums.PositionKeys.SIZE.value: float(position[trading_enums.ExchangeConstantsPositionColumns.SIZE.value])
+                if position[trading_enums.ExchangeConstantsPositionColumns.SIZE.value] else 0,
+            backend_enums.PositionKeys.NOTIONAL.value: float(position[trading_enums.ExchangeConstantsPositionColumns.NOTIONAL.value])
+                if position[trading_enums.ExchangeConstantsPositionColumns.NOTIONAL.value] else 0,
+            backend_enums.PositionKeys.INITIAL_MARGIN.value: float(position[trading_enums.ExchangeConstantsPositionColumns.INITIAL_MARGIN.value])
+                if position[trading_enums.ExchangeConstantsPositionColumns.INITIAL_MARGIN.value] else 0,
+            backend_enums.PositionKeys.AUTO_DEPOSIT_MARGIN.value:
+                position[trading_enums.ExchangeConstantsPositionColumns.AUTO_DEPOSIT_MARGIN.value],
+            backend_enums.PositionKeys.COLLATERAL.value: float(position[trading_enums.ExchangeConstantsPositionColumns.COLLATERAL.value])
+                if position[trading_enums.ExchangeConstantsPositionColumns.COLLATERAL.value] else 0,
+            backend_enums.PositionKeys.LEVERAGE.value: float(position[trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value])
+                if position[trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value] else 0,
+            backend_enums.PositionKeys.MARGIN_TYPE.value: position[trading_enums.ExchangeConstantsPositionColumns.MARGIN_TYPE.value],
+            backend_enums.PositionKeys.POSITION_MODE.value: position[trading_enums.ExchangeConstantsPositionColumns.POSITION_MODE.value],
+            backend_enums.PositionKeys.ENTRY_PRICE.value: float(position[trading_enums.ExchangeConstantsPositionColumns.ENTRY_PRICE.value])
+                if position[trading_enums.ExchangeConstantsPositionColumns.ENTRY_PRICE.value] else 0,
+            backend_enums.PositionKeys.MARK_PRICE.value: float(position[trading_enums.ExchangeConstantsPositionColumns.MARK_PRICE.value])
+                if position[trading_enums.ExchangeConstantsPositionColumns.MARK_PRICE.value] else 0,
+            backend_enums.PositionKeys.LIQUIDATION_PRICE.value: float(position[trading_enums.ExchangeConstantsPositionColumns.LIQUIDATION_PRICE.value])
+                if position[trading_enums.ExchangeConstantsPositionColumns.LIQUIDATION_PRICE.value] else 0,
+            backend_enums.PositionKeys.UNREALIZED_PNL.value: float(position[trading_enums.ExchangeConstantsPositionColumns.UNREALIZED_PNL.value])
+                if position[trading_enums.ExchangeConstantsPositionColumns.UNREALIZED_PNL.value] else 0,
+            backend_enums.PositionKeys.REALISED_PNL.value: float(position[trading_enums.ExchangeConstantsPositionColumns.REALISED_PNL.value])
+                if position[trading_enums.ExchangeConstantsPositionColumns.REALISED_PNL.value] else 0,
+            backend_enums.PositionKeys.MAINTENANCE_MARGIN_RATE.value: float(position[trading_enums.ExchangeConstantsPositionColumns.MAINTENANCE_MARGIN_RATE.value])
+                if position[trading_enums.ExchangeConstantsPositionColumns.MAINTENANCE_MARGIN_RATE.value] else 0,
+
+        }
+        for position in positions
+    ]
+
+
 def format_orders(orders: list, exchange_name: str) -> list:
     return [
         {
@@ -72,6 +121,8 @@ def format_orders(orders: list, exchange_name: str) -> list:
             ),
             backend_enums.OrderKeys.QUANTITY.value: storage_order[trading_constants.STORAGE_ORIGIN_VALUE][
                 trading_enums.ExchangeConstantsOrderColumns.AMOUNT.value],
+            backend_enums.OrderKeys.SIDE.value: storage_order[trading_constants.STORAGE_ORIGIN_VALUE][
+                trading_enums.ExchangeConstantsOrderColumns.SIDE.value],
             backend_enums.OrderKeys.EXCHANGE_ID.value: storage_order[trading_constants.STORAGE_ORIGIN_VALUE][
                 trading_enums.ExchangeConstantsOrderColumns.EXCHANGE_ID.value],
             backend_enums.OrderKeys.CHAINED.value: format_orders(
@@ -92,6 +143,46 @@ def _get_order_type(order_or_trade):
     except Exception:
         # use default trade_type
         return order_type
+
+
+def to_community_exchange_internal_name(bot_exchange_internal_name: str, exchange_type: str) -> str:
+    if exchange_type == commons_constants.CONFIG_EXCHANGE_FUTURE:
+        return f"{bot_exchange_internal_name}{FUTURES_INTERNAL_NAME_SUFFIX}"
+    return bot_exchange_internal_name
+
+
+def to_bot_exchange_internal_name(community_exchange_internal_name: str) -> str:
+    if community_exchange_internal_name.endswith(FUTURES_INTERNAL_NAME_SUFFIX):
+        return community_exchange_internal_name[:-len(FUTURES_INTERNAL_NAME_SUFFIX)]
+    return community_exchange_internal_name
+
+
+def get_exchange_type_from_internal_name(community_exchange_internal_name: str) -> str:
+    if community_exchange_internal_name.endswith(FUTURES_INTERNAL_NAME_SUFFIX):
+        return commons_constants.CONFIG_EXCHANGE_FUTURE
+    return commons_constants.CONFIG_EXCHANGE_SPOT
+
+
+def get_exchange_type_from_availability(exchange_availability: dict) -> str:
+    if not exchange_availability:
+        # use spot by default
+        return commons_constants.CONFIG_EXCHANGE_SPOT
+    # 1. try futures
+    if exchange_availability.get("futures") == backend_enums.ExchangeSupportValues.SUPPORTED.value:
+        return commons_constants.CONFIG_EXCHANGE_FUTURE
+    # 2. try spot
+    if exchange_availability.get("spot") == backend_enums.ExchangeSupportValues.SUPPORTED.value:
+        return commons_constants.CONFIG_EXCHANGE_SPOT
+    # 3. try market_making
+    if exchange_availability.get("market_making") == backend_enums.ExchangeSupportValues.SUPPORTED.value:
+        # use SPOT by default, be more accurate later on if necessary
+        return commons_constants.CONFIG_EXCHANGE_SPOT
+    # 4. something went wrong: select spot and log error
+    _get_logger().error(
+        f"Unknown exchange type from exchange availability: {exchange_availability}. "
+        f"Defaulting to {commons_constants.CONFIG_EXCHANGE_SPOT}"
+    )
+    return commons_constants.CONFIG_EXCHANGE_SPOT
 
 
 def format_portfolio(
@@ -151,3 +242,7 @@ def get_adapted_portfolio(usd_like_asset, portfolio):
             currency = usd_like_asset
         formatted[currency] = asset[backend_enums.PortfolioAssetKeys.VALUE.value]
     return formatted
+
+
+def _get_logger():
+    return commons_logging.get_logger("CommunityFormatter")

@@ -20,6 +20,7 @@ import typing
 
 import octobot_commons.constants as constants
 import octobot_commons.timestamp_util as timestamp_util
+import octobot_commons.html_util as html_util
 
 LOG_DATABASE = "log_db"
 LOG_NEW_ERRORS_COUNT = "log_new_errors_count"
@@ -226,7 +227,7 @@ class BotLogger:
         :param publish_error_if_necessary: if the error should be published
         :param error_message: the log message
         :param include_exception_name: when True adds the __class__.__name__ of the exception at the end of the message
-        :param skip_post_callback: when True, the error callback wont be called
+        :param skip_post_callback: when True, the error callback won't be called
         """
         extra = kwargs.get("extra", {})
         origin_error_message = error_message
@@ -236,6 +237,7 @@ class BotLogger:
             else error_message
         )
         extra[constants.EXCEPTION_DESC] = error_message
+        html_util.summarize_exception_html_cause_if_relevant(exception)
         self.logger.exception(exception, extra=extra, **kwargs)
         if publish_error_if_necessary:
             message = origin_error_message

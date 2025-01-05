@@ -56,8 +56,9 @@ class ExchangePersonalData(util.Initializable):
         self.exchange = self.exchange_manager.exchange
         if self.trader.is_enabled:
             try:
-                self.portfolio_manager = portfolio_manager.PortfolioManager(self.config, self.trader,
-                                                                            self.exchange_manager)
+                self.portfolio_manager = portfolio_manager.PortfolioManager(
+                    self.config, self.trader, self.exchange_manager
+                )
                 self.trades_manager = trades_manager.TradesManager(self.trader)
                 self.orders_manager = orders_manager.OrdersManager(self.trader)
                 self.positions_manager = positions_manager.PositionsManager(self.trader)
@@ -98,7 +99,6 @@ class ExchangePersonalData(util.Initializable):
                 await self.handle_portfolio_update_notification(self.portfolio_manager.portfolio.portfolio)
 
                 if self.exchange_manager.is_future:
-                    # should this be done only "if should_notify" ?
                     await self.handle_position_instance_update(
                         order.exchange_manager.exchange_personal_data.positions_manager.get_order_position(order),
                         should_notify=True

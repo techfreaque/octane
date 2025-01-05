@@ -13,10 +13,13 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import decimal
+
 import octobot_commons.logging as logging
 
 import octobot_trading.enums as enums
 import octobot_trading.constants as constants
+import octobot_trading.exchange_data.contracts.future_contract as future_contract
 
 
 def update_contracts_from_positions(exchange_manager, positions) -> bool:
@@ -49,6 +52,45 @@ def update_contracts_from_positions(exchange_manager, positions) -> bool:
                     # no need to inform as the contract is not requested
                     _get_logger().debug(message)
     return updated
+
+
+def update_future_contract_from_dict(exchange_manager, contract: dict) -> bool:
+    return exchange_manager.exchange.create_pair_contract(
+        pair=contract[enums.ExchangeConstantsMarginContractColumns.PAIR.value],
+        current_leverage=decimal.Decimal(str(
+            contract[enums.ExchangeConstantsMarginContractColumns.CURRENT_LEVERAGE.value]
+        )),
+        contract_size=decimal.Decimal(str(
+            contract[enums.ExchangeConstantsMarginContractColumns.CONTRACT_SIZE.value]
+        )),
+        margin_type=enums.MarginType(contract[enums.ExchangeConstantsMarginContractColumns.MARGIN_TYPE.value]),
+        contract_type=enums.FutureContractType(contract[enums.ExchangeConstantsFutureContractColumns.CONTRACT_TYPE.value]),
+        position_mode=enums.PositionMode(contract[enums.ExchangeConstantsFutureContractColumns.POSITION_MODE.value])
+            if contract[enums.ExchangeConstantsFutureContractColumns.POSITION_MODE.value]
+            else contract[enums.ExchangeConstantsFutureContractColumns.POSITION_MODE.value],
+        maintenance_margin_rate=decimal.Decimal(str(
+            contract[enums.ExchangeConstantsFutureContractColumns.MAINTENANCE_MARGIN_RATE.value]
+        )),
+        maximum_leverage=None if contract[enums.ExchangeConstantsMarginContractColumns.MAXIMUM_LEVERAGE.value] is None
+            else decimal.Decimal(str(
+                contract[enums.ExchangeConstantsMarginContractColumns.MAXIMUM_LEVERAGE.value]
+            ))
+    )
+
+
+def create_default_future_contract(
+    pair: str, leverage: decimal.Decimal, contract_type: enums.FutureContractType
+) -> future_contract.FutureContract:
+    return future_contract.FutureContract(
+        pair=pair,
+        contract_size=constants.DEFAULT_SYMBOL_CONTRACT_SIZE,
+        margin_type=constants.DEFAULT_SYMBOL_MARGIN_TYPE,
+        contract_type=contract_type,
+        maximum_leverage=constants.DEFAULT_SYMBOL_MAX_LEVERAGE,
+        current_leverage=leverage,
+        position_mode=constants.DEFAULT_SYMBOL_POSITION_MODE,
+        maintenance_margin_rate=constants.DEFAULT_SYMBOL_MAINTENANCE_MARGIN_RATE
+    )
 
 
 def _get_logger():

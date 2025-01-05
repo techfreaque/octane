@@ -46,6 +46,7 @@ class ExchangeSimulatorConnector(abstract_exchange.AbstractExchange):
 
         self.is_authenticated = False
         self._forced_market_statuses: dict = None
+        self._missing_market_statuses: set = set()
 
     async def initialize_impl(self):
         self.exchange_importers = self.backtesting.get_importers(importers.ExchangeDataImporter)
@@ -75,11 +76,19 @@ class ExchangeSimulatorConnector(abstract_exchange.AbstractExchange):
             return market[enums.ExchangeConstantsMarketStatusColumns.SYMBOL.value] in self.symbols
 
         self._forced_market_statuses = ccxt_client_simulation.parse_markets(
-            self.exchange_manager.exchange_class_string, market_filter
+            self._get_exchange_class_rest_name(), market_filter
         )
+
+    def _get_exchange_class_rest_name(self):
+        if self.exchange_manager.exchange.exchange_tentacle_class:
+            return self.exchange_manager.exchange.exchange_tentacle_class.get_rest_name(self.exchange_manager)
+        return self.exchange_manager.exchange_class_string
 
     def should_adapt_market_statuses(self) -> bool:
         return self.exchange_manager.use_cached_markets
+
+    def get_contract_size(self, symbol: str):
+        return ccxt_client_simulation.get_contract_size(self.get_market_status(symbol, with_fixer=False))
 
     @classmethod
     def load_user_inputs_from_class(cls, tentacles_setup_config, tentacle_config):
@@ -150,7 +159,15 @@ class ExchangeSimulatorConnector(abstract_exchange.AbstractExchange):
                     ).market_status
                 return self._forced_market_statuses[symbol]
             except KeyError:
-                raise errors.NotSupported
+                self._missing_market_statuses.add(symbol)
+                if len(self._missing_market_statuses) >= len(self.symbols) - 1:
+                    # issue: almost all market statuses are missing
+                    raise errors.NotSupported(
+                        f"Missing too many market statuses: {self._missing_market_statuses}, "
+                        f"traded symbols: {self.symbols}"
+                    )
+                else:
+                    self.logger.warning(f"Missing cached market status for {symbol}: using default market status")
         return self._get_default_market_status()
 
     def _get_default_market_status(self):

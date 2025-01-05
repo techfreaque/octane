@@ -456,20 +456,25 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
             self.logger.error(f"Initialization took more than {timeout} seconds")
         return False
 
-    async def _wait_for_bot_init(self, timeout, extra_topics: list=None) -> bool:
+    async def _wait_for_bot_init(self, timeout, extra_symbol_topics: list=None, extra_global_topics: list=None) -> bool:
         try:
-            topics = [
-                common_enums.InitializationEventExchangeTopics.BALANCE.value,
-                common_enums.InitializationEventExchangeTopics.ORDERS.value
-            ] + (extra_topics if extra_topics else [])
+            init_symbols = self.trading_mode.get_init_symbols()
+            symbol_topics = [common_enums.InitializationEventExchangeTopics.ORDERS.value] + (extra_symbol_topics or [])
             if self.trading_mode.REQUIRE_TRADES_HISTORY:
-                topics.append(common_enums.InitializationEventExchangeTopics.TRADES.value)
-            for topic in topics:
+                symbol_topics.append(common_enums.InitializationEventExchangeTopics.TRADES.value)
+            for symbol_topic in symbol_topics:
                 self.logger.debug(f"Trading mode [{self.exchange_manager.exchange_name}] start complete. "
-                                  f"Now waiting for {topic} full initialisation.")
-                await util.wait_for_topic_init(self.exchange_manager, timeout, topic)
+                                  f"1/2: Now waiting for {symbol_topic} (for {init_symbols}) full initialisation.")
+                await util.wait_for_topic_init(
+                    self.exchange_manager, timeout, symbol_topic, symbols=init_symbols
+                )
+            global_topics = [common_enums.InitializationEventExchangeTopics.BALANCE.value] + (extra_global_topics or [])
+            for global_topic in global_topics:
+                self.logger.debug(f"Trading mode [{self.exchange_manager.exchange_name}] start complete. "
+                                  f"2/2: Now waiting for {global_topics} full initialisation.")
+                await util.wait_for_topic_init(self.exchange_manager, timeout, global_topic)
             self.logger.debug(
-                f"Trading mode requirements init complete: {', '.join(t for t in topics)} initialisation completed."
+                f"Trading mode requirements init complete: {', '.join(t for t in symbol_topics)} initialisation completed."
             )
             return True
         except (asyncio.TimeoutError, concurrent.futures.TimeoutError):
@@ -498,24 +503,30 @@ class AbstractTradingModeProducer(modes_channel.ModeChannelProducer):
                 common_enums.ActivationTopics.EVALUATION_CYCLE.value,
                 activation_topic_values
             )
-        try:
-            await self._apply_exchange_side_config(context)
-        except Exception as err:
-            # TODO important error to display
-            self.logger.exception(err, True, f"Error when applying exchange side config: {err}")
+        if self.trading_mode.is_updating_exchange_settings(context):
+            try:
+                await self._apply_exchange_side_config(context)
+            except Exception as err:
+                # TODO important error to display
+                self.logger.exception(err, True, f"Error when applying exchange side config: {err}")
 
     async def _apply_exchange_side_config(self, context):
         # can be slow, call in a task if necessary
         if context.exchange_manager.is_future:
             if not self._is_ready_to_trade.is_set():
-                await util.wait_for_topic_init(self.exchange_manager, self.CONFIG_INIT_TIMEOUT,
-                                               common_enums.InitializationEventExchangeTopics.CONTRACTS.value)
+                await util.wait_for_topic_init(
+                    self.exchange_manager, self.CONFIG_INIT_TIMEOUT,
+                    common_enums.InitializationEventExchangeTopics.CONTRACTS.value,
+                    symbols=self.trading_mode.get_init_symbols()
+                )
             await script_keywords.set_leverage(context, await script_keywords.user_select_leverage(context))
 
     async def _wait_for_symbol_prices_and_profitability_init(self, timeout) -> bool:
         try:
-            await util.wait_for_topic_init(self.exchange_manager, timeout,
-                                           common_enums.InitializationEventExchangeTopics.PRICE.value)
+            await util.wait_for_topic_init(
+                self.exchange_manager, timeout, common_enums.InitializationEventExchangeTopics.PRICE.value,
+                symbols=self.trading_mode.get_init_symbols()
+            )
             await util.wait_for_topic_init(self.exchange_manager, timeout,
                                            common_enums.InitializationEventExchangeTopics.PROFITABILITY.value)
         except (asyncio.TimeoutError, concurrent.futures.TimeoutError):

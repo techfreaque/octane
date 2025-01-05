@@ -17,11 +17,13 @@ import abc
 import asyncio
 import contextlib
 import decimal
+import copy
 
 import octobot_commons.constants as common_constants
 import octobot_commons.enums as common_enums
 import octobot_commons.logging as logging
 import octobot_commons.tentacles_management as abstract_tentacle
+import octobot_commons.configuration
 
 import async_channel.constants as channel_constants
 import async_channel.channels as channels
@@ -77,6 +79,9 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
 
         # Trading Mode specific config snapshot before a config update
         self.previous_trading_config: dict = None
+
+        # Used when historical config is enabled
+        self.historical_master_config: dict = None
 
         # If this mode is enabled
         self.enabled: bool = True
@@ -200,6 +205,13 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
         """
         Should be overwritten
         :return: True if the TradingMode can be used in a backtesting else False
+        """
+        return True
+
+    def is_updating_exchange_settings(self, context) -> bool:
+        """
+        :return: True if the TradingMode should update exchange settings
+        (such as leverage) upon initializing user inputs
         """
         return True
 
@@ -439,6 +451,37 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
     def get_local_config(self):
         return self.trading_config
 
+    def update_config_and_user_inputs_if_necessary(self):
+        if self.update_config_if_necessary():
+            self.init_user_inputs({})
+
+    def update_config_if_necessary(self) -> bool:
+        if self.exchange_manager.is_backtesting:
+            try:
+                most_recent_config = self.get_historical_config()
+                if most_recent_config != self.trading_config:
+                    self.previous_trading_config = self.trading_config
+                    self.trading_config = most_recent_config
+                    self.logger.info(f"Switching config to use the most recent one: new config: {self.trading_config}")
+                    return True
+            except Exception as err:
+                self.logger.error(f"Error when reading historical config: {err} {err.__class__.__name__}")
+        return False
+
+    def get_historical_config(self) -> dict:
+        if self.historical_master_config is None:
+            self.historical_master_config = copy.deepcopy(self.trading_config)
+        return octobot_commons.configuration.get_historical_tentacle_config(
+            self.historical_master_config, self.exchange_manager.exchange.get_exchange_current_time()
+        )
+
+    def has_historical_config(self) -> bool:
+        try:
+            octobot_commons.configuration.get_oldest_historical_tentacle_config_time(self.trading_config)
+            return True
+        except ValueError:
+            return False
+
     @classmethod
     def create_local_instance(cls, config, tentacles_setup_config, tentacle_config):
         return modes_factory.create_temporary_trading_mode_with_local_config(
@@ -448,6 +491,17 @@ class AbstractTradingMode(abstract_tentacle.AbstractTentacle):
     # to implement in subclasses if config is necessary
     def set_default_config(self) -> None:
         pass
+
+    def get_init_symbols(self) -> list:
+        try:
+            if self.has_historical_config():
+                self.update_config_and_user_inputs_if_necessary()
+            return self.get_tentacle_config_traded_symbols(
+                self.trading_config, self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+            )
+        except NotImplementedError:
+            return self.exchange_manager.exchange_config.traded_symbol_pairs
+
 
     """
     Strategy related methods

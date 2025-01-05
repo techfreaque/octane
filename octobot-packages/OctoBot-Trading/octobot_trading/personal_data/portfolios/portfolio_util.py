@@ -161,7 +161,7 @@ async def get_coefficient_of_determination_data(transactions, longest_candles, s
             y = [start_balance, end_value]
 
             pw = 15
-            A = numpy.exp(numpy.log((y[0]+0.0000000001) / y[1]) / pw)
+            A = numpy.exp(numpy.log(y[0] / y[1]) / pw)
             a = (x[0] - x[1] * A) / (A - 1)
             b = y[0] / (x[0] + a) ** pw
 
@@ -188,7 +188,7 @@ async def get_coefficient_of_determination(exchange_manager, use_high_instead_of
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.origin_portfolio.portfolio
     )
     start_balance = origin_portfolio[
-        exchange_manager.exchange_personal_data.portfolio_manager.reference_market][commons_constants.PORTFOLIO_TOTAL] or 0.00000001
+        exchange_manager.exchange_personal_data.portfolio_manager.reference_market][commons_constants.PORTFOLIO_TOTAL]
 
     best_case, pnl_data, start_balance, _, _ \
         = await get_coefficient_of_determination_data(transactions=exchange_manager.exchange_personal_data.
