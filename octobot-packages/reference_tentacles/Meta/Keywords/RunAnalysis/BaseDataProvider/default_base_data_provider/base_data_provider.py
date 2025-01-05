@@ -52,6 +52,10 @@ class RunAnalysisBaseDataGenerator:
             str, displayed_elements.DisplayedElements
         ] = {}
         self._portfolio_history = None
+        self._start_value: float | None = None
+        self._value_asset: str | None = None
+        self._deposits: dict | None = None
+        self._withdrawals: dict | None = None
 
         self.start_time: typing.Union[float, int] = None
         self.end_time: typing.Union[float, int] = None
@@ -304,8 +308,8 @@ class RunAnalysisBaseDataGenerator:
                 self._start_value = asset["total"]
             else:
                 # TODO handle multiple assets
-                print(
-                    f"Other assets than reference asset is not supported yet : {asset_name}"
+                self.logger.error(
+                    f"Other assets than reference asset is not supported yet : {asset_name} will be ignored in unrealized pnl calculation"
                 )
         return self._start_value, self._value_asset
 
