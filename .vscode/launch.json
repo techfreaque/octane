@@ -19,6 +19,20 @@
             "justMyCode": false
         },
         {
+            "name": "Start Octane Installer",
+            "type": "python",
+            "request": "launch",
+            "env": {
+                "EXIT_BEFORE_TENTACLES_AUTO_REINSTALL": "True",
+                "PYTHONPATH": "${workspaceFolder}/octobot-packages/Async-Channel;${workspaceFolder}/octobot-packages/OctoBot-Tentacles-Manager;${workspaceFolder}/octobot-packages/OctoBot-Commons;${workspaceFolder}/octobot-packages/OctoBot-Trading;${workspaceFolder}/octobot-packages/OctoBot-Backtesting;${workspaceFolder}/octobot-packages/OctoBot-evaluators;${workspaceFolder}/octobot-packages/OctoBot-Services;${workspaceFolder}/octobot-packages/trading-backend"
+            },
+            "program": "installer/installer.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": [],
+            "justMyCode": false
+        },
+        {
             // run the following to be able to view profiler reports:
             // pip install snakeviz
             //
