@@ -1,5 +1,5 @@
 from .utils import run_command
-from .config import InstallConfig
+from .config import InstallConfig, Channels
 from .platforms import PlatformHandler, WindowsHandler, LinuxHandler, MacHandler
 
 __all__ = [
@@ -9,4 +9,5 @@ __all__ = [
     "PlatformHandler",
     "run_command",
     "InstallConfig",
+    "Channels",
 ]

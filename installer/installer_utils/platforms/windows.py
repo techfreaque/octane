@@ -4,7 +4,7 @@ from .base import InstallConfig, PlatformHandler
 
 
 class WindowsHandler(PlatformHandler):
-    def install_dependencies(self):
+    def install_dependencies(self, config: InstallConfig):
         if check_dependency_installed("choco --version"):
             run_command("choco install git python visualstudio2022buildtools -y")
         elif check_dependency_installed("winget --info"):
@@ -15,13 +15,6 @@ class WindowsHandler(PlatformHandler):
             )
         else:
             raise RuntimeError("No package manager found (chocolatey/winget)")
-
-    def setup_environment(self, config: InstallConfig):
-        config.activate_cmd = "source .venv/bin/activate"
-        config.create_env = "python -m venv .venv"
-        config.python_cmd = "python"
-        config.env_file = ".env-example-unix"
-        self._setup_environment(config)
 
     def setup_autostart(self, config: InstallConfig):
         startup_folder = os.path.join(
@@ -38,3 +31,15 @@ class WindowsHandler(PlatformHandler):
                 f'@echo off\ncd /d "{config.install_path}"\n'
                 f"call {config.activate_cmd}\npython main.py\n"
             )
+
+    def get_activate_cmd(self, config: InstallConfig):
+        return f"source {config.install_path}/.venv/Scripts/activate"
+    
+    def get_create_env_cmd(self, config: InstallConfig):
+        return f"python -m venv {config.install_path}/.venv"
+
+    def get_python_cmd(self):
+        return "python"
+
+    def get_env_file(self):
+        return ".env-example-windows"

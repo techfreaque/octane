@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, END
 from installer_utils.utils import run_command
 from installer_utils.platforms.base import PlatformHandler
-from installer_utils.config import InstallConfig
+from installer_utils.config import InstallConfig, Channels
 from installer_utils.platforms import WindowsHandler, LinuxHandler, MacHandler
 
 
@@ -66,14 +66,25 @@ class InstallerGUI:
         )
         branch_dropdown.grid(row=2, column=1, padx=5, pady=5)
 
-        self.timesync_var = tk.BooleanVar(value=True)  # Add this line
+        self.timesync_var = tk.BooleanVar(value=True)
         tk.Checkbutton(
-            self.setup_page, text="Enable Time Synchronization", variable=self.timesync_var
-        ).grid(row=3, columnspan=3, padx=5, pady=5)  # Add this line
+            self.setup_page,
+            text="Enable Time Synchronization",
+            variable=self.timesync_var,
+        ).grid(row=3, columnspan=3, padx=5, pady=5)
+
+        self.dev_env_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(
+            self.setup_page,
+            text="Setup Development Environment",
+            variable=self.dev_env_var,
+        ).grid(row=4, columnspan=3, padx=5, pady=5)
 
         tk.Button(
             self.setup_page, text="Install / Update", command=self._on_install
-        ).grid(row=4, columnspan=3, pady=10)  # Update row number
+        ).grid(
+            row=5, columnspan=3, pady=10
+        )  # Update row number
 
     def _progress_widgets(self):
         # Progress page widgets
@@ -118,23 +129,28 @@ class InstallerGUI:
 
     def _on_install(self):
         self.config = InstallConfig(
-               install_path=self.path_var.get(),
-        branch=self.branch_var.get(),
-        autostart=self.autostart_var.get(),
-        timesync=self.timesync_var.get(),
+            install_path=self.path_var.get(),
+            branch=Channels.STABLE.value
+            if self.branch_var.get() == "STABLE"
+            else Channels.BETA.value,
+            autostart=self.autostart_var.get(),
+            timesync=self.timesync_var.get(),
+            dev_env=self.dev_env_var.get(),
         )
         self.notebook.hide(self.setup_page)
         self.notebook.hide(self.done_page)
         self.notebook.select(self.progress_page)
         self.install(self.config)
 
-    def update_progress(self, current_step: int, total_steps: int, command: str):
-        percentage = int((current_step / total_steps) * 100)
-        self.progress_bar["maximum"] = total_steps
-        self.progress_bar["value"] = current_step
+    def update_progress(
+        self, current_percent: int, current_step: int, total_steps: int, command: str
+    ):
+        percentage = int((current_percent / 100) * 100)
+        self.progress_bar["maximum"] = 100
+        self.progress_bar["value"] = current_percent
         self.progress_label.config(text=f"Progress: {percentage}%")
         self.command_listbox.insert(
-            tk.END, f"Step {current_step}/{total_steps}: {command}"
+            tk.END, f"Step {current_step}/{total_steps} ({current_percent}%): {command}"
         )
         self.command_listbox.yview(tk.END)
         self.root.update_idletasks()
@@ -151,9 +167,12 @@ class InstallerGUI:
         self.notebook.select(self.done_page)
 
     def show_complete(self):
+        self.command_listbox.insert(
+            tk.END, f"100% Installation completed successfully!"
+        )
         self.done_label.config(text="Installation completed successfully!")
         self.complete_button.config(state=tk.NORMAL)
-        self.retry_button.config(state=tk.DISABLED)
+        self.retry_button.pack_forget()
         self.command_listbox_done.delete(0, tk.END)
         for item in self.command_listbox.get(0, tk.END):
             self.command_listbox_done.insert(tk.END, item)
@@ -169,36 +188,59 @@ class InstallerGUI:
         self.notebook.hide(self.done_page)
         self.notebook.hide(self.progress_page)
         self.notebook.select(self.setup_page)
-        
+
     def install(self, config: InstallConfig):
-        steps = 5
         try:
-            # Step 1
-            self.update_progress(1, steps, "Ensuring dependencies")
-            self.handler.install_dependencies(config)
+            steps = [
+                {"description": "Ensuring dependencies", "percentage": 10},
+                {"description": "Cloning repository", "percentage": 10},
+                {"description": "Updating repository", "percentage": 10},
+                {"description": "Setting up environment", "percentage": 10},
+                {"description": "Installing packages", "percentage": 50},
+                {"description": "Running additional install step", "percentage": 10},
+                {"description": "Setting up autostart", "percentage": 10},
+            ]
 
-            # Step 2
-            if not os.path.exists(os.path.join(config.install_path, ".git")):
-                self.update_progress(2, steps, "Cloning repository")
-                if os.path.exists(os.path.join(config.install_path)):
-                    raise RuntimeError("Install path is not empty and is not a Octane installation")
-                self._clone_repository(config)
-            else:
-                self.update_progress(2, steps, "Updating repository")
-                self._update_repository(config)
+            total_steps = len(steps)
+            current_step = 1
+            current_percent = 0
 
-            # Step 3
-            self.update_progress(3, steps, "Setting up environment")
-            self.handler.setup_environment(config)
+            for step in steps:
+                self.update_progress(
+                    current_percent + step["percentage"],
+                    current_step,
+                    total_steps,
+                    step["description"],
+                )
 
-            # Step 4
-            self.update_progress(4, steps, "Installing packages")
-            self.handler.install_packages(config)
+                if step["description"] == "Ensuring dependencies":
+                    self.handler.install_dependencies(config)
+                elif step["description"] == "Cloning repository":
+                    if not os.path.exists(os.path.join(config.install_path, ".git")):
+                        if os.path.exists(config.install_path):
+                            raise RuntimeError(
+                                f"Installation path {config.install_path} already exists and is not a Octane installation"
+                            )
+                        self._clone_repository(config)
+                    else:
+                        self._update_repository(config)
+                elif step["description"] == "Setting up environment":
+                    self.handler.setup_environment(config)
+                elif step["description"] == "Installing packages":
+                    current_step = self.handler.install_packages(
+                        config,
+                        self.update_progress,
+                        current_percent,
+                        current_step,
+                        total_steps,
+                    )
+                elif step["description"] == "Running additional install step":
+                    self.handler.run_additional_install_step(config)
+                elif step["description"] == "Setting up autostart" and config.autostart:
+                    self.handler.setup_autostart(config)
 
-            # Step 5
-            if config.autostart:
-                self.update_progress(5, steps, "Setting up autostart")
-                self.handler.setup_autostart(config)
+                current_percent += step["percentage"]
+                current_step += 1
 
             self.show_complete()
 
@@ -209,9 +251,7 @@ class InstallerGUI:
 
     def _clone_repository(self, config: InstallConfig):
         try:
-            os.makedirs(config.install_path, exist_ok=True)
-            os.chdir(config.install_path)
-            run_command(f"git clone {config.git_url} .")
+            self.handler.clone_repository(config)
         except Exception as ex:
             self.command_listbox.insert(END, f"ERROR: Cloning repository failed: {ex}")
             self.command_listbox.yview(END)
@@ -219,9 +259,7 @@ class InstallerGUI:
 
     def _update_repository(self, config: InstallConfig):
         try:
-            os.chdir(config.install_path)
-            run_command("git stash || echo 'No changes to stash'")
-            run_command("git pull")
+            self.handler.update_repository(config)
         except Exception as ex:
             self.command_listbox.insert(END, f"ERROR: Updating repository failed: {ex}")
             self.command_listbox.yview(END)

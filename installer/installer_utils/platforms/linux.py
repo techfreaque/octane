@@ -20,13 +20,6 @@ class LinuxHandler(PlatformHandler):
         if config.timesync:
             run_command("timedatectl set-ntp true")
 
-    def setup_environment(self, config: InstallConfig):
-        config.activate_cmd = "source .venv/bin/activate"
-        config.create_env = "python3 -m venv .venv"
-        config.python_cmd = "python3"
-        config.env_file = ".env-example-unix"
-        self._setup_environment(config)
-
     def setup_autostart(self, config: InstallConfig):
         autostart_dir = os.path.expanduser("~/.config/autostart")
         os.makedirs(autostart_dir, exist_ok=True)
@@ -42,3 +35,17 @@ class LinuxHandler(PlatformHandler):
                 "X-GNOME-Autostart-enabled=true\n"
                 "Name=Octane\n"
             )
+
+
+
+    def get_activate_cmd(self, config: InstallConfig):
+        return f"source {config.install_path}/.venv/bin/activate"
+
+    def get_create_env_cmd(self, config: InstallConfig):
+        return f"python3 -m venv {config.install_path}/.venv"
+
+    def get_python_cmd(self):
+        return "python3"
+
+    def get_env_file(self):
+        return ".env-example-unix"
