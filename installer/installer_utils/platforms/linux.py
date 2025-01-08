@@ -7,7 +7,8 @@ import os
 class LinuxHandler(PlatformHandler):
     def install_dependencies(self, config: InstallConfig):
         missing_dependencies = [
-            cmd for cmd in ["git", "python3"]
+            cmd
+            for cmd in ["git", "python3"]
             if not check_dependency_installed(f"which {cmd}")
         ]
 
