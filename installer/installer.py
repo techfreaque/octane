@@ -165,6 +165,7 @@ class InstallerGUI:
         self.retry_button.config(state=tk.DISABLED)
         self.progress_bar["value"] = 0
         self.progress_label.config(text="Progress: 0%")
+        self.command_listbox.delete(0, tk.END)
         self.notebook.hide(self.done_page)
         self.notebook.hide(self.progress_page)
         self.notebook.select(self.setup_page)
@@ -177,16 +178,18 @@ class InstallerGUI:
             self.handler.install_dependencies(config)
 
             # Step 2
-            self.update_progress(2, steps, "Setting up environment")
-            self.handler.setup_environment(config)
-
-            # Step 3
             if not os.path.exists(os.path.join(config.install_path, ".git")):
-                self.update_progress(3, steps, "Cloning repository")
+                self.update_progress(2, steps, "Cloning repository")
+                if os.path.exists(os.path.join(config.install_path)):
+                    raise RuntimeError("Install path is not empty and is not a Octane installation")
                 self._clone_repository(config)
             else:
-                self.update_progress(3, steps, "Updating repository")
+                self.update_progress(2, steps, "Updating repository")
                 self._update_repository(config)
+
+            # Step 3
+            self.update_progress(3, steps, "Setting up environment")
+            self.handler.setup_environment(config)
 
             # Step 4
             self.update_progress(4, steps, "Installing packages")
