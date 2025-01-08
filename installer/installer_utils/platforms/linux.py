@@ -5,15 +5,19 @@ import os
 
 
 class LinuxHandler(PlatformHandler):
-    def ensure_dependencies(self):
-        if not all(
-            check_dependency_installed(f"which {cmd}")
-            for cmd in ["git", "python3", "python3-venv"]
-        ):
+    def install_dependencies(self, config: InstallConfig):
+        missing_dependencies = [
+            cmd for cmd in ["git", "python3"]
+            if not check_dependency_installed(f"which {cmd}")
+        ]
+
+        if missing_dependencies:
             raise RuntimeError(
-                "Missing required dependencies: git, python3, python3-venv"
+                f"Missing required dependencies: {', '.join(missing_dependencies)}"
             )
-        run_command("timedatectl set-ntp true")
+
+        if config.timesync:
+            run_command("timedatectl set-ntp true")
 
     def setup_environment(self, config: InstallConfig):
         config.activate_cmd = "source .venv/bin/activate"
@@ -21,9 +25,6 @@ class LinuxHandler(PlatformHandler):
         config.python_cmd = "python3"
         config.env_file = ".env-example-unix"
         self._setup_environment(config)
-
-    def install_packages(self, config: InstallConfig):
-        self._install_packages(config)
 
     def setup_autostart(self, config: InstallConfig):
         autostart_dir = os.path.expanduser("~/.config/autostart")

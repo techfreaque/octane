@@ -1,7 +1,6 @@
 from .utils import run_command
 from .config import InstallConfig
 from .platforms import PlatformHandler, WindowsHandler, LinuxHandler, MacHandler
-from .gui import InstallerGUI, ProgressWindow
 
 __all__ = [
     "WindowsHandler",
@@ -10,6 +9,4 @@ __all__ = [
     "PlatformHandler",
     "run_command",
     "InstallConfig",
-    "InstallerGUI",
-    "ProgressWindow",
 ]
