@@ -6,7 +6,7 @@ def run_command(cmd):
     print(f"Running command: {cmd}")
     result = subprocess.run(cmd, shell=True)
     if result.returncode != 0:
-        sys.exit(result.returncode)
+        raise RuntimeError(f"Command failed with return code {result.returncode}: {cmd}")
 
 
 def check_dependency_installed(command):

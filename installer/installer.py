@@ -66,9 +66,14 @@ class InstallerGUI:
         )
         branch_dropdown.grid(row=2, column=1, padx=5, pady=5)
 
+        self.timesync_var = tk.BooleanVar(value=True)  # Add this line
+        tk.Checkbutton(
+            self.setup_page, text="Enable Time Synchronization", variable=self.timesync_var
+        ).grid(row=3, columnspan=3, padx=5, pady=5)  # Add this line
+
         tk.Button(
             self.setup_page, text="Install / Update", command=self._on_install
-        ).grid(row=3, columnspan=3, pady=10)
+        ).grid(row=4, columnspan=3, pady=10)  # Update row number
 
     def _progress_widgets(self):
         # Progress page widgets
@@ -113,9 +118,10 @@ class InstallerGUI:
 
     def _on_install(self):
         self.config = InstallConfig(
-            install_path=self.path_var.get(),
-            branch=self.branch_var.get(),
-            autostart=self.autostart_var.get(),
+               install_path=self.path_var.get(),
+        branch=self.branch_var.get(),
+        autostart=self.autostart_var.get(),
+        timesync=self.timesync_var.get(),
         )
         self.notebook.hide(self.setup_page)
         self.notebook.hide(self.done_page)
@@ -162,7 +168,7 @@ class InstallerGUI:
         self.notebook.hide(self.done_page)
         self.notebook.hide(self.progress_page)
         self.notebook.select(self.setup_page)
-
+        
     def install(self, config: InstallConfig):
         steps = 5
         try:
@@ -195,17 +201,28 @@ class InstallerGUI:
 
         except Exception as ex:
             self.command_listbox.insert(END, f"ERROR: Installation failed: {ex}")
+            self.command_listbox.yview(END)
             self.show_retry()
 
     def _clone_repository(self, config: InstallConfig):
-        os.makedirs(config.install_path, exist_ok=True)
-        os.chdir(config.install_path)
-        run_command(f"git clone {config.git_url} .")
+        try:
+            os.makedirs(config.install_path, exist_ok=True)
+            os.chdir(config.install_path)
+            run_command(f"git clone {config.git_url} .")
+        except Exception as ex:
+            self.command_listbox.insert(END, f"ERROR: Cloning repository failed: {ex}")
+            self.command_listbox.yview(END)
+            raise
 
     def _update_repository(self, config: InstallConfig):
-        os.chdir(config.install_path)
-        run_command("git stash || echo 'No changes to stash'")
-        run_command("git pull")
+        try:
+            os.chdir(config.install_path)
+            run_command("git stash || echo 'No changes to stash'")
+            run_command("git pull")
+        except Exception as ex:
+            self.command_listbox.insert(END, f"ERROR: Updating repository failed: {ex}")
+            self.command_listbox.yview(END)
+            raise
 
     def show(self):
         self.root.mainloop()
