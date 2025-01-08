@@ -5,20 +5,20 @@ from ..config import InstallConfig
 
 
 class PlatformHandler:
-    def check_dependencies(self) -> bool:
+    def install_dependencies(self, config: InstallConfig):
         pass
 
-    def install_dependencies(self):
+    def setup_environment(self, config: InstallConfig):
         pass
-
-    def setup_venv(self, config: InstallConfig):
+    
+    def setup_autostart(self, config: InstallConfig):
         pass
 
     def install_packages(self, config: InstallConfig):
-        pass
-
-    def setup_autostart(self, config: InstallConfig):
-        pass
+        if config.branch == "dev":
+            self._install_beta_packages(config.activate_cmd)
+        else:
+            self._install_stable_packages(config.activate_cmd)
 
     def _clone_repository(self, config: InstallConfig):
         os.makedirs(config.install_path, exist_ok=True)
@@ -43,12 +43,6 @@ class PlatformHandler:
 
         # Set up virtual environment
         run_command(config.create_env)
-
-    def _install_packages(self, config: InstallConfig):
-        if config.branch == "dev":
-            self._install_beta_packages(config.activate_cmd)
-        else:
-            self._install_stable_packages(config.activate_cmd)
 
     def _install_stable_packages(self, config: InstallConfig):
         # Install basic requirements

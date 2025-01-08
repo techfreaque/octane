@@ -4,7 +4,7 @@ from .base import InstallConfig, PlatformHandler
 
 
 class WindowsHandler(PlatformHandler):
-    def ensure_dependencies(self):
+    def install_dependencies(self):
         if check_dependency_installed("choco --version"):
             run_command("choco install git python visualstudio2022buildtools -y")
         elif check_dependency_installed("winget --info"):
@@ -22,9 +22,6 @@ class WindowsHandler(PlatformHandler):
         config.python_cmd = "python"
         config.env_file = ".env-example-unix"
         self._setup_environment(config)
-
-    def install_packages(self, config: InstallConfig):
-        self._install_packages(config)
 
     def setup_autostart(self, config: InstallConfig):
         startup_folder = os.path.join(

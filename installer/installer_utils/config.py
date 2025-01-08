@@ -12,7 +12,8 @@ class InstallConfig:
     python_cmd: str = "python3"
     create_env: str = "python3 -m venv .venv"
     git_url: str = "https://github.com/techfreaque/octane"
-
+    timesync: bool = True   
+    
     @property
     def venv_path(self) -> str:
         return os.path.join(self.install_path, ".venv")
