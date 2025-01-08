@@ -1,4 +1,5 @@
 import os
+import shutil
 
 from ..utils import run_command
 from ..config import InstallConfig
@@ -10,7 +11,7 @@ class PlatformHandler:
 
     def setup_environment(self, config: InstallConfig):
         pass
-    
+
     def setup_autostart(self, config: InstallConfig):
         pass
 
@@ -34,12 +35,23 @@ class PlatformHandler:
         os.makedirs(os.path.join(config.install_path, "user"), exist_ok=True)
 
         # Copy default configs
-        if not os.path.exists(os.path.join(config.install_path, "user", "config.json")):
-            run_command(
-                "cp -n ./octobot-packages/OctoBot/octobot/config/default_config.json user/config.json"
-            )
-        if not os.path.exists(os.path.join(config.install_path, ".env")):
-            run_command(f"cp -n scripts/{config.env_file} .env")
+        target_config = os.path.join(config.install_path, "user", "config.json")
+        source_config = os.path.join(
+            config.install_path,
+            "octobot-packages",
+            "OctoBot",
+            "octobot",
+            "config",
+            "default_config.json",
+        )
+        if not os.path.exists(target_config):
+            shutil.copyfile(source_config, target_config)
+
+        # Copy .env file
+        target_env = os.path.join(config.install_path, ".env")
+        source_env = os.path.join("scripts", config.env_file)
+        if not os.path.exists(target_env):
+            shutil.copyfile(source_env, target_env)
 
         # Set up virtual environment
         run_command(config.create_env)
