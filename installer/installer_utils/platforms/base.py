@@ -128,6 +128,7 @@ class PlatformHandler:
                 "    os.chdir(os.path.dirname(__file__))\n"
                 '    os.environ["EXIT_BEFORE_TENTACLES_AUTO_REINSTALL"] = "True"\n'
                 f'    os.environ["PYTHONPATH"] = r"{pythonpath}"\n'
+                "    print('Starting Octane...')\n"
                 '    cmd = [sys.executable, "octobot-packages/OctoBot/start.py"]\n'
                 "    sys.exit(subprocess.call(cmd))\n"
             )

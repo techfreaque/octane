@@ -71,24 +71,31 @@ class InstallerGUI:
         )
         branch_dropdown.grid(row=2, column=1, padx=5, pady=5)
 
-        self.timesync_var = tk.BooleanVar(value=True)
+        self.timesync_var = tk.BooleanVar(value=False)
         tk.Checkbutton(
             self.setup_page,
             text="Enable Time Synchronization (requires root access)",
             variable=self.timesync_var,
         ).grid(row=3, columnspan=3, padx=5, pady=5)
 
+        self.repair_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(
+            self.setup_page,
+            text="Repair existing installation",
+            variable=self.repair_var,
+        ).grid(row=4, columnspan=3, padx=5, pady=5)
+
         self.dev_env_var = tk.BooleanVar(value=False)
         tk.Checkbutton(
             self.setup_page,
             text="Setup Development Environment",
             variable=self.dev_env_var,
-        ).grid(row=4, columnspan=3, padx=5, pady=5)
+        ).grid(row=5, columnspan=3, padx=5, pady=5)
 
         tk.Button(
             self.setup_page, text="Install / Update", command=self._on_install
         ).grid(
-            row=5, columnspan=3, pady=10
+            row=6, columnspan=3, pady=10
         )  # Update row number
 
     def _progress_widgets(self):
@@ -140,6 +147,7 @@ class InstallerGUI:
             else Channels.BETA.value,
             autostart=self.autostart_var.get(),
             timesync=self.timesync_var.get(),
+            repair=self.repair_var.get(),
             dev_env=self.dev_env_var.get(),
         )
         self.notebook.hide(self.setup_page)

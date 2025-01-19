@@ -109,9 +109,10 @@ async def get_manged_order_position_size(
             trading_side,
             position_size_settings.risk_in_p,
             position_size_settings.total_risk_in_p,
-            reduce_only=False
+            reduce_only=False,
+            use_total_holding=True,
         )
-        
+
     # position size based on percent of total account balance
     elif (
         position_size_settings.position_size_type
@@ -138,6 +139,7 @@ async def get_manged_order_position_size(
             position_size_settings.risk_in_p,
             position_size_settings.total_risk_in_p,
             reduce_only=True,
+            use_total_holding
         )
 
     (
@@ -361,6 +363,7 @@ async def get_position_size_based_on_available_account(
     stop_loss_percent: decimal.Decimal,
     stop_loss_total_percent: decimal.Decimal,
     reduce_only: bool,
+    use_total_holding: bool,
 ) -> tuple:
     current_acc_balance = await account_balance.available_account_balance(
         ctx,
@@ -373,6 +376,7 @@ async def get_position_size_based_on_available_account(
             )
             else trading_enums.TradeOrderSide.BUY.value
         ),
+        use_total_holding=use_total_holding,
         reduce_only=reduce_only,
     )
     if not current_acc_balance:
