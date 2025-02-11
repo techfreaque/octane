@@ -105,13 +105,14 @@ async def get_manged_order_position_size(
             position_size,
             max_position_size,
         ) = await get_position_size_based_on_available_account(
-            maker.ctx,
-            trading_side,
-            position_size_settings.risk_in_p,
-            position_size_settings.total_risk_in_p,
-            reduce_only=False
+            ctx=maker.ctx,
+            trading_side=trading_side,
+            risk_percent=position_size_settings.risk_in_p,
+            risk_total_percent=position_size_settings.total_risk_in_p,
+            reduce_only=False,
+            use_total_holding=True,
         )
-        
+
     # position size based on percent of total account balance
     elif (
         position_size_settings.position_size_type
@@ -133,11 +134,12 @@ async def get_manged_order_position_size(
             position_size,
             max_position_size,
         ) = await get_position_size_based_on_available_account(
-            maker.ctx,
-            trading_side,
-            position_size_settings.risk_in_p,
-            position_size_settings.total_risk_in_p,
+            ctx=maker.ctx,
+            trading_side=trading_side,
+            risk_percent=position_size_settings.risk_in_p,
+            risk_total_percent=position_size_settings.total_risk_in_p,
             reduce_only=True,
+            use_total_holding=False,
         )
 
     (
@@ -358,9 +360,10 @@ async def get_position_size_based_on_account(
 async def get_position_size_based_on_available_account(
     ctx,
     trading_side,
-    stop_loss_percent: decimal.Decimal,
-    stop_loss_total_percent: decimal.Decimal,
+    risk_percent: decimal.Decimal,
+    risk_total_percent: decimal.Decimal,
     reduce_only: bool,
+    use_total_holding: bool,
 ) -> tuple:
     current_acc_balance = await account_balance.available_account_balance(
         ctx,
@@ -373,6 +376,7 @@ async def get_position_size_based_on_available_account(
             )
             else trading_enums.TradeOrderSide.BUY.value
         ),
+        use_total_holding=use_total_holding,
         reduce_only=reduce_only,
     )
     if not current_acc_balance:
@@ -381,14 +385,14 @@ async def get_position_size_based_on_available_account(
             f"no available balance for {trading_side} {ctx.symbol}"
         )
         raise matrix_errors.MaximumOpenPositionReachedError
-    position_size = (stop_loss_percent / 100) * current_acc_balance
+    position_size = (risk_percent / 100) * current_acc_balance
     current_open_position_size = open_positions.open_position_size(ctx, side="both")
     if trading_side in (
         trading_enums.PositionSide.SHORT.value,
         trading_enums.TradeOrderSide.SELL.value,
     ):
         current_open_position_size *= -1
-    max_position_size = (stop_loss_total_percent / 100) * current_acc_balance
+    max_position_size = (risk_total_percent / 100) * current_acc_balance
     return position_size, max_position_size
 
 

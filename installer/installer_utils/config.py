@@ -15,6 +15,7 @@ class InstallConfig:
     git_url: str = "https://github.com/techfreaque/octane"
     timesync: bool = True
     dev_env: bool = False
+    repair: bool = False
 
     @property
     def venv_path(self) -> str:
