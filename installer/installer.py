@@ -2,10 +2,15 @@ import os
 import platform
 import tkinter as tk
 from tkinter import ttk, filedialog, END
-from installer_utils.utils import run_command
 from installer_utils.platforms.base import PlatformHandler
 from installer_utils.config import InstallConfig, Channels
-from installer_utils.platforms import WindowsHandler, LinuxHandler, MacHandler
+from installer_utils.platforms import (
+    WindowsHandler,
+    LinuxHandler,
+    MacHandler,
+    installing_packages_steps,
+)
+from installer_utils.utils import run_command
 
 
 class InstallerGUI:
@@ -66,24 +71,31 @@ class InstallerGUI:
         )
         branch_dropdown.grid(row=2, column=1, padx=5, pady=5)
 
-        self.timesync_var = tk.BooleanVar(value=True)
+        self.timesync_var = tk.BooleanVar(value=False)
         tk.Checkbutton(
             self.setup_page,
-            text="Enable Time Synchronization",
+            text="Enable Time Synchronization (requires root access)",
             variable=self.timesync_var,
         ).grid(row=3, columnspan=3, padx=5, pady=5)
+
+        self.repair_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(
+            self.setup_page,
+            text="Repair existing installation",
+            variable=self.repair_var,
+        ).grid(row=4, columnspan=3, padx=5, pady=5)
 
         self.dev_env_var = tk.BooleanVar(value=False)
         tk.Checkbutton(
             self.setup_page,
             text="Setup Development Environment",
             variable=self.dev_env_var,
-        ).grid(row=4, columnspan=3, padx=5, pady=5)
+        ).grid(row=5, columnspan=3, padx=5, pady=5)
 
         tk.Button(
             self.setup_page, text="Install / Update", command=self._on_install
         ).grid(
-            row=5, columnspan=3, pady=10
+            row=6, columnspan=3, pady=10
         )  # Update row number
 
     def _progress_widgets(self):
@@ -135,6 +147,7 @@ class InstallerGUI:
             else Channels.BETA.value,
             autostart=self.autostart_var.get(),
             timesync=self.timesync_var.get(),
+            repair=self.repair_var.get(),
             dev_env=self.dev_env_var.get(),
         )
         self.notebook.hide(self.setup_page)
@@ -191,31 +204,59 @@ class InstallerGUI:
 
     def install(self, config: InstallConfig):
         try:
-            steps = [
-                {"description": "Ensuring dependencies", "percentage": 10},
-                {"description": "Cloning repository", "percentage": 10},
-                {"description": "Updating repository", "percentage": 10},
-                {"description": "Setting up environment", "percentage": 10},
-                {"description": "Installing packages", "percentage": 50},
-                {"description": "Running additional install step", "percentage": 10},
-                {"description": "Setting up autostart", "percentage": 10},
-            ]
+            steps = {
+                "ensuring_dependencies": {
+                    "description": "Ensuring dependencies",
+                    "percentage": 10,
+                },
+                "downloading_octane": {
+                    "description": "Downloading Octane",
+                    "percentage": 10,
+                },
+                "setting_up_environment": {
+                    "description": "Setting up environment",
+                    "percentage": 10,
+                },
+                "installing_packages": {
+                    "description": "Installing packages",
+                    "percentage": 65 if config.autostart else 60,
+                },
+                "installing_octane_extensions": {
+                    "description": "Installing Octane extensions",
+                    "percentage": 10,
+                },
+                "generating_octane_binary": {
+                    "description": "Generating the Octane start binary",
+                    "percentage": 5,
+                },
+                **(
+                    {
+                        "setting_up_autostart": {
+                            "description": "Setting up autostart",
+                            "percentage": 5,
+                        },
+                    }
+                    if config.autostart
+                    else {}
+                ),
+            }
 
-            total_steps = len(steps)
+            general_steps = len(steps.keys())
+            total_steps = general_steps + installing_packages_steps
             current_step = 1
             current_percent = 0
 
-            for step in steps:
+            for step_key, step in steps.items():
                 self.update_progress(
-                    current_percent + step["percentage"],
+                    current_percent,
                     current_step,
                     total_steps,
                     step["description"],
                 )
 
-                if step["description"] == "Ensuring dependencies":
+                if step_key == "ensuring_dependencies":
                     self.handler.install_dependencies(config)
-                elif step["description"] == "Cloning repository":
+                elif step_key == "downloading_octane":
                     if not os.path.exists(os.path.join(config.install_path, ".git")):
                         if os.path.exists(config.install_path):
                             raise RuntimeError(
@@ -224,9 +265,9 @@ class InstallerGUI:
                         self._clone_repository(config)
                     else:
                         self._update_repository(config)
-                elif step["description"] == "Setting up environment":
+                elif step_key == "setting_up_environment":
                     self.handler.setup_environment(config)
-                elif step["description"] == "Installing packages":
+                elif step_key == "installing_packages":
                     current_step = self.handler.install_packages(
                         config,
                         self.update_progress,
@@ -234,14 +275,15 @@ class InstallerGUI:
                         current_step,
                         total_steps,
                     )
-                elif step["description"] == "Running additional install step":
+                elif step_key == "installing_octane_extensions":
                     self.handler.run_additional_install_step(config)
-                elif step["description"] == "Setting up autostart" and config.autostart:
+                elif step_key == "generating_octane_binary":
+                    self.handler.create_starter_executable(config)
+                elif step_key == "setting_up_autostart" and config.autostart:
                     self.handler.setup_autostart(config)
 
                 current_percent += step["percentage"]
                 current_step += 1
-
             self.show_complete()
 
         except Exception as ex:
