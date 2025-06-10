@@ -1,0 +1,4 @@
+*.css
+*.ico
+**/node_modules
+**/dist

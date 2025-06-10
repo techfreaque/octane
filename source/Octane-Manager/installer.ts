@@ -1,0 +1,1 @@
+export const TENTACLES_URL_TAG: string = "TENTACLES_URL_TAG";

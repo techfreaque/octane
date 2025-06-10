@@ -1,0 +1,19 @@
+{
+  "files.eol": "\n",
+  "editor.formatOnSave": true, // Format files on save
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "never"
+  },
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  "prettier.requireConfig": true,
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "javascript.preferences.importModuleSpecifier": "relative",
+  "prettier.singleQuote": false,
+  "prettier.jsxSingleQuote": false
+}
