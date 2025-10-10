@@ -1,5 +1,5 @@
-ARG DOCKER_PYTHON_VERSION
-FROM python:${DOCKER_PYTHON_VERSION}-slim-buster AS base
+ARG DOCKER_PYTHON_VERSION=3.11
+FROM python:${DOCKER_PYTHON_VERSION}-slim-bookworm AS base
 
 VOLUME /octobot/backtesting
 VOLUME /octobot/logs
