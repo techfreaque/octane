@@ -1,6 +1,6 @@
 # TA-Lib # conda install -c conda-forge ta-lib
 pandas
-pandas_ta
+pandas-ta-openbb
 finta
 newtulipy
 statistics
